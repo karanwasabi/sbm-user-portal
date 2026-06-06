@@ -1,6 +1,6 @@
 'use client';
 
-import { type InputHTMLAttributes, type ReactNode, useState } from 'react';
+import { type InputHTMLAttributes, type ReactNode, forwardRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 
 type TextInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & {
@@ -11,20 +11,23 @@ type TextInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & 
   error?: boolean;
 };
 
-export function TextInput({
-  value,
-  onChange,
-  placeholder,
-  type = 'text',
-  leftIcon,
-  rightIcon,
-  disabled,
-  autoComplete,
-  autoFocus,
-  error = false,
-  className,
-  ...props
-}: TextInputProps) {
+export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function TextInput(
+  {
+    value,
+    onChange,
+    placeholder,
+    type = 'text',
+    leftIcon,
+    rightIcon,
+    disabled,
+    autoComplete,
+    autoFocus,
+    error = false,
+    className,
+    ...props
+  },
+  ref
+) {
   const [focused, setFocused] = useState(Boolean(autoFocus));
 
   const iconColorClass = error ? 'text-danger-press' : focused ? 'text-brand' : 'text-slate-400';
@@ -41,6 +44,7 @@ export function TextInput({
       {leftIcon && <div className={cn('flex pr-0.5 pl-3.5', iconColorClass)}>{leftIcon}</div>}
       <input
         {...props}
+        ref={ref}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -65,4 +69,4 @@ export function TextInput({
       {rightIcon && <div className={cn('flex pr-3.5 pl-1', iconColorClass)}>{rightIcon}</div>}
     </div>
   );
-}
+});
