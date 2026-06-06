@@ -23,6 +23,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 Husky runs the following hooks:
 
 - **pre-commit** — `pnpm format:check` (commit fails if any file is not formatted)
+- **pre-push** — `pnpm build` (push fails if the production build fails)
 - **commit-msg** — validates the commit message with Commitlint
 
 ## Commit messages
