@@ -24,7 +24,7 @@ export function PortalShell({ profile, profileError, children }: PortalShellProp
               {profileError}
             </div>
           )}
-          <div className="flex-1 overflow-auto bg-canvas">{children}</div>
+          <div className="flex flex-1 flex-col overflow-auto bg-canvas">{children}</div>
         </div>
       </div>
     </PortalProfileProvider>

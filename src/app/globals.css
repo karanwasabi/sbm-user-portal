@@ -7,6 +7,7 @@
   --sbm-brand-deep-press: #1a0f3d;
   --sbm-brand-glow: #a2a8f3;
   --sbm-brand-glow-soft: #c8ccff;
+  --sbm-lilac: #c8b6ff;
   --sbm-canvas-warm: #fdfbf7;
   --sbm-canvas-cool: #f8f9fe;
   --sbm-surface: #ffffff;
@@ -32,7 +33,10 @@
   --color-brand: var(--sbm-brand);
   --color-brand-press: var(--sbm-brand-press);
   --color-brand-deep: var(--sbm-brand-deep);
+  --color-brand-deep-press: var(--sbm-brand-deep-press);
   --color-brand-glow: var(--sbm-brand-glow);
+  --color-brand-glow-soft: var(--sbm-brand-glow-soft);
+  --color-lilac: var(--sbm-lilac);
   --color-canvas: var(--sbm-canvas-warm);
   --color-canvas-cool: var(--sbm-canvas-cool);
   --color-surface: var(--sbm-surface);
