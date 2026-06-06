@@ -10,14 +10,14 @@ type SbmWordmarkProps = {
 const sizeConfig = {
   sm: { logo: 28, title: 'text-[13px]', subtitle: 'text-[8.5px]' },
   md: { logo: 36, title: 'text-sm', subtitle: 'text-[9px]' },
-  lg: { logo: 44, title: 'text-[17px]', subtitle: 'text-[10px]' },
+  lg: { logo: 56, title: 'text-[19px]', subtitle: 'text-[11px]' },
 } as const;
 
 export function SbmWordmark({ size = 'md', tone = 'dark', className }: SbmWordmarkProps) {
   const config = sizeConfig[size];
 
   return (
-    <div className={cn('flex items-center gap-2.5', className)}>
+    <div className={cn('flex items-center', size === 'lg' ? 'gap-3.5' : 'gap-2.5', className)}>
       <Image
         src="/images/sbm-logo-circle.png"
         alt="Slow Burn Method"

@@ -14,44 +14,54 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   fullWidth?: boolean;
 };
 
-const variantClasses: Record<ButtonVariant, { base: string; lip: string }> = {
+const variantClasses: Record<ButtonVariant, { base: string; lip: string; pressedLip: string; shadow: string }> = {
   primary: {
-    base: 'bg-brand text-white shadow-brand',
+    base: 'bg-brand text-white',
     lip: 'border-b-brand-press',
+    pressedLip: 'border-b-brand',
+    shadow: 'shadow-brand',
   },
   light: {
-    base: 'bg-white text-brand shadow-sm',
+    base: 'bg-white text-brand',
     lip: 'border-b-slate-200',
+    pressedLip: 'border-b-white',
+    shadow: 'shadow-sm',
   },
   ghost: {
     base: 'bg-transparent text-slate-700',
     lip: 'border-b-transparent',
+    pressedLip: 'border-b-transparent',
+    shadow: '',
   },
   success: {
-    base: 'bg-success text-white shadow-[0_8px_14px_-4px_rgba(16,185,129,0.30)]',
+    base: 'bg-success text-white',
     lip: 'border-b-success-press',
+    pressedLip: 'border-b-success',
+    shadow: 'shadow-[0_8px_14px_-4px_rgba(16,185,129,0.30)]',
   },
   danger: {
-    base: 'bg-danger text-white shadow-[0_8px_14px_-4px_rgba(244,63,94,0.30)]',
+    base: 'bg-danger text-white',
     lip: 'border-b-danger-press',
+    pressedLip: 'border-b-danger',
+    shadow: 'shadow-[0_8px_14px_-4px_rgba(244,63,94,0.30)]',
   },
 };
 
-const sizeClasses: Record<ButtonSize, { base: string; lip: string; pressedLip: string }> = {
+const sizeClasses: Record<ButtonSize, { base: string; lip: string; pressOffset: string }> = {
   sm: {
     base: 'rounded-2xl px-4 py-2.25 text-xs',
     lip: 'border-b-[3px]',
-    pressedLip: 'border-b',
+    pressOffset: 'translate-y-0.5',
   },
   md: {
     base: 'rounded-[20px] px-5 py-2.75 text-[13.5px]',
     lip: 'border-b-4',
-    pressedLip: 'border-b',
+    pressOffset: 'translate-y-[3px]',
   },
   lg: {
     base: 'rounded-3xl px-6 py-4 text-[15px]',
     lip: 'border-b-[5px]',
-    pressedLip: 'border-b',
+    pressOffset: 'translate-y-1',
   },
 };
 
@@ -70,6 +80,7 @@ export function Button({
   const [pressed, setPressed] = useState(false);
   const variantStyle = variantClasses[disabled ? 'ghost' : variant];
   const sizeStyle = sizeClasses[size];
+  const isPressed = pressed && !disabled;
 
   return (
     <button
@@ -91,11 +102,16 @@ export function Button({
       className={cn(
         'inline-flex cursor-pointer items-center justify-center gap-2 border-x-0 border-t-0 font-semibold transition-all duration-100 outline-none',
         sizeStyle.base,
+        sizeStyle.lip,
         fullWidth && 'w-full',
         disabled
           ? 'cursor-not-allowed border-b-slate-200 bg-slate-100 text-slate-400 shadow-none'
-          : cn(variantStyle.base, variantStyle.lip, pressed ? sizeStyle.pressedLip : sizeStyle.lip),
-        pressed && !disabled && 'translate-y-1 scale-[0.992] shadow-none',
+          : cn(
+              variantStyle.base,
+              isPressed ? variantStyle.pressedLip : variantStyle.lip,
+              isPressed ? 'shadow-none' : variantStyle.shadow,
+              isPressed && sizeStyle.pressOffset
+            ),
         className
       )}
     >

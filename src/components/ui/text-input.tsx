@@ -8,6 +8,7 @@ type TextInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & 
   onChange: (value: string) => void;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
+  error?: boolean;
 };
 
 export function TextInput({
@@ -19,21 +20,25 @@ export function TextInput({
   rightIcon,
   disabled,
   autoComplete,
+  autoFocus,
+  error = false,
   className,
   ...props
 }: TextInputProps) {
-  const [focused, setFocused] = useState(false);
+  const [focused, setFocused] = useState(Boolean(autoFocus));
+
+  const iconColorClass = error ? 'text-danger-press' : focused ? 'text-brand' : 'text-slate-400';
 
   return (
     <div
       className={cn(
         'relative flex items-center rounded-2xl border-[1.5px] transition-all duration-120',
         disabled ? 'bg-slate-50' : 'bg-white',
-        focused ? 'border-brand shadow-[0_0_0_4px_rgba(92,101,207,0.12)]' : 'border-slate-200',
+        error ? 'border-danger-press' : focused ? 'border-brand' : 'border-slate-200',
         className
       )}
     >
-      {leftIcon && <div className="flex pr-0.5 pl-3.5 text-slate-400">{leftIcon}</div>}
+      {leftIcon && <div className={cn('flex pr-0.5 pl-3.5', iconColorClass)}>{leftIcon}</div>}
       <input
         {...props}
         value={value}
@@ -42,6 +47,8 @@ export function TextInput({
         type={type}
         disabled={disabled}
         autoComplete={autoComplete}
+        autoFocus={autoFocus}
+        aria-invalid={error || undefined}
         onFocus={(e) => {
           setFocused(true);
           props.onFocus?.(e);
@@ -55,7 +62,7 @@ export function TextInput({
           leftIcon ? 'py-3.25 pr-4 pl-2.5' : 'px-4 py-3.25'
         )}
       />
-      {rightIcon && <div className="flex pr-3.5 pl-1 text-slate-400">{rightIcon}</div>}
+      {rightIcon && <div className={cn('flex pr-3.5 pl-1', iconColorClass)}>{rightIcon}</div>}
     </div>
   );
 }

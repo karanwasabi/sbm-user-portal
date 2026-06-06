@@ -9,15 +9,17 @@ type CheckboxProps = {
   onChange: (checked: boolean) => void;
   label?: ReactNode;
   className?: string;
+  tabIndex?: number;
 };
 
-export function Checkbox({ checked, onChange, label, className }: CheckboxProps) {
+export function Checkbox({ checked, onChange, label, className, tabIndex }: CheckboxProps) {
   return (
     <label className={cn('flex cursor-pointer items-start gap-2.5', className)}>
       <button
         type="button"
         role="checkbox"
         aria-checked={checked}
+        tabIndex={tabIndex}
         onClick={() => onChange(!checked)}
         className={cn(
           'mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border-[1.5px] transition-all duration-120',
