@@ -15,6 +15,15 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - `pnpm build` — create a production build
 - `pnpm start` — run the production server
 - `pnpm lint` — run ESLint
+- `pnpm format` — format the project with Prettier
+- `pnpm format:check` — verify formatting without writing changes
+
+## Git hooks
+
+Husky runs the following hooks:
+
+- **pre-commit** — `pnpm format:check` (commit fails if any file is not formatted)
+- **commit-msg** — validates the commit message with Commitlint
 
 ## Commit messages
 

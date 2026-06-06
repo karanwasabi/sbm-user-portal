@@ -5,3 +5,5 @@ export default function Home() {
     </main>
   );
 }
+
+const x = 1;
