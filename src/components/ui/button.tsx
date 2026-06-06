@@ -3,7 +3,7 @@
 import { type ButtonHTMLAttributes, type ReactNode, useState } from 'react';
 import { cn } from '@/lib/cn';
 
-type ButtonVariant = 'primary' | 'light' | 'ghost' | 'success' | 'danger';
+type ButtonVariant = 'primary' | 'light' | 'ghost' | 'success' | 'danger' | 'amber';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -44,6 +44,12 @@ const variantClasses: Record<ButtonVariant, { base: string; lip: string; pressed
     lip: 'border-b-danger-press',
     pressedLip: 'border-b-danger',
     shadow: 'shadow-[0_8px_14px_-4px_rgba(244,63,94,0.30)]',
+  },
+  amber: {
+    base: 'bg-motivation text-slate-900',
+    lip: 'border-b-[#C28C00]',
+    pressedLip: 'border-b-motivation',
+    shadow: 'shadow-[0_8px_14px_-4px_rgba(255,183,3,0.30)]',
   },
 };
 
