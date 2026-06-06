@@ -27,9 +27,18 @@ Get these from Supabase Dashboard → Project Settings → API. Email/password a
 3. Submit valid credentials → redirects to `/`, session cookie set
 4. Visit `/login` while authenticated → redirects to `/`
 
-### Go API (future)
+### Go API
 
-For server-side requests to the Go API, use `apiFetch` from `src/utils/api.ts`. It attaches the Supabase access token as `Authorization: Bearer <token>`. Set `NEXT_PUBLIC_GO_API_URL` in `.env.local`.
+Set the backend URL in `.env.local`:
+
+```bash
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
+```
+
+- **Server-side:** `getLatestProfile()` in `src/utils/api.ts` — fetches `/me` with the Supabase JWT from cookies (`cache: 'no-store'`)
+- **Client-side:** `UserProfileCard` demonstrates dynamic fetch via the browser Supabase session
+
+Both attach `Authorization: Bearer <token>` to requests. The Go backend must be running with a profile row for the authenticated user.
 
 ## Scripts
 
