@@ -1,6 +1,7 @@
 'use client';
 
 import { Cake, Calendar, Globe, Lock, Mail, MessageCircle, Phone, Receipt, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
@@ -16,6 +17,7 @@ import { TextInput } from '@/components/ui/text-input';
 import { getFullName, getInitials } from '@/types/profile';
 
 export function ProfileView() {
+  const router = useRouter();
   const { profile } = usePortalProfile();
 
   const [firstName, setFirstName] = useState(profile?.first_name ?? '');
@@ -176,16 +178,21 @@ export function ProfileView() {
 
       <Card>
         <SectionHead title="Security" />
-        <div className="flex flex-col gap-3 rounded-[14px] border border-slate-100 bg-canvas-cool px-3.5 py-3 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-3">
-            <Lock size={16} className="text-brand" />
-            <div>
+        <div className="flex flex-col gap-3 rounded-[14px] border border-slate-100 bg-canvas-cool p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <Lock size={16} className="shrink-0 text-brand" />
+            <div className="min-w-0">
               <div className="text-sm font-bold text-slate-800">Password</div>
-              <div className="text-xs text-slate-500">Last changed 4 months ago</div>
+              <div className="text-xs text-slate-500">Used to sign in to your account</div>
             </div>
           </div>
-          <Button variant="light" size="sm" className="shrink-0 self-start sm:self-center">
-            Change
+          <Button
+            variant="light"
+            size="sm"
+            className="shrink-0 self-start sm:self-center"
+            onClick={() => router.push('/profile/change-password')}
+          >
+            Change password
           </Button>
         </div>
       </Card>

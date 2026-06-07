@@ -16,6 +16,7 @@ type PortalPageLayoutProps = {
   panelClassName: string;
   glowClassName?: string;
   highlights?: PortalPageAsideHighlight[];
+  footer?: string;
 };
 
 export function PortalPageLayout({
@@ -27,6 +28,7 @@ export function PortalPageLayout({
   panelClassName,
   glowClassName = 'bg-white/30',
   highlights,
+  footer,
 }: PortalPageLayoutProps) {
   const aside = (
     <div
@@ -55,6 +57,17 @@ export function PortalPageLayout({
                 <span className="font-bold text-white">{item.value}</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {footer && (
+          <div
+            className={cn(
+              'rounded-2xl border border-white/20 bg-black/10 p-4 backdrop-blur-sm',
+              (highlights?.length ?? 0) > 0 ? 'mt-4' : 'mt-0'
+            )}
+          >
+            <p className="text-sm leading-relaxed font-medium text-white/85">{footer}</p>
           </div>
         )}
       </div>

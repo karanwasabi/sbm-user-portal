@@ -108,3 +108,24 @@ export function ProfilePageIllustration() {
     </svg>
   );
 }
+
+export function SecurityPageIllustration() {
+  return (
+    <svg viewBox="0 0 280 180" fill="none" className="h-auto w-full max-w-[260px]" aria-hidden>
+      <circle cx="140" cy="90" r="56" fill="white" fillOpacity="0.15" />
+      <rect x="108" y="72" width="64" height="72" rx="16" fill="white" fillOpacity="0.95" />
+      <path
+        d="M124 72v-8c0-8.837 7.163-16 16-16s16 7.163 16 16v8"
+        stroke="#5C65CF"
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <circle cx="140" cy="108" r="8" fill="#5C65CF" />
+      <rect x="136" y="108" width="8" height="16" rx="4" fill="#5C65CF" />
+      <circle cx="68" cy="56" r="5" fill="white" fillOpacity="0.45" />
+      <circle cx="220" cy="132" r="6" fill="white" fillOpacity="0.35" />
+      <circle cx="200" cy="48" r="14" fill="#10B981" fillOpacity="0.95" />
+      <path d="M194 48l4 4 8-8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
