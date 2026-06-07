@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { PortalPageShell } from '@/components/layout/portal/portal-page-shell';
 
 type PortalPageAsideHighlight = {
   label: string;
@@ -61,8 +62,8 @@ export function PortalPageLayout({
   );
 
   return (
-    <div className="w-full px-6 py-6 pb-10 sm:px-8 lg:px-10">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-start lg:gap-10 xl:gap-14">
+    <PortalPageShell>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-start lg:gap-10 xl:gap-14">
         <div className="min-w-0">
           <div className="mb-6 lg:hidden">{aside}</div>
           <div className="flex flex-col gap-[18px]">{children}</div>
@@ -72,6 +73,6 @@ export function PortalPageLayout({
           <div className="sticky top-6">{aside}</div>
         </aside>
       </div>
-    </div>
+    </PortalPageShell>
   );
 }

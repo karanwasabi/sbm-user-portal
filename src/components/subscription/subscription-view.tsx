@@ -41,7 +41,7 @@ export function SubscriptionView() {
               <CreditCard size={22} />
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-bold text-slate-800">₹3,540 / month incl. GST</div>
+              <div className="text-sm font-bold text-slate-800">₹3,000 + GST / month</div>
               <div className="mt-0.5 text-xs text-slate-500">Next renewal · Jun 11, 2026 · UPI · anjali@okhdfcbank</div>
             </div>
           </div>

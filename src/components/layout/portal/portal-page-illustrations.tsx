@@ -1,3 +1,28 @@
+export function HomePageIllustration() {
+  return (
+    <svg viewBox="0 0 280 180" fill="none" className="h-auto w-full max-w-[260px]" aria-hidden>
+      <circle cx="140" cy="90" r="56" fill="white" fillOpacity="0.2" />
+      <rect x="88" y="48" width="104" height="88" rx="20" fill="white" fillOpacity="0.95" />
+      <rect x="104" y="64" width="72" height="10" rx="5" fill="#C8CCFF" />
+      <rect x="104" y="84" width="48" height="8" rx="4" fill="#E2E8F0" />
+      <rect x="104" y="100" width="56" height="8" rx="4" fill="#E2E8F0" />
+      <circle cx="168" cy="120" r="14" fill="#10B981" fillOpacity="0.95" />
+      <path d="M162 120l4 4 8-8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="48" y="72" width="44" height="32" rx="12" fill="#FFB703" fillOpacity="0.95" />
+      <circle cx="58" cy="88" r="4" fill="white" fillOpacity="0.9" />
+      <rect x="66" y="84" width="20" height="4" rx="2" fill="white" fillOpacity="0.7" />
+      <rect x="66" y="92" width="14" height="3" rx="1.5" fill="white" fillOpacity="0.5" />
+      <circle cx="220" cy="64" r="18" fill="#C8B6FF" fillOpacity="0.95" />
+      <rect x="212" y="58" width="16" height="12" rx="3" fill="white" fillOpacity="0.85" />
+      <circle cx="216" cy="62" r="1.5" fill="#5C65CF" />
+      <circle cx="220" cy="62" r="1.5" fill="#5C65CF" />
+      <circle cx="224" cy="62" r="1.5" fill="#5C65CF" />
+      <circle cx="56" cy="48" r="4" fill="white" fillOpacity="0.45" />
+      <circle cx="232" cy="128" r="5" fill="white" fillOpacity="0.35" />
+    </svg>
+  );
+}
+
 export function SubscriptionPageIllustration() {
   return (
     <svg viewBox="0 0 280 180" fill="none" className="h-auto w-full max-w-[260px]" aria-hidden>
