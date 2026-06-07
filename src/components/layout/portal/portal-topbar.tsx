@@ -1,6 +1,5 @@
 'use client';
 
-import { Bell } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { PortalUserMenu } from '@/components/layout/portal/portal-user-menu';
@@ -26,14 +25,6 @@ export function PortalTopbar({ right }: PortalTopbarProps) {
       </div>
       <div className="flex items-center gap-2.5">
         {right}
-        <button
-          type="button"
-          className="relative cursor-pointer rounded-full border border-slate-100 bg-white p-2 text-slate-500 transition-colors hover:border-slate-200"
-          aria-label="Notifications"
-        >
-          <Bell size={15} />
-          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-motivation" />
-        </button>
         <PortalUserMenu />
       </div>
     </header>

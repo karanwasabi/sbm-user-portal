@@ -86,7 +86,6 @@ export function DashboardView() {
           <Button variant="amber" size="md" disabled className="mt-5" rightIcon={<ArrowRight size={14} />}>
             Enroll in Take Control
           </Button>
-          <p className="mt-2 text-xs font-medium text-slate-400">Enrollment opens soon</p>
         </div>
         <div className="border-t border-slate-100 px-6 py-4 sm:px-8">
           <p className="text-[11px] font-bold tracking-wide text-slate-400 uppercase">What&apos;s included</p>

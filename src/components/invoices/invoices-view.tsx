@@ -1,6 +1,8 @@
 'use client';
 
-import { Download, Info, Receipt } from 'lucide-react';
+import { Download } from 'lucide-react';
+import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
+import { InvoicesPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pill } from '@/components/ui/pill';
@@ -10,25 +12,38 @@ const invoices = [
   { id: 'INV-2026-0042', date: 'May 11, 2026', amount: '₹3,540', status: 'Paid' },
   { id: 'INV-2026-0031', date: 'Apr 11, 2026', amount: '₹3,540', status: 'Paid' },
   { id: 'INV-2026-0018', date: 'Mar 11, 2026', amount: '₹3,540', status: 'Paid' },
+  { id: 'INV-2026-0009', date: 'Feb 11, 2026', amount: '₹3,540', status: 'Paid' },
 ];
 
 export function InvoicesView() {
   return (
-    <div className="flex flex-col gap-[18px] px-7 pt-6 pb-10">
-      <Card className="border-dashed border-brand/30 bg-[#EEF0FF]/40">
-        <div className="flex items-start gap-3">
-          <Info size={18} className="mt-0.5 shrink-0 text-brand" />
-          <p className="text-sm font-medium text-slate-700">
-            Invoice history is coming soon. Sample rows below match the planned invoices screen.
-          </p>
-        </div>
-      </Card>
-
+    <PortalPageLayout
+      eyebrow="Billing records"
+      title="Tax invoices"
+      description="GST-compliant invoices for every charge. Download PDFs for your records or reimbursement."
+      illustration={<InvoicesPageIllustration />}
+      panelClassName="bg-gradient-to-br from-motivation via-amber to-[#E88A0C]"
+      glowClassName="bg-white/35"
+      highlights={[
+        { label: 'Invoices on file', value: '4' },
+        { label: 'Latest', value: 'May 11' },
+        { label: 'Billing type', value: 'Individual' },
+      ]}
+    >
       <Card>
-        <SectionHead title="GST billing details" subtitle="Used on all future tax invoices" />
+        <SectionHead title="GST billing details" subtitle="Issued on all tax invoices" />
         <div className="rounded-[14px] border border-slate-100 bg-canvas-cool p-4 text-sm text-slate-600">
-          <div className="font-bold text-slate-800">Individual billing</div>
-          <div className="mt-1">GST address management will be editable once the billing API is available.</div>
+          <div className="font-bold text-slate-800">Individual · no GSTIN</div>
+          <div className="mt-2 leading-relaxed">
+            Flat 304, Vasanth Apartments
+            <br />
+            14th Main, HSR Layout
+            <br />
+            Bengaluru, Karnataka 560102
+          </div>
+          <Button variant="light" size="sm" className="mt-4">
+            Edit billing address
+          </Button>
         </div>
       </Card>
 
@@ -41,7 +56,7 @@ export function InvoicesView() {
                 <th className="px-4 py-3">Invoice</th>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -51,11 +66,11 @@ export function InvoicesView() {
                   <td className="px-4 py-3 font-medium text-slate-800">{inv.id}</td>
                   <td className="px-4 py-3 text-slate-700">{inv.date}</td>
                   <td className="px-4 py-3 text-slate-700">{inv.amount}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-right">
                     <Pill tone="success">{inv.status}</Pill>
                   </td>
-                  <td className="px-4 py-3">
-                    <Button variant="light" size="sm" disabled leftIcon={<Download size={14} />}>
+                  <td className="px-4 py-3 text-right">
+                    <Button variant="light" size="sm" leftIcon={<Download size={14} />}>
                       PDF
                     </Button>
                   </td>
@@ -65,11 +80,6 @@ export function InvoicesView() {
           </table>
         </div>
       </Card>
-
-      <Card className="flex items-center gap-3 border-dashed">
-        <Receipt size={20} className="text-brand" />
-        <p className="text-sm text-slate-600">PDF downloads will connect to the billing API in a future release.</p>
-      </Card>
-    </div>
+    </PortalPageLayout>
   );
 }
