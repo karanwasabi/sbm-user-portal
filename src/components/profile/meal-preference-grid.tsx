@@ -1,20 +1,19 @@
 'use client';
 
-import { Drumstick, Egg, Leaf, Salad, type LucideIcon } from 'lucide-react';
-import { ChoiceCard } from '@/components/ui/choice-card';
+import { Check, Drumstick, Egg, Leaf, Salad, type LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { fieldShell } from '@/lib/field-shell';
 import type { MealPreference } from '@/types/profile';
 
 const MEAL_CARD_OPTIONS: {
   value: MealPreference;
   label: string;
   icon: LucideIcon;
-  accent: string;
-  accentInk: string;
 }[] = [
-  { value: 'vegan', label: 'Vegan', icon: Leaf, accent: '#10B981', accentInk: '#059669' },
-  { value: 'veg', label: 'Vegetarian', icon: Salad, accent: '#F97316', accentInk: '#EA580C' },
-  { value: 'veg_egg', label: 'Veg + eggs', icon: Egg, accent: '#F59E0B', accentInk: '#D97706' },
-  { value: 'non_veg', label: 'Non-veg', icon: Drumstick, accent: '#EF4444', accentInk: '#DC2626' },
+  { value: 'vegan', label: 'Vegan', icon: Leaf },
+  { value: 'veg', label: 'Vegetarian', icon: Salad },
+  { value: 'veg_egg', label: 'Veg + eggs', icon: Egg },
+  { value: 'non_veg', label: 'Non-veg', icon: Drumstick },
 ];
 
 type MealPreferenceGridProps = {
@@ -30,20 +29,33 @@ export function MealPreferenceGrid({ value, onChange, disabled }: MealPreference
         const Icon = option.icon;
         const selected = value === option.value;
         return (
-          <ChoiceCard
+          <button
             key={option.value}
+            type="button"
             role="radio"
             aria-checked={selected}
-            selected={selected}
             disabled={disabled}
-            accent={option.accent}
-            accentInk={option.accentInk}
-            onSelect={() => onChange(option.value)}
-            className="flex min-h-[96px] flex-col items-center justify-center gap-2 rounded-2xl px-3 py-4 text-center"
+            onClick={() => onChange(option.value)}
+            className={cn(
+              'relative flex min-h-[96px] flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] px-3 py-4 text-center transition-all duration-120',
+              fieldShell.focusRing,
+              disabled && fieldShell.disabled,
+              !disabled && selected && fieldShell.selected,
+              !disabled && !selected && cn(fieldShell.default, fieldShell.hover, 'text-slate-800')
+            )}
           >
-            <Icon size={28} strokeWidth={selected ? 2.25 : 1.75} />
-            <span className="text-sm font-bold">{option.label}</span>
-          </ChoiceCard>
+            {selected ? (
+              <Check size={14} className="absolute top-2.5 right-2.5 text-brand" strokeWidth={2.5} aria-hidden />
+            ) : null}
+            <Icon
+              size={26}
+              strokeWidth={selected ? 2.25 : 1.75}
+              className={selected ? 'text-brand' : 'text-slate-400'}
+            />
+            <span className={cn('text-sm font-bold', selected ? 'text-slate-900' : 'text-slate-700')}>
+              {option.label}
+            </span>
+          </button>
         );
       })}
     </div>

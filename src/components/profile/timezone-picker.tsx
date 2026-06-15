@@ -1,15 +1,16 @@
 'use client';
 
-import { Globe, Search } from 'lucide-react';
+import { ChevronDown, Globe, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   filterOnboardingTimezoneGroups,
   getOnboardingTimezoneGroups,
   resolveOnboardingTimezoneId,
 } from '@/domain/onboarding-timezones';
-import { ChoiceCard } from '@/components/ui/choice-card';
+import { ListOption } from '@/components/ui/list-option';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/cn';
+import { fieldShell } from '@/lib/field-shell';
 import { normalizeProfileTimezoneForDb } from '@/lib/profile-timezone';
 import { useDismissiblePanel } from '@/lib/use-dismissible-panel';
 
@@ -28,6 +29,7 @@ export function TimezonePicker({ value, onChange, disabled = false }: TimezonePi
 
   const resolvedSelectionId = value ? resolveOnboardingTimezoneId(value) : '';
   const filtered = useMemo(() => filterOnboardingTimezoneGroups(groups, query), [groups, query]);
+  const active = open || triggerFocused;
 
   const selectedLabel = useMemo(() => {
     if (!resolvedSelectionId) return '';
@@ -58,21 +60,27 @@ export function TimezonePicker({ value, onChange, disabled = false }: TimezonePi
         onFocus={() => setTriggerFocused(true)}
         onBlur={() => setTriggerFocused(false)}
         className={cn(
-          'flex w-full items-center rounded-2xl border-[1.5px] bg-white px-4 py-3.25 text-left text-sm font-medium transition-all duration-120',
-          disabled ? 'cursor-not-allowed bg-slate-50 text-slate-400' : 'cursor-pointer text-slate-800',
-          triggerFocused ? 'border-brand' : 'border-slate-200'
+          'flex w-full items-center px-4 py-3.25 text-left text-sm font-medium transition-all duration-120',
+          fieldShell.base,
+          fieldShell.focusRing,
+          disabled ? fieldShell.disabled : active ? fieldShell.focused : fieldShell.default,
+          !disabled && 'cursor-pointer text-slate-800'
         )}
       >
-        <Globe size={16} className="mr-2.5 shrink-0 text-slate-400" />
+        <Globe size={16} className={cn('mr-2.5 shrink-0', active ? 'text-brand' : 'text-slate-400')} />
         <span className={cn('min-w-0 flex-1 truncate', !selectedLabel && 'text-slate-400')}>
           {selectedLabel || 'Select timezone'}
         </span>
+        <ChevronDown
+          size={16}
+          className={cn('ml-2 shrink-0 text-slate-400 transition-transform', open && 'rotate-180')}
+        />
       </button>
 
       {open && !disabled ? (
         <div
           {...panelProps}
-          className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+          className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_40px_-12px_rgba(15,23,42,0.18)]"
         >
           <div className="border-b border-slate-100 p-3">
             <TextInput
@@ -83,7 +91,7 @@ export function TimezonePicker({ value, onChange, disabled = false }: TimezonePi
               autoFocus
             />
           </div>
-          <ul ref={listRef} className="max-h-72 overflow-y-auto p-2">
+          <ul ref={listRef} className="max-h-72 overflow-y-auto p-1.5">
             {filtered.length === 0 ? (
               <li className="px-3 py-4 text-center text-sm text-slate-500">No timezones match your search.</li>
             ) : (
@@ -91,40 +99,34 @@ export function TimezonePicker({ value, onChange, disabled = false }: TimezonePi
                 const selected = resolvedSelectionId !== '' && group.ids.includes(resolvedSelectionId);
                 const pickedId = group.ids.includes(resolvedSelectionId) ? resolvedSelectionId : group.ids[0]!;
                 return (
-                  <li key={group.key} className="py-0.5">
-                    <ChoiceCard
+                  <li key={group.key}>
+                    <ListOption
                       role="option"
                       aria-selected={selected}
                       selected={selected}
-                      accent="var(--sbm-brand)"
-                      accentInk="var(--sbm-brand-press)"
                       onSelect={() => {
                         const canonical = normalizeProfileTimezoneForDb(pickedId);
                         if (canonical) onChange(canonical);
                         setOpen(false);
                         setQuery('');
                       }}
-                      className="rounded-xl px-3 py-3"
+                      className="py-3"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-bold">{group.title}</div>
-                          <div
-                            className={cn('mt-0.5 text-xs font-medium', selected ? 'text-white/80' : 'text-slate-500')}
-                          >
-                            {group.regionLabel}
-                          </div>
+                          <div className={cn('text-sm font-semibold', selected && 'text-brand')}>{group.title}</div>
+                          <div className="mt-0.5 text-xs font-medium text-slate-500">{group.regionLabel}</div>
                         </div>
                         <span
                           className={cn(
                             'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tracking-wide',
-                            selected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                            selected ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-600'
                           )}
                         >
                           {group.offsetStr}
                         </span>
                       </div>
-                    </ChoiceCard>
+                    </ListOption>
                   </li>
                 );
               })

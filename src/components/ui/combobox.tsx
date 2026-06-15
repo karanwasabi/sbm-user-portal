@@ -2,9 +2,10 @@
 
 import { ChevronDown, Search } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { ChoiceCard } from '@/components/ui/choice-card';
+import { ListOption } from '@/components/ui/list-option';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/cn';
+import { fieldShell } from '@/lib/field-shell';
 import { useDismissiblePanel } from '@/lib/use-dismissible-panel';
 
 export type ComboboxOption = {
@@ -43,6 +44,60 @@ function highlightMatch(text: string, query: string) {
       </mark>
       {text.slice(idx + query.length)}
     </>
+  );
+}
+
+function TriggerShell({
+  disabled,
+  open,
+  focused,
+  leftIcon,
+  children,
+  onClick,
+  onKeyDown,
+  onFocus,
+  onBlur,
+  triggerProps,
+}: {
+  disabled: boolean;
+  open: boolean;
+  focused: boolean;
+  leftIcon?: ReactNode;
+  children: ReactNode;
+  onClick: () => void;
+  onKeyDown: (event: React.KeyboardEvent) => void;
+  onFocus: () => void;
+  onBlur: () => void;
+  triggerProps: Record<string, unknown>;
+}) {
+  const active = open || focused;
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      {...triggerProps}
+      onClick={onClick}
+      onKeyDown={onKeyDown}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      className={cn(
+        'flex w-full items-center px-4 py-3.25 text-left text-sm font-medium transition-all duration-120',
+        fieldShell.base,
+        fieldShell.focusRing,
+        disabled ? fieldShell.disabled : active ? fieldShell.focused : fieldShell.default,
+        !disabled && 'cursor-pointer text-slate-800'
+      )}
+    >
+      {leftIcon ? (
+        <span className={cn('mr-2.5 shrink-0', active ? 'text-brand' : 'text-slate-400')}>{leftIcon}</span>
+      ) : null}
+      {children}
+      <ChevronDown
+        size={16}
+        className={cn('ml-2 shrink-0 text-slate-400 transition-transform', open && 'rotate-180')}
+      />
+    </button>
   );
 }
 
@@ -123,6 +178,9 @@ export function Combobox({
     }
   };
 
+  const panelClassName =
+    'absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_40px_-12px_rgba(15,23,42,0.18)]';
+
   if (allowFreeText) {
     return (
       <div ref={rootRef} className={cn('relative', className)}>
@@ -136,42 +194,28 @@ export function Combobox({
           onKeyDown={onSearchKeyDown}
         />
         {open && !disabled ? (
-          <div
-            {...panelProps}
-            className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
-          >
+          <div {...panelProps} className={panelClassName}>
             {loading ? (
               <p className="px-4 py-3 text-sm text-slate-500">Loading suggestions…</p>
             ) : filtered.length === 0 ? (
               <p className="px-4 py-3 text-sm text-slate-500">{emptyMessage}</p>
             ) : (
-              <ul ref={listRef} className="max-h-60 overflow-y-auto p-2">
+              <ul ref={listRef} className="max-h-60 overflow-y-auto p-1.5">
                 {filtered.map((option, index) => (
-                  <li key={option.value} className="py-0.5">
-                    <ChoiceCard
-                      role="option"
+                  <li key={option.value}>
+                    <ListOption
                       aria-selected={value === option.value}
                       selected={value === option.value}
-                      accent="var(--sbm-brand)"
-                      accentInk="var(--sbm-brand-press)"
+                      focused={focusedIndex === index}
                       onSelect={() => selectOption(option)}
-                      className={cn(
-                        'rounded-xl px-3 py-2.5 text-sm font-semibold',
-                        focusedIndex === index && 'ring-2 ring-brand/30'
-                      )}
                     >
-                      <span>{highlightMatch(option.label, query || (freeTextValue ?? ''))}</span>
+                      <span className="text-sm font-semibold">
+                        {highlightMatch(option.label, query || (freeTextValue ?? ''))}
+                      </span>
                       {option.subtitle ? (
-                        <span
-                          className={cn(
-                            'mt-0.5 block text-xs font-medium',
-                            value === option.value ? 'text-white/80' : 'text-slate-500'
-                          )}
-                        >
-                          {option.subtitle}
-                        </span>
+                        <span className="mt-0.5 block text-xs font-medium text-slate-500">{option.subtitle}</span>
                       ) : null}
-                    </ChoiceCard>
+                    </ListOption>
                   </li>
                 ))}
               </ul>
@@ -184,35 +228,24 @@ export function Combobox({
 
   return (
     <div ref={rootRef} className={cn('relative', className)}>
-      <button
-        type="button"
+      <TriggerShell
         disabled={disabled}
-        {...triggerProps}
+        open={open}
+        focused={triggerFocused}
+        leftIcon={leftIcon}
+        triggerProps={triggerProps}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={onTriggerKeyDown}
         onFocus={() => setTriggerFocused(true)}
         onBlur={() => setTriggerFocused(false)}
-        className={cn(
-          'flex w-full items-center rounded-2xl border-[1.5px] bg-white px-4 py-3.25 text-left text-sm font-medium transition-all duration-120',
-          disabled ? 'cursor-not-allowed bg-slate-50 text-slate-400' : 'cursor-pointer text-slate-800',
-          triggerFocused ? 'border-brand' : 'border-slate-200'
-        )}
       >
-        {leftIcon ? <span className="mr-2.5 shrink-0 text-slate-400">{leftIcon}</span> : null}
         <span className={cn('min-w-0 flex-1 truncate', !displayLabel && 'text-slate-400')}>
           {displayLabel || placeholder}
         </span>
-        <ChevronDown
-          size={16}
-          className={cn('ml-2 shrink-0 text-slate-400 transition-transform', open && 'rotate-180')}
-        />
-      </button>
+      </TriggerShell>
 
       {open && !disabled ? (
-        <div
-          {...panelProps}
-          className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
-        >
+        <div {...panelProps} className={panelClassName}>
           <div className="border-b border-slate-100 p-3">
             <TextInput
               value={query}
@@ -228,30 +261,20 @@ export function Combobox({
           ) : filtered.length === 0 ? (
             <p className="px-4 py-3 text-sm text-slate-500">{emptyMessage}</p>
           ) : (
-            <ul ref={listRef} className="max-h-72 overflow-y-auto p-2">
+            <ul ref={listRef} className="max-h-72 overflow-y-auto p-1.5">
               {filtered.map((option, index) => (
-                <li key={option.value} className="py-0.5">
-                  <ChoiceCard
-                    role="option"
+                <li key={option.value}>
+                  <ListOption
                     aria-selected={value === option.value}
                     selected={value === option.value}
-                    accent="var(--sbm-brand)"
-                    accentInk="var(--sbm-brand-press)"
+                    focused={focusedIndex === index}
                     onSelect={() => selectOption(option)}
-                    className={cn('rounded-xl px-3 py-2.5', focusedIndex === index && 'ring-2 ring-brand/30')}
                   >
-                    <div className="text-sm font-bold">{highlightMatch(option.label, query)}</div>
+                    <div className="text-sm font-semibold">{highlightMatch(option.label, query)}</div>
                     {option.subtitle ? (
-                      <div
-                        className={cn(
-                          'mt-0.5 text-xs font-medium',
-                          value === option.value ? 'text-white/80' : 'text-slate-500'
-                        )}
-                      >
-                        {option.subtitle}
-                      </div>
+                      <div className="mt-0.5 text-xs font-medium text-slate-500">{option.subtitle}</div>
                     ) : null}
-                  </ChoiceCard>
+                  </ListOption>
                 </li>
               ))}
             </ul>
