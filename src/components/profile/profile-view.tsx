@@ -1,11 +1,27 @@
 'use client';
 
-import { Cake, Calendar, Globe, Lock, Mail, MessageCircle, Phone, Receipt, Sparkles } from 'lucide-react';
+import {
+  Cake,
+  Calendar,
+  Globe,
+  Loader2,
+  Lock,
+  Mail,
+  MessageCircle,
+  Phone,
+  Receipt,
+  Sparkles,
+  UserRound,
+  Utensils,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
+import { loadCountryCities, updateProfile } from '@/app/(portal)/profile/actions';
 import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
 import { ProfilePageIllustration } from '@/components/layout/portal/portal-page-illustrations';
+import { CityInput } from '@/components/profile/city-input';
+import { TimezonePicker } from '@/components/profile/timezone-picker';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,18 +29,123 @@ import { Eyebrow } from '@/components/ui/eyebrow';
 import { Field } from '@/components/ui/field';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
+import { SelectInput } from '@/components/ui/select-input';
 import { TextInput } from '@/components/ui/text-input';
-import { getFullName, getInitials } from '@/types/profile';
+import { formatTimezoneLabel } from '@/lib/profile-timezone';
+import {
+  getFullName,
+  getInitials,
+  MEAL_OPTIONS,
+  SEX_OPTIONS,
+  type MealPreference,
+  type Sex,
+  type UpdateProfileState,
+} from '@/types/profile';
+import type { Country, CountryCity } from '@/types/reference';
 
-export function ProfileView() {
+const initialState: UpdateProfileState = { error: null, success: false };
+
+type ProfileViewProps = {
+  countries: Country[];
+};
+
+export function ProfileView({ countries }: ProfileViewProps) {
   const router = useRouter();
   const { profile } = usePortalProfile();
+  const [state, formAction, pending] = useActionState(updateProfile, initialState);
+  const [, startTransition] = useTransition();
 
   const [firstName, setFirstName] = useState(profile?.first_name ?? '');
   const [lastName, setLastName] = useState(profile?.last_name ?? '');
+  const [dateOfBirth, setDateOfBirth] = useState(profile?.date_of_birth ?? '');
+  const [sex, setSex] = useState<Sex | ''>(profile?.sex ?? '');
+  const [timezoneId, setTimezoneId] = useState(profile?.timezone_id ?? '');
+  const [countryCode, setCountryCode] = useState(profile?.country_code ?? '');
+  const [city, setCity] = useState(profile?.city ?? '');
+  const [mealPreference, setMealPreference] = useState<MealPreference | ''>(profile?.meal_preference ?? '');
+  const [whatsapp, setWhatsapp] = useState(profile?.whatsapp ?? '');
+  const [citySuggestions, setCitySuggestions] = useState<CountryCity[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+
   const email = profile?.email ?? '';
   const fullName = profile ? getFullName(profile) : 'Member';
   const initials = profile ? getInitials(profile) : 'SB';
+
+  const countryOptions = useMemo(() => countries.map((c) => ({ value: c.iso_code, label: c.name })), [countries]);
+
+  const timezoneHighlight = timezoneId
+    ? (formatTimezoneLabel(timezoneId).split(' (')[1]?.replace(')', '') ?? 'Set')
+    : 'Not set';
+
+  useEffect(() => {
+    if (!profile) return;
+    setFirstName(profile.first_name ?? '');
+    setLastName(profile.last_name ?? '');
+    setDateOfBirth(profile.date_of_birth ?? '');
+    setSex(profile.sex ?? '');
+    setTimezoneId(profile.timezone_id ?? '');
+    setCountryCode(profile.country_code ?? '');
+    setCity(profile.city ?? '');
+    setMealPreference(profile.meal_preference ?? '');
+    setWhatsapp(profile.whatsapp ?? '');
+  }, [profile]);
+
+  useEffect(() => {
+    if (!state.success) return;
+    startTransition(() => router.refresh());
+  }, [state.success, router, startTransition]);
+
+  useEffect(() => {
+    if (!countryCode) {
+      setCitySuggestions([]);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingCities(true);
+    loadCountryCities(countryCode)
+      .then((rows) => {
+        if (!cancelled) setCitySuggestions(rows);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCities(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [countryCode]);
+
+  const handleCountryChange = (code: string) => {
+    setCountryCode(code);
+    const country = countries.find((c) => c.iso_code === code);
+    if (country?.default_timezone_id) {
+      setTimezoneId(country.default_timezone_id);
+    }
+  };
+
+  const handleCitySuggestion = (entry: CountryCity) => {
+    if (entry.timezone_id) {
+      setTimezoneId(entry.timezone_id);
+      return;
+    }
+    const country = countries.find((c) => c.iso_code === countryCode);
+    if (country?.default_timezone_id) {
+      setTimezoneId(country.default_timezone_id);
+    }
+  };
+
+  const resetForm = () => {
+    setFirstName(profile?.first_name ?? '');
+    setLastName(profile?.last_name ?? '');
+    setDateOfBirth(profile?.date_of_birth ?? '');
+    setSex(profile?.sex ?? '');
+    setTimezoneId(profile?.timezone_id ?? '');
+    setCountryCode(profile?.country_code ?? '');
+    setCity(profile?.city ?? '');
+    setMealPreference(profile?.meal_preference ?? '');
+    setWhatsapp(profile?.whatsapp ?? '');
+  };
 
   const [notif, setNotif] = useState({
     coachWa: true,
@@ -45,7 +166,7 @@ export function ProfileView() {
       highlights={[
         { label: 'Status', value: 'Active' },
         { label: 'Member since', value: 'Sep 2025' },
-        { label: 'Timezone', value: 'IST' },
+        { label: 'Timezone', value: timezoneHighlight },
       ]}
     >
       <Card>
@@ -74,52 +195,121 @@ export function ProfileView() {
 
       <Card>
         <SectionHead title="Personal details" subtitle="Used to personalise your program experience." />
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-          <Field label="First name">
-            <TextInput value={firstName} onChange={setFirstName} placeholder="First name" />
-          </Field>
-          <Field label="Last name">
-            <TextInput value={lastName} onChange={setLastName} placeholder="Last name" />
-          </Field>
-          <Field label="Email" hint="Used to sign in. Contact support to change.">
-            <TextInput
-              value={email}
-              onChange={() => {}}
-              disabled
-              leftIcon={<Mail size={16} className="text-slate-400" />}
-            />
-          </Field>
-          <Field label="Date of birth">
-            <TextInput
-              value="1991-04-12"
-              onChange={() => {}}
-              type="date"
-              leftIcon={<Cake size={16} className="text-slate-400" />}
-            />
-          </Field>
-          <Field label="Timezone">
-            <TextInput
-              value="Asia/Kolkata (GMT+05:30)"
-              onChange={() => {}}
-              leftIcon={<Globe size={16} className="text-slate-400" />}
-            />
-          </Field>
-          <Field label="Mobile (WhatsApp)" hint="Your coach uses this number.">
-            <TextInput
-              value="+91 98765 43210"
-              onChange={() => {}}
-              leftIcon={<Phone size={16} className="text-slate-400" />}
-            />
-          </Field>
-        </div>
-        <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
-          <Button variant="ghost" size="md">
-            Discard
-          </Button>
-          <Button variant="primary" size="md">
-            Save changes
-          </Button>
-        </div>
+        <form action={formAction}>
+          <input type="hidden" name="timezoneId" value={timezoneId} />
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+            <Field label="First name">
+              <TextInput
+                name="firstName"
+                value={firstName}
+                onChange={setFirstName}
+                placeholder="First name"
+                disabled={pending}
+              />
+            </Field>
+            <Field label="Last name">
+              <TextInput
+                name="lastName"
+                value={lastName}
+                onChange={setLastName}
+                placeholder="Last name"
+                disabled={pending}
+              />
+            </Field>
+            <Field label="Email" hint="Used to sign in. Contact support to change.">
+              <TextInput
+                value={email}
+                onChange={() => {}}
+                disabled
+                leftIcon={<Mail size={16} className="text-slate-400" />}
+              />
+            </Field>
+            <Field label="Date of birth">
+              <TextInput
+                name="dateOfBirth"
+                value={dateOfBirth}
+                onChange={setDateOfBirth}
+                type="date"
+                disabled={pending}
+                leftIcon={<Cake size={16} className="text-slate-400" />}
+              />
+            </Field>
+            <Field label="Sex">
+              <SelectInput
+                value={sex}
+                onChange={(v) => setSex(v as Sex)}
+                options={SEX_OPTIONS}
+                placeholder="Select sex"
+                leftIcon={<UserRound size={16} />}
+                disabled={pending}
+              />
+              <input type="hidden" name="sex" value={sex} />
+            </Field>
+            <Field label="Meal preference">
+              <SelectInput
+                value={mealPreference}
+                onChange={(v) => setMealPreference(v as MealPreference)}
+                options={MEAL_OPTIONS}
+                placeholder="Select meal preference"
+                leftIcon={<Utensils size={16} />}
+                disabled={pending}
+              />
+              <input type="hidden" name="mealPreference" value={mealPreference} />
+            </Field>
+            <Field label="Country">
+              <SelectInput
+                value={countryCode}
+                onChange={handleCountryChange}
+                options={countryOptions}
+                placeholder="Select country"
+                leftIcon={<Globe size={16} />}
+                disabled={pending}
+              />
+              <input type="hidden" name="countryCode" value={countryCode} />
+            </Field>
+            <Field label="City" hint={loadingCities ? 'Loading suggestions…' : 'Start typing or pick a suggestion.'}>
+              <CityInput
+                value={city}
+                onChange={setCity}
+                suggestions={citySuggestions}
+                onSuggestionSelect={handleCitySuggestion}
+                disabled={pending}
+              />
+              <input type="hidden" name="city" value={city} />
+            </Field>
+            <Field label="Timezone" className="sm:col-span-2">
+              <TimezonePicker value={timezoneId} onChange={setTimezoneId} disabled={pending} />
+            </Field>
+            <Field label="Mobile (WhatsApp)" hint="Your coach uses this number." className="sm:col-span-2">
+              <TextInput
+                name="whatsapp"
+                value={whatsapp}
+                onChange={setWhatsapp}
+                disabled={pending}
+                leftIcon={<Phone size={16} className="text-slate-400" />}
+              />
+            </Field>
+          </div>
+
+          {state.error ? <p className="mt-3 text-sm font-medium text-danger-press">{state.error}</p> : null}
+          {state.success ? <p className="mt-3 text-sm font-medium text-emerald-600">Profile saved.</p> : null}
+
+          <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <Button type="button" variant="ghost" size="md" onClick={resetForm} disabled={pending}>
+              Discard
+            </Button>
+            <Button type="submit" variant="primary" size="md" disabled={pending}>
+              {pending ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                'Save changes'
+              )}
+            </Button>
+          </div>
+        </form>
       </Card>
 
       <Card>

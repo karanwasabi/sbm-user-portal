@@ -1,4 +1,5 @@
-import { getBackendUrl, type Profile } from '@/types/profile';
+import { getBackendUrl, type Profile, type ProfilePatch } from '@/types/profile';
+import type { Country, CountryCity } from '@/types/reference';
 import { createClient } from '@/utils/supabase/server';
 
 export class ProfileFetchError extends Error {
@@ -41,7 +42,7 @@ export async function apiFetch(path: string, init?: RequestInit) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  if (!headers.has('Content-Type')) {
+  if (!headers.has('Content-Type') && init?.body) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -52,23 +53,15 @@ export async function apiFetch(path: string, init?: RequestInit) {
   });
 }
 
-export async function getLatestProfile(): Promise<Profile> {
+async function requireApiFetch(path: string, init?: RequestInit): Promise<Response> {
   const token = await getAccessToken();
-
   if (!token) {
     throw new ProfileFetchError('Not authenticated.', 401);
   }
 
   let response: Response;
-
   try {
-    response = await fetch(`${getBackendUrl()}/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
+    response = await apiFetch(path, init);
   } catch {
     throw new ProfileFetchError('Could not reach the backend. Is it running?', 503);
   }
@@ -76,6 +69,12 @@ export async function getLatestProfile(): Promise<Profile> {
   if (response.status === 401 || response.status === 403) {
     throw new ProfileFetchError('The backend rejected your session token.', response.status);
   }
+
+  return response;
+}
+
+export async function getLatestProfile(): Promise<Profile> {
+  const response = await requireApiFetch('/me');
 
   if (response.status === 404) {
     throw new ProfileFetchError('No profile found for your account.', 404);
@@ -87,4 +86,34 @@ export async function getLatestProfile(): Promise<Profile> {
   }
 
   return response.json() as Promise<Profile>;
+}
+
+export async function patchProfile(body: ProfilePatch): Promise<Profile> {
+  const response = await requireApiFetch('/me', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ProfileFetchError(payload?.error ?? `Failed to update profile (${response.status})`, response.status);
+  }
+
+  return response.json() as Promise<Profile>;
+}
+
+export async function fetchCountries(): Promise<Country[]> {
+  const response = await requireApiFetch('/reference/countries');
+  if (!response.ok) {
+    throw new ProfileFetchError('Failed to load countries.', response.status);
+  }
+  return response.json() as Promise<Country[]>;
+}
+
+export async function fetchCountryCities(countryCode: string): Promise<CountryCity[]> {
+  const response = await requireApiFetch(`/reference/countries/${encodeURIComponent(countryCode)}/cities`);
+  if (!response.ok) {
+    throw new ProfileFetchError('Failed to load cities.', response.status);
+  }
+  return response.json() as Promise<CountryCity[]>;
 }

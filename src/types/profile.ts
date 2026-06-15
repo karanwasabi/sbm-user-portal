@@ -1,8 +1,35 @@
+export type Sex = 'female' | 'male' | 'others';
+export type MealPreference = 'vegan' | 'veg' | 'veg_egg' | 'non_veg';
+
 export type Profile = {
   id: string;
   email: string;
   first_name: string | null;
   last_name: string | null;
+  date_of_birth: string | null;
+  sex: Sex | null;
+  timezone_id: string | null;
+  country_code: string | null;
+  city: string | null;
+  meal_preference: MealPreference | null;
+  whatsapp: string | null;
+};
+
+export type ProfilePatch = Partial<{
+  first_name: string;
+  last_name: string;
+  date_of_birth: string;
+  sex: Sex;
+  timezone_id: string;
+  country_code: string;
+  city: string;
+  meal_preference: MealPreference;
+  whatsapp: string;
+}>;
+
+export type UpdateProfileState = {
+  error: string | null;
+  success: boolean;
 };
 
 export function getDisplayName(profile: Profile): string {
@@ -27,3 +54,16 @@ export function getInitials(profile: Profile): string {
 export function getBackendUrl(): string {
   return process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8080';
 }
+
+export const SEX_OPTIONS: { value: Sex; label: string }[] = [
+  { value: 'female', label: 'Female' },
+  { value: 'male', label: 'Male' },
+  { value: 'others', label: 'Others' },
+];
+
+export const MEAL_OPTIONS: { value: MealPreference; label: string }[] = [
+  { value: 'vegan', label: 'Vegan' },
+  { value: 'veg', label: 'Vegetarian' },
+  { value: 'veg_egg', label: 'Vegetarian (eggs)' },
+  { value: 'non_veg', label: 'Non-vegetarian' },
+];
