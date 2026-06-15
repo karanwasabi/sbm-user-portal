@@ -64,6 +64,6 @@ export const SEX_OPTIONS: { value: Sex; label: string }[] = [
 export const MEAL_OPTIONS: { value: MealPreference; label: string }[] = [
   { value: 'vegan', label: 'Vegan' },
   { value: 'veg', label: 'Vegetarian' },
-  { value: 'veg_egg', label: 'Vegetarian (eggs)' },
+  { value: 'veg_egg', label: 'Vegetarian + Eggs' },
   { value: 'non_veg', label: 'Non-vegetarian' },
 ];

@@ -9,8 +9,8 @@ import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout'
 import { ProfilePageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { CityCombobox } from '@/components/profile/city-combobox';
 import { CountryCombobox } from '@/components/profile/country-combobox';
-import { MealPreferenceGrid } from '@/components/profile/meal-preference-grid';
-import { SexSegmentedRadio } from '@/components/profile/sex-segmented-radio';
+import { MealPreferenceSelect } from '@/components/profile/meal-preference-select';
+import { SexSelect } from '@/components/profile/sex-select';
 import { TimezonePicker } from '@/components/profile/timezone-picker';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -217,8 +217,11 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 leftIcon={<Cake size={16} className="text-slate-400" />}
               />
             </Field>
-            <Field label="Sex" className="sm:col-span-2">
-              <SexSegmentedRadio value={sex} onChange={setSex} disabled={pending} />
+            <Field label="Sex">
+              <SexSelect value={sex} onChange={setSex} disabled={pending} />
+            </Field>
+            <Field label="Meal preference">
+              <MealPreferenceSelect value={mealPreference} onChange={setMealPreference} disabled={pending} />
             </Field>
             <Field label="Country">
               <CountryCombobox
@@ -237,9 +240,6 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 disabled={pending}
                 loading={loadingCities}
               />
-            </Field>
-            <Field label="Meal preference" className="sm:col-span-2">
-              <MealPreferenceGrid value={mealPreference} onChange={setMealPreference} disabled={pending} />
             </Field>
             <Field label="Timezone" className="sm:col-span-2">
               <TimezonePicker value={timezoneId} onChange={setTimezoneId} disabled={pending} />

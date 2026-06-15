@@ -23,6 +23,7 @@ type SearchableSelectProps = {
   disabled?: boolean;
   leftIcon?: ReactNode;
   className?: string;
+  searchable?: boolean;
 };
 
 export function SearchableSelect({
@@ -35,6 +36,7 @@ export function SearchableSelect({
   disabled,
   leftIcon,
   className,
+  searchable = true,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
 
@@ -61,7 +63,7 @@ export function SearchableSelect({
       </PopoverTrigger>
       <PopoverContent className="w-(--anchor-width) p-0" align="start">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          {searchable ? <CommandInput placeholder={searchPlaceholder} /> : null}
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>

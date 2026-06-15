@@ -49,7 +49,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
         autoComplete={autoComplete}
         autoFocus={autoFocus}
         aria-invalid={error || undefined}
-        className="px-2 py-3 text-sm font-medium"
+        className={cn('py-3 text-sm font-medium', leftIcon ? 'px-2' : 'px-3.5')}
       />
       {rightIcon ? (
         <InputGroupAddon align="inline-end" className="pr-3.5 text-muted-foreground">
