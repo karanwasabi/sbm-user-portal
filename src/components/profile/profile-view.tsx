@@ -2,7 +2,7 @@
 
 import { Cake, Calendar, Globe, Loader2, Lock, Mail, MessageCircle, Receipt, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useState, useTransition } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { loadCountryCities, updateProfile } from '@/app/(portal)/profile/actions';
 import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
@@ -21,11 +21,59 @@ import { Field } from '@/components/ui/field';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
 import { TextInput } from '@/components/ui/text-input';
+import { useToast } from '@/components/ui/toast';
 import { formatTimezoneLabel } from '@/lib/profile-timezone';
-import { getFullName, getInitials, type MealPreference, type Sex, type UpdateProfileState } from '@/types/profile';
+import {
+  getFullName,
+  getInitials,
+  type MealPreference,
+  type Profile,
+  type Sex,
+  type UpdateProfileState,
+} from '@/types/profile';
 import type { Country, CountryCity } from '@/types/reference';
 
 const initialState: UpdateProfileState = { error: null, success: false };
+
+type ProfileFormSnapshot = {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  sex: Sex | '';
+  timezoneId: string;
+  countryCode: string;
+  city: string;
+  mealPreference: MealPreference | '';
+  whatsapp: string;
+};
+
+function snapshotFromProfile(profile: Profile | null | undefined): ProfileFormSnapshot {
+  return {
+    firstName: profile?.first_name ?? '',
+    lastName: profile?.last_name ?? '',
+    dateOfBirth: profile?.date_of_birth ?? '',
+    sex: profile?.sex ?? '',
+    timezoneId: profile?.timezone_id ?? '',
+    countryCode: profile?.country_code ?? '',
+    city: profile?.city ?? '',
+    mealPreference: profile?.meal_preference ?? '',
+    whatsapp: profile?.whatsapp ?? '',
+  };
+}
+
+function snapshotsEqual(a: ProfileFormSnapshot, b: ProfileFormSnapshot): boolean {
+  return (
+    a.firstName === b.firstName &&
+    a.lastName === b.lastName &&
+    a.dateOfBirth === b.dateOfBirth &&
+    a.sex === b.sex &&
+    a.timezoneId === b.timezoneId &&
+    a.countryCode === b.countryCode &&
+    a.city === b.city &&
+    a.mealPreference === b.mealPreference &&
+    a.whatsapp === b.whatsapp
+  );
+}
 
 type ProfileViewProps = {
   countries: Country[];
@@ -34,6 +82,7 @@ type ProfileViewProps = {
 export function ProfileView({ countries }: ProfileViewProps) {
   const router = useRouter();
   const { profile } = usePortalProfile();
+  const { toast } = useToast();
   const [state, formAction, pending] = useActionState(updateProfile, initialState);
   const [, startTransition] = useTransition();
 
@@ -46,8 +95,11 @@ export function ProfileView({ countries }: ProfileViewProps) {
   const [city, setCity] = useState(profile?.city ?? '');
   const [mealPreference, setMealPreference] = useState<MealPreference | ''>(profile?.meal_preference ?? '');
   const [whatsapp, setWhatsapp] = useState(profile?.whatsapp ?? '');
+  const [savedSnapshot, setSavedSnapshot] = useState<ProfileFormSnapshot>(() => snapshotFromProfile(profile));
+  const [phoneSyncToken, setPhoneSyncToken] = useState(0);
   const [citySuggestions, setCitySuggestions] = useState<CountryCity[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
+  const formSnapshotRef = useRef<ProfileFormSnapshot>(snapshotFromProfile(profile));
 
   const email = profile?.email ?? '';
   const fullName = profile ? getFullName(profile) : 'Member';
@@ -59,21 +111,37 @@ export function ProfileView({ countries }: ProfileViewProps) {
 
   useEffect(() => {
     if (!profile) return;
-    setFirstName(profile.first_name ?? '');
-    setLastName(profile.last_name ?? '');
-    setDateOfBirth(profile.date_of_birth ?? '');
-    setSex(profile.sex ?? '');
-    setTimezoneId(profile.timezone_id ?? '');
-    setCountryCode(profile.country_code ?? '');
-    setCity(profile.city ?? '');
-    setMealPreference(profile.meal_preference ?? '');
-    setWhatsapp(profile.whatsapp ?? '');
+    const snapshot = snapshotFromProfile(profile);
+    setSavedSnapshot(snapshot);
+    setFirstName(snapshot.firstName);
+    setLastName(snapshot.lastName);
+    setDateOfBirth(snapshot.dateOfBirth);
+    setSex(snapshot.sex);
+    setTimezoneId(snapshot.timezoneId);
+    setCountryCode(snapshot.countryCode);
+    setCity(snapshot.city);
+    setMealPreference(snapshot.mealPreference);
+    setWhatsapp(snapshot.whatsapp);
   }, [profile]);
+
+  formSnapshotRef.current = {
+    firstName,
+    lastName,
+    dateOfBirth,
+    sex,
+    timezoneId,
+    countryCode,
+    city,
+    mealPreference,
+    whatsapp,
+  };
 
   useEffect(() => {
     if (!state.success) return;
+    setSavedSnapshot(formSnapshotRef.current);
+    toast({ message: 'Profile saved', variant: 'success' });
     startTransition(() => router.refresh());
-  }, [state.success, router, startTransition]);
+  }, [state, router, startTransition, toast]);
 
   useEffect(() => {
     if (!countryCode) {
@@ -116,16 +184,33 @@ export function ProfileView({ countries }: ProfileViewProps) {
   };
 
   const resetForm = () => {
-    setFirstName(profile?.first_name ?? '');
-    setLastName(profile?.last_name ?? '');
-    setDateOfBirth(profile?.date_of_birth ?? '');
-    setSex(profile?.sex ?? '');
-    setTimezoneId(profile?.timezone_id ?? '');
-    setCountryCode(profile?.country_code ?? '');
-    setCity(profile?.city ?? '');
-    setMealPreference(profile?.meal_preference ?? '');
-    setWhatsapp(profile?.whatsapp ?? '');
+    setFirstName(savedSnapshot.firstName);
+    setLastName(savedSnapshot.lastName);
+    setDateOfBirth(savedSnapshot.dateOfBirth);
+    setSex(savedSnapshot.sex);
+    setTimezoneId(savedSnapshot.timezoneId);
+    setCountryCode(savedSnapshot.countryCode);
+    setCity(savedSnapshot.city);
+    setMealPreference(savedSnapshot.mealPreference);
+    setWhatsapp(savedSnapshot.whatsapp);
+    setPhoneSyncToken((token) => token + 1);
   };
+
+  const isDirty = useMemo(() => {
+    const currentSnapshot: ProfileFormSnapshot = {
+      firstName,
+      lastName,
+      dateOfBirth,
+      sex,
+      timezoneId,
+      countryCode,
+      city,
+      mealPreference,
+      whatsapp,
+    };
+
+    return !snapshotsEqual(currentSnapshot, savedSnapshot);
+  }, [savedSnapshot, firstName, lastName, dateOfBirth, sex, timezoneId, countryCode, city, mealPreference, whatsapp]);
 
   const [notif, setNotif] = useState({
     coachWa: true,
@@ -249,6 +334,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 onChange={setWhatsapp}
                 countries={countries}
                 suggestedCountryIso={countryCode}
+                syncToken={phoneSyncToken}
                 disabled={pending}
               />
             </Field>
@@ -258,21 +344,16 @@ export function ProfileView({ countries }: ProfileViewProps) {
           </div>
 
           {state.error ? <p className="mt-3 text-sm font-medium text-danger-press">{state.error}</p> : null}
-          {state.success ? <p className="mt-3 text-sm font-medium text-emerald-600">Profile saved.</p> : null}
 
           <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
-            <Button type="button" variant="ghost" size="md" onClick={resetForm} disabled={pending}>
+            <Button type="button" variant="ghost" size="md" onClick={resetForm} disabled={pending || !isDirty}>
               Discard
             </Button>
-            <Button type="submit" variant="primary" size="md" disabled={pending}>
-              {pending ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                'Save changes'
-              )}
+            <Button type="submit" variant="primary" size="md" disabled={pending || !isDirty} aria-busy={pending}>
+              <span className="relative inline-flex items-center justify-center">
+                <span className={pending ? 'opacity-0' : undefined}>Save changes</span>
+                {pending ? <Loader2 size={16} className="absolute animate-spin" aria-hidden /> : null}
+              </span>
             </Button>
           </div>
         </form>

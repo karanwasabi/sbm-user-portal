@@ -36,7 +36,8 @@ export async function updateProfile(_prevState: UpdateProfileState, formData: Fo
   if (countryCode) patch.country_code = countryCode;
   if (city) patch.city = city;
   if (mealPreference) patch.meal_preference = mealPreference as MealPreference;
-  if (whatsapp) patch.whatsapp = whatsapp;
+  // Always include whatsapp: empty string clears the stored number.
+  patch.whatsapp = whatsapp;
 
   if (timezoneRaw) {
     const canonical = normalizeProfileTimezoneForDb(timezoneRaw);

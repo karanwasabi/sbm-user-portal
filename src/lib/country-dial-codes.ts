@@ -507,7 +507,7 @@ export function resolveIsoForDialCode(dialCode: string, preferredIso?: string): 
 export function normalizeDialCode(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return '';
-  const digits = trimmed.replace(/[^d+]/g, '');
+  const digits = trimmed.replace(/[^\d+]/g, '');
   if (!digits) return '';
   const withPlus = digits.startsWith('+') ? digits : `+${digits}`;
   return withPlus.replace(/(?!^)\+/g, '');

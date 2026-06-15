@@ -16,6 +16,8 @@ type PhoneInputProps = {
   countries: Country[];
   /** When the combined number is blank, auto-fill dial code from this country. */
   suggestedCountryIso?: string;
+  /** Bumped to force internal state to re-sync from `value` (e.g. form discard). */
+  syncToken?: number;
   name?: string;
   disabled?: boolean;
   className?: string;
@@ -38,11 +40,33 @@ function initialParts(value: string, suggestedCountryIso?: string) {
   return parsed;
 }
 
+function applyValueToParts(
+  value: string,
+  suggestedCountryIso: string | undefined,
+  setters: {
+    setDialCode: (v: string) => void;
+    setDialIso: (v: string) => void;
+    setNationalNumber: (v: string) => void;
+  },
+  refs: {
+    lastEmitted: { current: string };
+    lastSuggestedIso: { current: string | undefined };
+  }
+) {
+  refs.lastEmitted.current = value;
+  refs.lastSuggestedIso.current = suggestedCountryIso;
+  const next = initialParts(value, suggestedCountryIso);
+  setters.setDialCode(next.dialCode);
+  setters.setDialIso(next.dialIso);
+  setters.setNationalNumber(next.nationalNumber);
+}
+
 export function PhoneInput({
   value,
   onChange,
   countries,
   suggestedCountryIso,
+  syncToken,
   name,
   disabled,
   className,
@@ -53,8 +77,20 @@ export function PhoneInput({
   const [nationalNumber, setNationalNumber] = useState(initial.nationalNumber);
   const lastEmitted = useRef(value);
   const lastSuggestedIso = useRef(suggestedCountryIso);
+  const lastSyncToken = useRef(syncToken);
 
   useEffect(() => {
+    if (syncToken !== undefined && syncToken !== lastSyncToken.current) {
+      lastSyncToken.current = syncToken;
+      applyValueToParts(
+        value,
+        suggestedCountryIso,
+        { setDialCode, setDialIso, setNationalNumber },
+        { lastEmitted, lastSuggestedIso }
+      );
+      return;
+    }
+
     if (value === lastEmitted.current) {
       if (!value.trim() && suggestedCountryIso && suggestedCountryIso !== lastSuggestedIso.current) {
         lastSuggestedIso.current = suggestedCountryIso;
@@ -67,13 +103,18 @@ export function PhoneInput({
       return;
     }
 
+    // Parent has not applied a clear emit yet; avoid restoring a stale saved number.
+    if (!lastEmitted.current.trim() && value.trim()) {
+      return;
+    }
+
     lastEmitted.current = value;
     lastSuggestedIso.current = suggestedCountryIso;
     const next = initialParts(value, suggestedCountryIso);
     setDialCode(next.dialCode);
     setDialIso(next.dialIso);
     setNationalNumber(next.nationalNumber);
-  }, [value, suggestedCountryIso]);
+  }, [value, suggestedCountryIso, syncToken]);
 
   const digitHint = useMemo(() => getMobileDigitHint(dialIso), [dialIso]);
   const validationError = useMemo(() => {
@@ -86,12 +127,12 @@ export function PhoneInput({
     setDialCode(nextDial);
     setDialIso(nextIso);
     setNationalNumber(sanitized);
-    const combined = combineWhatsapp(nextDial, sanitized);
+    const combined = combineWhatsapp(nextDial, sanitized, nextIso);
     lastEmitted.current = combined;
     onChange(combined);
   };
 
-  const combinedValue = combineWhatsapp(dialCode, nationalNumber);
+  const combinedValue = combineWhatsapp(dialCode, nationalNumber, dialIso);
 
   return (
     <div className={cn('flex items-start gap-2', className)}>

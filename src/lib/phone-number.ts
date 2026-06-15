@@ -4,6 +4,7 @@ import {
   normalizeDialCode,
   resolveIsoForDialCode,
 } from '@/lib/country-dial-codes';
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js/mobile';
 
 export type ParsedPhone = {
   dialCode: string;
@@ -15,6 +16,13 @@ const DIAL_CODES_BY_LENGTH = Object.values(COUNTRY_DIAL_CODES)
   .filter((dial, index, all) => all.indexOf(dial) === index)
   .sort((a, b) => b.length - a.length);
 
+function asCountryCode(iso: string | undefined): CountryCode | null {
+  if (!iso) return null;
+  const code = iso.trim().toUpperCase();
+  if (code.length !== 2) return null;
+  return code as CountryCode;
+}
+
 export function parseWhatsapp(value: string, preferredIso?: string): ParsedPhone {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -23,17 +31,6 @@ export function parseWhatsapp(value: string, preferredIso?: string): ParsedPhone
 
   const compact = trimmed.replace(/[\s().-]/g, '');
   const withPlus = compact.startsWith('+') ? compact : `+${compact.replace(/^\+/, '')}`;
-
-  if (preferredIso) {
-    const preferredDial = getCountryDialCode(preferredIso);
-    if (preferredDial && withPlus.startsWith(preferredDial)) {
-      return {
-        dialCode: preferredDial,
-        dialIso: preferredIso.toUpperCase(),
-        nationalNumber: withPlus.slice(preferredDial.length).replace(/\D/g, ''),
-      };
-    }
-  }
 
   for (const dial of DIAL_CODES_BY_LENGTH) {
     if (!withPlus.startsWith(dial)) continue;
@@ -49,11 +46,28 @@ export function parseWhatsapp(value: string, preferredIso?: string): ParsedPhone
   return { dialCode: '', dialIso: '', nationalNumber: digitsOnly };
 }
 
-export function combineWhatsapp(dialCode: string, nationalNumber: string): string {
-  const dial = normalizeDialCode(dialCode);
+export function combineWhatsapp(dialCode: string, nationalNumber: string, dialIso?: string): string {
   const national = nationalNumber.replace(/\D/g, '');
   if (!national) return '';
+
+  const country = asCountryCode(dialIso);
+  if (country) {
+    const parsedNational = parsePhoneNumberFromString(national, country);
+    if (parsedNational?.isValid()) {
+      return parsedNational.format('E.164');
+    }
+  }
+
+  const dial = normalizeDialCode(dialCode);
   if (!dial) return national;
+
+  if (country) {
+    const parsedWithDial = parsePhoneNumberFromString(`${dial}${national}`, country);
+    if (parsedWithDial?.isValid()) {
+      return parsedWithDial.format('E.164');
+    }
+  }
+
   return `${dial}${national}`;
 }
 
