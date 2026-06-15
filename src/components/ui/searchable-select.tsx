@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 export type SearchableSelectOption = {
   value: string;
   label: string;
+  /** Label shown in the trigger when selected. Defaults to label. */
+  triggerLabel?: string;
   /** Text used for search ranking. Defaults to label only. */
   searchText?: string;
   subtitle?: ReactNode;
@@ -28,9 +30,12 @@ type SearchableSelectProps = {
   disabled?: boolean;
   leftIcon?: ReactNode;
   className?: string;
+  popoverClassName?: string;
   searchable?: boolean;
   /** When true, scrolls the selected option into view on open (before searching). */
   scrollToSelectedOnOpen?: boolean;
+  /** When true, focuses the search field when the dropdown opens. */
+  focusSearchOnOpen?: boolean;
 };
 
 export function SearchableSelect({
@@ -43,16 +48,20 @@ export function SearchableSelect({
   disabled,
   leftIcon,
   className,
+  popoverClassName,
   searchable = true,
   scrollToSelectedOnOpen = false,
+  focusSearchOnOpen = true,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(() => options.find((o) => o.value === value), [options, value]);
   const triggerIcon = selected?.icon ?? leftIcon;
+  const triggerLabel = selected?.triggerLabel ?? selected?.label;
 
   const visibleOptions = useMemo(() => {
     if (!searchable || !search.trim()) return options;
@@ -62,6 +71,12 @@ export function SearchableSelect({
   useEffect(() => {
     if (!open) setSearch('');
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !searchable || !focusSearchOnOpen) return;
+    const frame = requestAnimationFrame(() => searchRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open, searchable, focusSearchOnOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -94,17 +109,17 @@ export function SearchableSelect({
       >
         <span className="flex min-w-0 flex-1 items-center gap-2.5">
           {triggerIcon ? <span className="shrink-0 text-muted-foreground">{triggerIcon}</span> : null}
-          <span className="truncate">{selected?.label ?? placeholder}</span>
+          <span className="truncate">{triggerLabel ?? placeholder}</span>
         </span>
-        {selected?.rightLabel ? (
+        {selected?.rightLabel && !selected?.triggerLabel ? (
           <span className="ml-2 shrink-0 text-sm font-semibold text-primary tabular-nums">{selected.rightLabel}</span>
         ) : null}
         <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
       </PopoverTrigger>
-      <PopoverContent className="w-(--anchor-width) p-0" align="start">
+      <PopoverContent className={cn('w-(--anchor-width) p-0', popoverClassName)} align="start">
         <Command shouldFilter={false}>
           {searchable ? (
-            <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
+            <CommandInput ref={searchRef} placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
           ) : null}
           <CommandList ref={listRef}>
             <CommandEmpty>{emptyMessage}</CommandEmpty>

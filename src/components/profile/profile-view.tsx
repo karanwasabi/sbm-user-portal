@@ -1,6 +1,6 @@
 'use client';
 
-import { Cake, Calendar, Globe, Loader2, Lock, Mail, MessageCircle, Phone, Receipt, Sparkles } from 'lucide-react';
+import { Cake, Calendar, Globe, Loader2, Lock, Mail, MessageCircle, Receipt, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useState, useTransition } from 'react';
 import { loadCountryCities, updateProfile } from '@/app/(portal)/profile/actions';
@@ -10,6 +10,7 @@ import { ProfilePageIllustration } from '@/components/layout/portal/portal-page-
 import { CityCombobox } from '@/components/profile/city-combobox';
 import { CountryCombobox } from '@/components/profile/country-combobox';
 import { MealPreferenceSelect } from '@/components/profile/meal-preference-select';
+import { PhoneInput } from '@/components/profile/phone-input';
 import { SexSelect } from '@/components/profile/sex-select';
 import { TimezonePicker } from '@/components/profile/timezone-picker';
 import { Button } from '@/components/ui/button';
@@ -241,17 +242,18 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 loading={loadingCities}
               />
             </Field>
-            <Field label="Timezone" className="sm:col-span-2">
-              <TimezonePicker value={timezoneId} onChange={setTimezoneId} disabled={pending} />
-            </Field>
-            <Field label="Mobile (WhatsApp)" hint="Your coach uses this number." className="sm:col-span-2">
-              <TextInput
+            <Field label="Mobile (WhatsApp)">
+              <PhoneInput
                 name="whatsapp"
                 value={whatsapp}
                 onChange={setWhatsapp}
+                countries={countries}
+                suggestedCountryIso={countryCode}
                 disabled={pending}
-                leftIcon={<Phone size={16} className="text-slate-400" />}
               />
+            </Field>
+            <Field label="Timezone">
+              <TimezonePicker value={timezoneId} onChange={setTimezoneId} disabled={pending} />
             </Field>
           </div>
 
