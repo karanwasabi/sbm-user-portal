@@ -29,7 +29,7 @@ export function CountryFlag({ code, size = 'sm', className }: CountryFlagProps) 
       src={`/flags/4x3/${normalized}.svg`}
       alt=""
       aria-hidden
-      className={cn('shrink-0 rounded-sm object-cover', sizeClasses[size], className)}
+      className={cn('shrink-0 object-cover', sizeClasses[size], className)}
       onError={() => setFailed(true)}
     />
   );

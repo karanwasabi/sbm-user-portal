@@ -1,15 +1,16 @@
 'use client';
 
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { filterAndRankBySearch } from '@/lib/search-match';
 import { cn } from '@/lib/utils';
 
 export type SearchableSelectOption = {
   value: string;
   label: string;
-  /** Text used for cmdk filtering. Defaults to label only. */
+  /** Text used for search ranking. Defaults to label only. */
   searchText?: string;
   subtitle?: ReactNode;
   icon?: ReactNode;
@@ -41,9 +42,24 @@ export function SearchableSelect({
   searchable = true,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const listRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(() => options.find((o) => o.value === value), [options, value]);
   const triggerIcon = selected?.icon ?? leftIcon;
+
+  const visibleOptions = useMemo(() => {
+    if (!searchable || !search.trim()) return options;
+    return filterAndRankBySearch(options, search, (option) => option.searchText ?? option.label);
+  }, [options, search, searchable]);
+
+  useEffect(() => {
+    if (!open) setSearch('');
+  }, [open]);
+
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: 0 });
+  }, [search, visibleOptions.length]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -65,15 +81,17 @@ export function SearchableSelect({
         <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
       </PopoverTrigger>
       <PopoverContent className="w-(--anchor-width) p-0" align="start">
-        <Command>
-          {searchable ? <CommandInput placeholder={searchPlaceholder} /> : null}
-          <CommandList>
+        <Command shouldFilter={false}>
+          {searchable ? (
+            <CommandInput placeholder={searchPlaceholder} value={search} onValueChange={setSearch} />
+          ) : null}
+          <CommandList ref={listRef}>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
+              {visibleOptions.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.searchText ?? option.label}
+                  value={option.value}
                   onSelect={() => {
                     onChange(option.value);
                     setOpen(false);
