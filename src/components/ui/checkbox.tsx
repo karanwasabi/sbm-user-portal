@@ -1,7 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { cn } from '@/lib/cn';
 
 type CheckboxProps = {
@@ -11,14 +11,16 @@ type CheckboxProps = {
   className?: string;
   tabIndex?: number;
   disabled?: boolean;
+  inputRef?: Ref<HTMLButtonElement>;
 };
 
-export function Checkbox({ checked, onChange, label, className, tabIndex, disabled }: CheckboxProps) {
+export function Checkbox({ checked, onChange, label, className, tabIndex, disabled, inputRef }: CheckboxProps) {
   return (
     <label
       className={cn('flex cursor-pointer items-start gap-2.5', disabled && 'cursor-not-allowed opacity-60', className)}
     >
       <button
+        ref={inputRef}
         type="button"
         role="checkbox"
         aria-checked={checked}

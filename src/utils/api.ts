@@ -117,3 +117,18 @@ export async function fetchCountryCities(countryCode: string): Promise<CountryCi
   }
   return response.json() as Promise<CountryCity[]>;
 }
+
+export async function recordDpdpConsent(termsUrl: string, privacyUrl: string): Promise<void> {
+  const response = await requireApiFetch('/me/consents/dpdp', {
+    method: 'POST',
+    body: JSON.stringify({
+      terms_url: termsUrl,
+      privacy_url: privacyUrl,
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ProfileFetchError(payload?.error ?? `Failed to record consent (${response.status})`, response.status);
+  }
+}

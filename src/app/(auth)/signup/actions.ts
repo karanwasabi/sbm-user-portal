@@ -1,26 +1,31 @@
 'use server';
 
 import { buildProfilePatch } from '@/lib/profile-form';
+import { DPDP_PRIVACY_URL, DPDP_TERMS_URL } from '@/lib/dpdp-consent';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-requirements';
 import type { CreateAccountState, CompleteRegistrationState } from '@/types/signup';
 import type { Country } from '@/types/reference';
-import { fetchCountries, patchProfile, ProfileFetchError } from '@/utils/api';
+import { fetchCountries, patchProfile, ProfileFetchError, recordDpdpConsent } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
 export async function createAccount(_prevState: CreateAccountState, formData: FormData): Promise<CreateAccountState> {
   const email = String(formData.get('email') ?? '').trim();
   const password = String(formData.get('password') ?? '');
   const confirmPassword = String(formData.get('confirmPassword') ?? '');
+  const dpdpConsent = formData.get('dpdpConsent') === 'true';
 
   const errorFields: CreateAccountState['errorFields'] = [];
 
   if (!email) errorFields.push('email');
   if (!password) errorFields.push('password');
   if (!confirmPassword) errorFields.push('confirmPassword');
+  if (!dpdpConsent) errorFields.push('dpdpConsent');
 
   if (errorFields.length > 0) {
     return {
-      error: 'All fields are required.',
+      error: dpdpConsent
+        ? 'All fields are required.'
+        : 'You must accept the Terms and Privacy Policy to create an account.',
       success: false,
       focusField: errorFields[0],
       errorFields,
@@ -58,6 +63,21 @@ export async function createAccount(_prevState: CreateAccountState, formData: Fo
       success: false,
       focusField: 'email',
       errorFields: ['email'],
+    };
+  }
+
+  try {
+    await recordDpdpConsent(DPDP_TERMS_URL, DPDP_PRIVACY_URL);
+  } catch (consentError) {
+    const message =
+      consentError instanceof ProfileFetchError
+        ? consentError.message
+        : 'Your account was created but we could not save your consent. Please try signing in or contact support.';
+    return {
+      error: message,
+      success: false,
+      focusField: 'dpdpConsent',
+      errorFields: ['dpdpConsent'],
     };
   }
 

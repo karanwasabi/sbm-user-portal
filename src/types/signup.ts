@@ -1,4 +1,4 @@
-export type SignupAccountField = 'email' | 'password' | 'confirmPassword';
+export type SignupAccountField = 'email' | 'password' | 'confirmPassword' | 'dpdpConsent';
 
 export type SignupStep = 1 | 2 | 3 | 4;
 

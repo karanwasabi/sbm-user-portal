@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Cake, Loader2, Mail } from 'lucide-react';
 import { useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { completeRegistration, createAccount, loadSignupCountries } from '@/app/(auth)/signup/actions';
+import { DpdpConsentCheckbox } from '@/components/auth/dpdp-consent-checkbox';
 import { PasswordField } from '@/components/auth/password-field';
 import { SignupStepIndicator } from '@/components/auth/signup-step-indicator';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
@@ -94,6 +95,7 @@ export function SignupForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [dpdpConsent, setDpdpConsent] = useState(false);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -120,6 +122,7 @@ export function SignupForm() {
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
+  const dpdpConsentRef = useRef<HTMLButtonElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
   const countryTriggerRef = useRef<HTMLButtonElement>(null);
   const mealTriggerRef = useRef<HTMLButtonElement>(null);
@@ -144,12 +147,16 @@ export function SignupForm() {
       setDisplayAccountError(accountState.error);
       setDisplayAccountErrorFields(accountState.errorFields ?? []);
       if (accountState.error && accountState.focusField) {
-        const refs = {
-          email: emailRef,
-          password: passwordRef,
-          confirmPassword: confirmRef,
-        } as const;
-        refs[accountState.focusField].current?.focus();
+        if (accountState.focusField === 'dpdpConsent') {
+          dpdpConsentRef.current?.focus();
+        } else {
+          const refs = {
+            email: emailRef,
+            password: passwordRef,
+            confirmPassword: confirmRef,
+          } as const;
+          refs[accountState.focusField].current?.focus();
+        }
       }
     }
     accountWasPending.current = accountPending;
@@ -216,6 +223,7 @@ export function SignupForm() {
   };
 
   const accountFieldError = (field: SignupAccountField) => displayAccountErrorFields.includes(field);
+  const dpdpConsentError = accountFieldError('dpdpConsent');
 
   const showParentalConsentError =
     showParentalConsent && !parentalConsent && isParentalConsentValidationError(stepError);
@@ -265,10 +273,9 @@ export function SignupForm() {
   };
 
   const { title, subtitle } = STEP_TITLES[step];
-  const isWide = step > 1;
 
   return (
-    <AuthLayout wide={isWide}>
+    <AuthLayout wide>
       <div className="mb-7">
         <SbmWordmark size="lg" />
       </div>
@@ -278,6 +285,7 @@ export function SignupForm() {
 
       {step === 1 ? (
         <form action={createAccountAction} className="flex flex-col gap-3.5">
+          <input type="hidden" name="dpdpConsent" value={dpdpConsent ? 'true' : 'false'} />
           <Field label="Email">
             <TextInput
               ref={emailRef}
@@ -330,8 +338,23 @@ export function SignupForm() {
 
           <p className="text-xs leading-relaxed text-slate-500">{PASSWORD_REQUIREMENTS_COPY}</p>
 
-          <div className="min-h-6 py-0.5" role={displayAccountError ? 'alert' : undefined} aria-live="polite">
-            {displayAccountError ? (
+          <DpdpConsentCheckbox
+            checked={dpdpConsent}
+            onChange={(checked) => {
+              setDpdpConsent(checked);
+              clearAccountError();
+            }}
+            disabled={accountPending}
+            error={dpdpConsentError}
+            inputRef={dpdpConsentRef}
+          />
+
+          <div
+            className="min-h-6 py-0.5"
+            role={displayAccountError && !dpdpConsentError ? 'alert' : undefined}
+            aria-live="polite"
+          >
+            {displayAccountError && !dpdpConsentError ? (
               <p className="text-[12.5px] leading-snug font-semibold text-danger-press">{displayAccountError}</p>
             ) : null}
           </div>

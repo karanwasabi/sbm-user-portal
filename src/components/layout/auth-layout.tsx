@@ -14,7 +14,7 @@ export function AuthLayout({ children, wide = false }: AuthLayoutProps) {
         className="absolute -bottom-22 -left-15 h-70 w-70 rounded-full bg-motivation opacity-40 blur-[60px]"
       />
       <div
-        className={`relative z-1 w-full rounded-3xl bg-white p-8 shadow-[0_24px_48px_-12px_rgba(43,24,101,0.35)] sm:p-10 ${wide ? 'max-w-[560px]' : 'max-w-[440px]'}`}
+        className={`relative z-1 w-full rounded-3xl bg-white p-8 shadow-[0_24px_48px_-12px_rgba(43,24,101,0.35)] sm:p-10 ${wide ? 'max-w-[640px]' : 'max-w-[440px]'}`}
       >
         {children}
       </div>
