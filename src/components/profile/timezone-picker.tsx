@@ -16,7 +16,7 @@ export function TimezonePicker({ value, onChange, disabled = false }: TimezonePi
   const groups = useMemo(() => getOnboardingTimezoneGroups(), []);
 
   const options = useMemo(() => {
-    const seen = new Map<string, { value: string; label: string; keywords: string; subtitle: string }>();
+    const seen = new Map<string, { value: string; label: string; searchText: string; subtitle: string }>();
     for (const group of groups) {
       const pickedId = group.ids[0]!;
       const canonical = normalizeProfileTimezoneForDb(pickedId) ?? pickedId;
@@ -24,7 +24,7 @@ export function TimezonePicker({ value, onChange, disabled = false }: TimezonePi
       seen.set(canonical, {
         value: canonical,
         label: group.title,
-        keywords: group.searchString,
+        searchText: `${group.title} ${group.searchString}`,
         subtitle: `${group.regionLabel} · ${group.offsetStr}`,
       });
     }

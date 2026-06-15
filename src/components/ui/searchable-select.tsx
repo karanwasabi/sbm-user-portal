@@ -9,8 +9,10 @@ import { cn } from '@/lib/utils';
 export type SearchableSelectOption = {
   value: string;
   label: string;
-  keywords?: string;
+  /** Text used for cmdk filtering. Defaults to label only. */
+  searchText?: string;
   subtitle?: ReactNode;
+  icon?: ReactNode;
 };
 
 type SearchableSelectProps = {
@@ -41,6 +43,7 @@ export function SearchableSelect({
   const [open, setOpen] = useState(false);
 
   const selected = useMemo(() => options.find((o) => o.value === value), [options, value]);
+  const triggerIcon = selected?.icon ?? leftIcon;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -56,7 +59,7 @@ export function SearchableSelect({
         )}
       >
         <span className="flex min-w-0 items-center gap-2.5">
-          {leftIcon ? <span className="shrink-0 text-muted-foreground">{leftIcon}</span> : null}
+          {triggerIcon ? <span className="shrink-0 text-muted-foreground">{triggerIcon}</span> : null}
           <span className="truncate">{selected?.label ?? placeholder}</span>
         </span>
         <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
@@ -70,12 +73,13 @@ export function SearchableSelect({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={`${option.label} ${option.keywords ?? ''}`}
+                  value={option.searchText ?? option.label}
                   onSelect={() => {
                     onChange(option.value);
                     setOpen(false);
                   }}
                 >
+                  {option.icon ? <span className="shrink-0">{option.icon}</span> : null}
                   <div className="min-w-0 flex-1">
                     <div className="font-medium">{option.label}</div>
                     {option.subtitle ? <div className="text-xs text-muted-foreground">{option.subtitle}</div> : null}
