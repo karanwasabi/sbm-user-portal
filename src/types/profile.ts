@@ -13,6 +13,7 @@ export type Profile = {
   city: string | null;
   meal_preference: MealPreference | null;
   whatsapp: string | null;
+  parental_consent: boolean;
 };
 
 export type ProfilePatch = Partial<{
@@ -25,6 +26,7 @@ export type ProfilePatch = Partial<{
   city: string;
   meal_preference: MealPreference;
   whatsapp: string;
+  parental_consent: boolean;
 }>;
 
 export type UpdateProfileState = {

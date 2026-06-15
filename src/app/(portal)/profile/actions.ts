@@ -1,5 +1,6 @@
 'use server';
 
+import { validateDateOfBirth } from '@/lib/date-of-birth';
 import { normalizeProfileTimezoneForDb } from '@/lib/profile-timezone';
 import type { MealPreference, ProfilePatch, Sex, UpdateProfileState } from '@/types/profile';
 import type { CountryCity } from '@/types/reference';
@@ -26,12 +27,20 @@ export async function updateProfile(_prevState: UpdateProfileState, formData: Fo
   const city = String(formData.get('city') ?? '').trim();
   const mealPreference = String(formData.get('mealPreference') ?? '').trim();
   const whatsapp = String(formData.get('whatsapp') ?? '').trim();
+  const parentalConsent = formData.get('parentalConsent') === 'true';
 
   const patch: ProfilePatch = {};
 
   if (firstName) patch.first_name = firstName;
   if (lastName) patch.last_name = lastName;
-  if (dateOfBirth) patch.date_of_birth = dateOfBirth;
+  if (dateOfBirth) {
+    const dobError = validateDateOfBirth(dateOfBirth, parentalConsent);
+    if (dobError) {
+      return { error: dobError, success: false };
+    }
+    patch.date_of_birth = dateOfBirth;
+    patch.parental_consent = parentalConsent;
+  }
   if (sex) patch.sex = sex as Sex;
   if (countryCode) patch.country_code = countryCode;
   if (city) patch.city = city;

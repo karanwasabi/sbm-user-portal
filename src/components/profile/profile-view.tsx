@@ -22,6 +22,12 @@ import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
+import {
+  getDateOfBirthInputBounds,
+  PARENTAL_CONSENT_LABEL,
+  shouldShowParentalConsent,
+  validateDateOfBirth,
+} from '@/lib/date-of-birth';
 import { formatTimezoneLabel } from '@/lib/profile-timezone';
 import {
   getFullName,
@@ -45,6 +51,7 @@ type ProfileFormSnapshot = {
   city: string;
   mealPreference: MealPreference | '';
   whatsapp: string;
+  parentalConsent: boolean;
 };
 
 function snapshotFromProfile(profile: Profile | null | undefined): ProfileFormSnapshot {
@@ -58,6 +65,7 @@ function snapshotFromProfile(profile: Profile | null | undefined): ProfileFormSn
     city: profile?.city ?? '',
     mealPreference: profile?.meal_preference ?? '',
     whatsapp: profile?.whatsapp ?? '',
+    parentalConsent: profile?.parental_consent ?? false,
   };
 }
 
@@ -71,7 +79,8 @@ function snapshotsEqual(a: ProfileFormSnapshot, b: ProfileFormSnapshot): boolean
     a.countryCode === b.countryCode &&
     a.city === b.city &&
     a.mealPreference === b.mealPreference &&
-    a.whatsapp === b.whatsapp
+    a.whatsapp === b.whatsapp &&
+    a.parentalConsent === b.parentalConsent
   );
 }
 
@@ -95,6 +104,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
   const [city, setCity] = useState(profile?.city ?? '');
   const [mealPreference, setMealPreference] = useState<MealPreference | ''>(profile?.meal_preference ?? '');
   const [whatsapp, setWhatsapp] = useState(profile?.whatsapp ?? '');
+  const [parentalConsent, setParentalConsent] = useState(profile?.parental_consent ?? false);
   const [savedSnapshot, setSavedSnapshot] = useState<ProfileFormSnapshot>(() => snapshotFromProfile(profile));
   const [phoneSyncToken, setPhoneSyncToken] = useState(0);
   const [citySuggestions, setCitySuggestions] = useState<CountryCity[]>([]);
@@ -122,7 +132,22 @@ export function ProfileView({ countries }: ProfileViewProps) {
     setCity(snapshot.city);
     setMealPreference(snapshot.mealPreference);
     setWhatsapp(snapshot.whatsapp);
+    setParentalConsent(snapshot.parentalConsent);
   }, [profile]);
+
+  const dateOfBirthBounds = useMemo(() => getDateOfBirthInputBounds(), []);
+  const showParentalConsent = useMemo(() => shouldShowParentalConsent(dateOfBirth), [dateOfBirth]);
+  const dateOfBirthError = useMemo(
+    () => validateDateOfBirth(dateOfBirth, parentalConsent),
+    [dateOfBirth, parentalConsent]
+  );
+
+  const handleDateOfBirthChange = (nextDateOfBirth: string) => {
+    setDateOfBirth(nextDateOfBirth);
+    if (nextDateOfBirth !== savedSnapshot.dateOfBirth) {
+      setParentalConsent(false);
+    }
+  };
 
   formSnapshotRef.current = {
     firstName,
@@ -134,6 +159,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
     city,
     mealPreference,
     whatsapp,
+    parentalConsent,
   };
 
   useEffect(() => {
@@ -193,6 +219,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
     setCity(savedSnapshot.city);
     setMealPreference(savedSnapshot.mealPreference);
     setWhatsapp(savedSnapshot.whatsapp);
+    setParentalConsent(savedSnapshot.parentalConsent);
     setPhoneSyncToken((token) => token + 1);
   };
 
@@ -207,10 +234,25 @@ export function ProfileView({ countries }: ProfileViewProps) {
       city,
       mealPreference,
       whatsapp,
+      parentalConsent,
     };
 
     return !snapshotsEqual(currentSnapshot, savedSnapshot);
-  }, [savedSnapshot, firstName, lastName, dateOfBirth, sex, timezoneId, countryCode, city, mealPreference, whatsapp]);
+  }, [
+    savedSnapshot,
+    firstName,
+    lastName,
+    dateOfBirth,
+    sex,
+    timezoneId,
+    countryCode,
+    city,
+    mealPreference,
+    whatsapp,
+    parentalConsent,
+  ]);
+
+  const canSave = isDirty && !dateOfBirthError;
 
   const [notif, setNotif] = useState({
     coachWa: true,
@@ -260,12 +302,20 @@ export function ProfileView({ countries }: ProfileViewProps) {
 
       <Card>
         <SectionHead title="Personal details" subtitle="Used to personalise your program experience." />
-        <form action={formAction}>
+        <form
+          action={formAction}
+          onSubmit={(event) => {
+            if (dateOfBirthError) {
+              event.preventDefault();
+            }
+          }}
+        >
           <input type="hidden" name="timezoneId" value={timezoneId} />
           <input type="hidden" name="sex" value={sex} />
           <input type="hidden" name="mealPreference" value={mealPreference} />
           <input type="hidden" name="countryCode" value={countryCode} />
           <input type="hidden" name="city" value={city} />
+          <input type="hidden" name="parentalConsent" value={parentalConsent ? 'true' : 'false'} />
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <Field label="First name">
               <TextInput
@@ -293,16 +343,30 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 leftIcon={<Mail size={16} className="text-slate-400" />}
               />
             </Field>
-            <Field label="Date of birth">
-              <TextInput
-                name="dateOfBirth"
-                value={dateOfBirth}
-                onChange={setDateOfBirth}
-                type="date"
-                disabled={pending}
-                leftIcon={<Cake size={16} className="text-slate-400" />}
-              />
-            </Field>
+            <div className="flex flex-col gap-2">
+              <Field label="Date of birth" error={dateOfBirthError ?? undefined}>
+                <TextInput
+                  name="dateOfBirth"
+                  value={dateOfBirth}
+                  onChange={handleDateOfBirthChange}
+                  type="date"
+                  min={dateOfBirthBounds.min}
+                  max={dateOfBirthBounds.max}
+                  disabled={pending}
+                  error={Boolean(dateOfBirthError)}
+                  leftIcon={<Cake size={16} className="text-slate-400" />}
+                />
+              </Field>
+              {showParentalConsent ? (
+                <Checkbox
+                  checked={parentalConsent}
+                  onChange={setParentalConsent}
+                  disabled={pending}
+                  label={PARENTAL_CONSENT_LABEL}
+                  className="pl-0.5"
+                />
+              ) : null}
+            </div>
             <Field label="Sex">
               <SexSelect value={sex} onChange={setSex} disabled={pending} />
             </Field>
@@ -349,7 +413,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
             <Button type="button" variant="ghost" size="md" onClick={resetForm} disabled={pending || !isDirty}>
               Discard
             </Button>
-            <Button type="submit" variant="primary" size="md" disabled={pending || !isDirty} aria-busy={pending}>
+            <Button type="submit" variant="primary" size="md" disabled={pending || !canSave} aria-busy={pending}>
               <span className="relative inline-flex items-center justify-center">
                 <span className={pending ? 'opacity-0' : undefined}>Save changes</span>
                 {pending ? <Loader2 size={16} className="absolute animate-spin" aria-hidden /> : null}
