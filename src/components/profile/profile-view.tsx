@@ -1,26 +1,16 @@
 'use client';
 
-import {
-  Cake,
-  Calendar,
-  Globe,
-  Loader2,
-  Lock,
-  Mail,
-  MessageCircle,
-  Phone,
-  Receipt,
-  Sparkles,
-  UserRound,
-  Utensils,
-} from 'lucide-react';
+import { Cake, Calendar, Globe, Loader2, Lock, Mail, MessageCircle, Phone, Receipt, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
+import { useActionState, useEffect, useState, useTransition } from 'react';
 import { loadCountryCities, updateProfile } from '@/app/(portal)/profile/actions';
 import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
 import { ProfilePageIllustration } from '@/components/layout/portal/portal-page-illustrations';
-import { CityInput } from '@/components/profile/city-input';
+import { CityCombobox } from '@/components/profile/city-combobox';
+import { CountryCombobox } from '@/components/profile/country-combobox';
+import { MealPreferenceGrid } from '@/components/profile/meal-preference-grid';
+import { SexRadioCards } from '@/components/profile/sex-radio-cards';
 import { TimezonePicker } from '@/components/profile/timezone-picker';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -29,18 +19,9 @@ import { Eyebrow } from '@/components/ui/eyebrow';
 import { Field } from '@/components/ui/field';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
-import { SelectInput } from '@/components/ui/select-input';
 import { TextInput } from '@/components/ui/text-input';
 import { formatTimezoneLabel } from '@/lib/profile-timezone';
-import {
-  getFullName,
-  getInitials,
-  MEAL_OPTIONS,
-  SEX_OPTIONS,
-  type MealPreference,
-  type Sex,
-  type UpdateProfileState,
-} from '@/types/profile';
+import { getFullName, getInitials, type MealPreference, type Sex, type UpdateProfileState } from '@/types/profile';
 import type { Country, CountryCity } from '@/types/reference';
 
 const initialState: UpdateProfileState = { error: null, success: false };
@@ -70,8 +51,6 @@ export function ProfileView({ countries }: ProfileViewProps) {
   const email = profile?.email ?? '';
   const fullName = profile ? getFullName(profile) : 'Member';
   const initials = profile ? getInitials(profile) : 'SB';
-
-  const countryOptions = useMemo(() => countries.map((c) => ({ value: c.iso_code, label: c.name })), [countries]);
 
   const timezoneHighlight = timezoneId
     ? (formatTimezoneLabel(timezoneId).split(' (')[1]?.replace(')', '') ?? 'Set')
@@ -197,6 +176,10 @@ export function ProfileView({ countries }: ProfileViewProps) {
         <SectionHead title="Personal details" subtitle="Used to personalise your program experience." />
         <form action={formAction}>
           <input type="hidden" name="timezoneId" value={timezoneId} />
+          <input type="hidden" name="sex" value={sex} />
+          <input type="hidden" name="mealPreference" value={mealPreference} />
+          <input type="hidden" name="countryCode" value={countryCode} />
+          <input type="hidden" name="city" value={city} />
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <Field label="First name">
               <TextInput
@@ -235,47 +218,28 @@ export function ProfileView({ countries }: ProfileViewProps) {
               />
             </Field>
             <Field label="Sex">
-              <SelectInput
-                value={sex}
-                onChange={(v) => setSex(v as Sex)}
-                options={SEX_OPTIONS}
-                placeholder="Select sex"
-                leftIcon={<UserRound size={16} />}
-                disabled={pending}
-              />
-              <input type="hidden" name="sex" value={sex} />
-            </Field>
-            <Field label="Meal preference">
-              <SelectInput
-                value={mealPreference}
-                onChange={(v) => setMealPreference(v as MealPreference)}
-                options={MEAL_OPTIONS}
-                placeholder="Select meal preference"
-                leftIcon={<Utensils size={16} />}
-                disabled={pending}
-              />
-              <input type="hidden" name="mealPreference" value={mealPreference} />
+              <SexRadioCards value={sex} onChange={setSex} disabled={pending} />
             </Field>
             <Field label="Country">
-              <SelectInput
+              <CountryCombobox
                 value={countryCode}
                 onChange={handleCountryChange}
-                options={countryOptions}
-                placeholder="Select country"
-                leftIcon={<Globe size={16} />}
+                countries={countries}
                 disabled={pending}
               />
-              <input type="hidden" name="countryCode" value={countryCode} />
             </Field>
             <Field label="City" hint={loadingCities ? 'Loading suggestions…' : 'Start typing or pick a suggestion.'}>
-              <CityInput
+              <CityCombobox
                 value={city}
                 onChange={setCity}
                 suggestions={citySuggestions}
                 onSuggestionSelect={handleCitySuggestion}
                 disabled={pending}
+                loading={loadingCities}
               />
-              <input type="hidden" name="city" value={city} />
+            </Field>
+            <Field label="Meal preference" className="sm:col-span-2">
+              <MealPreferenceGrid value={mealPreference} onChange={setMealPreference} disabled={pending} />
             </Field>
             <Field label="Timezone" className="sm:col-span-2">
               <TimezonePicker value={timezoneId} onChange={setTimezoneId} disabled={pending} />
