@@ -33,6 +33,7 @@ export function CountryCombobox({ value, onChange, countries, disabled }: Countr
       searchPlaceholder="Search country"
       leftIcon={<Globe size={16} />}
       disabled={disabled}
+      scrollToSelectedOnOpen
       emptyMessage="No countries match your search."
     />
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { MapPin } from 'lucide-react';
+import { Check, MapPin } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { TextInput } from '@/components/ui/text-input';
@@ -65,13 +65,15 @@ export function CityCombobox({
                   <CommandItem
                     key={city.id}
                     value={city.name}
+                    isChosen={city.name === value}
                     onSelect={() => {
                       onChange(city.name);
                       onSuggestionSelect?.(city);
                       setOpen(false);
                     }}
                   >
-                    {city.name}
+                    <span className="min-w-0 flex-1 font-medium">{city.name}</span>
+                    <Check className={cn('ml-1 size-4 shrink-0', city.name === value ? 'opacity-100' : 'opacity-0')} />
                   </CommandItem>
                 ))}
               </CommandGroup>

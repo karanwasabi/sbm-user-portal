@@ -14,6 +14,8 @@ export type SearchableSelectOption = {
   searchText?: string;
   subtitle?: ReactNode;
   icon?: ReactNode;
+  /** Prominent label on the right (e.g. UTC offset). */
+  rightLabel?: ReactNode;
 };
 
 type SearchableSelectProps = {
@@ -27,6 +29,8 @@ type SearchableSelectProps = {
   leftIcon?: ReactNode;
   className?: string;
   searchable?: boolean;
+  /** When true, scrolls the selected option into view on open (before searching). */
+  scrollToSelectedOnOpen?: boolean;
 };
 
 export function SearchableSelect({
@@ -40,10 +44,12 @@ export function SearchableSelect({
   leftIcon,
   className,
   searchable = true,
+  scrollToSelectedOnOpen = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  const selectedItemRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(() => options.find((o) => o.value === value), [options, value]);
   const triggerIcon = selected?.icon ?? leftIcon;
@@ -58,8 +64,20 @@ export function SearchableSelect({
   }, [open]);
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: 0 });
-  }, [search, visibleOptions.length]);
+    if (!open) return;
+    if (search.trim()) {
+      listRef.current?.scrollTo({ top: 0 });
+      return;
+    }
+    if (!scrollToSelectedOnOpen || !value) return;
+    const scrollSelected = () => selectedItemRef.current?.scrollIntoView({ block: 'center' });
+    const frame = requestAnimationFrame(scrollSelected);
+    const timer = window.setTimeout(scrollSelected, 50);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [open, search, scrollToSelectedOnOpen, value, visibleOptions]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -74,10 +92,13 @@ export function SearchableSelect({
           className
         )}
       >
-        <span className="flex min-w-0 items-center gap-2.5">
+        <span className="flex min-w-0 flex-1 items-center gap-2.5">
           {triggerIcon ? <span className="shrink-0 text-muted-foreground">{triggerIcon}</span> : null}
           <span className="truncate">{selected?.label ?? placeholder}</span>
         </span>
+        {selected?.rightLabel ? (
+          <span className="ml-2 shrink-0 text-sm font-semibold text-primary tabular-nums">{selected.rightLabel}</span>
+        ) : null}
         <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
       </PopoverTrigger>
       <PopoverContent className="w-(--anchor-width) p-0" align="start">
@@ -91,7 +112,9 @@ export function SearchableSelect({
               {visibleOptions.map((option) => (
                 <CommandItem
                   key={option.value}
+                  ref={option.value === value ? selectedItemRef : undefined}
                   value={option.value}
+                  isChosen={option.value === value}
                   onSelect={() => {
                     onChange(option.value);
                     setOpen(false);
@@ -102,7 +125,12 @@ export function SearchableSelect({
                     <div className="font-medium">{option.label}</div>
                     {option.subtitle ? <div className="text-xs text-muted-foreground">{option.subtitle}</div> : null}
                   </div>
-                  <Check className={cn('ml-auto size-4', value === option.value ? 'opacity-100' : 'opacity-0')} />
+                  {option.rightLabel ? (
+                    <span className="shrink-0 text-sm font-semibold text-primary tabular-nums">
+                      {option.rightLabel}
+                    </span>
+                  ) : null}
+                  <Check className={cn('ml-1 size-4 shrink-0', value === option.value ? 'opacity-100' : 'opacity-0')} />
                 </CommandItem>
               ))}
             </CommandGroup>

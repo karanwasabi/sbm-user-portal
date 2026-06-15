@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Globe } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { getOnboardingTimezoneGroups } from '@/domain/onboarding-timezones';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { normalizeProfileTimezoneForDb } from '@/lib/profile-timezone';
@@ -16,7 +16,10 @@ export function TimezonePicker({ value, onChange, disabled = false }: TimezonePi
   const groups = useMemo(() => getOnboardingTimezoneGroups(), []);
 
   const options = useMemo(() => {
-    const seen = new Map<string, { value: string; label: string; searchText: string; subtitle: string }>();
+    const seen = new Map<
+      string,
+      { value: string; label: string; searchText: string; subtitle: string; rightLabel: string }
+    >();
     for (const group of groups) {
       const pickedId = group.ids[0]!;
       const canonical = normalizeProfileTimezoneForDb(pickedId) ?? pickedId;
@@ -25,7 +28,8 @@ export function TimezonePicker({ value, onChange, disabled = false }: TimezonePi
         value: canonical,
         label: group.title,
         searchText: `${group.title} ${group.searchString}`,
-        subtitle: `${group.regionLabel} · ${group.offsetStr}`,
+        subtitle: group.regionLabel,
+        rightLabel: group.offsetStr,
       });
     }
     return [...seen.values()];
@@ -40,8 +44,9 @@ export function TimezonePicker({ value, onChange, disabled = false }: TimezonePi
       options={options}
       placeholder="Select timezone"
       searchPlaceholder="Search city, region, or UTC offset"
-      leftIcon={<Globe size={16} />}
+      leftIcon={<Clock size={16} />}
       disabled={disabled}
+      scrollToSelectedOnOpen
       emptyMessage="No timezones match your search."
     />
   );
