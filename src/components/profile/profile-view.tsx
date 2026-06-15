@@ -1,6 +1,6 @@
 'use client';
 
-import { Cake, Calendar, Globe, Loader2, Lock, Mail, MessageCircle, Receipt, Sparkles } from 'lucide-react';
+import { Cake, Loader2, Lock, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { loadCountryCities, updateProfile } from '@/app/(portal)/profile/actions';
@@ -10,6 +10,7 @@ import { ProfilePageIllustration } from '@/components/layout/portal/portal-page-
 import { CityCombobox } from '@/components/profile/city-combobox';
 import { CountryCombobox } from '@/components/profile/country-combobox';
 import { MealPreferenceSelect } from '@/components/profile/meal-preference-select';
+import { NotificationPreferencesCard } from '@/components/profile/notification-preferences-card';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { SexSelect } from '@/components/profile/sex-select';
 import { TimezonePicker } from '@/components/profile/timezone-picker';
@@ -254,14 +255,6 @@ export function ProfileView({ countries }: ProfileViewProps) {
 
   const canSave = isDirty && !dateOfBirthError;
 
-  const [notif, setNotif] = useState({
-    coachWa: true,
-    coachEmail: true,
-    billing: true,
-    webinars: true,
-    marketing: false,
-  });
-
   return (
     <PortalPageLayout
       eyebrow="Account"
@@ -423,59 +416,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
         </form>
       </Card>
 
-      <Card>
-        <SectionHead title="Notification preferences" subtitle="Choose how we reach you." />
-        <div className="flex flex-col gap-1">
-          {[
-            {
-              key: 'coachWa' as const,
-              title: 'Coach WhatsApp messages',
-              sub: 'Daily check-ins and feedback from your coach',
-              icon: MessageCircle,
-            },
-            {
-              key: 'coachEmail' as const,
-              title: 'Coach emails',
-              sub: 'Long-form notes and weekly recaps',
-              icon: Mail,
-            },
-            {
-              key: 'billing' as const,
-              title: 'Billing alerts',
-              sub: 'Renewal reminders, failed payments, invoices',
-              icon: Receipt,
-            },
-            {
-              key: 'webinars' as const,
-              title: 'Webinar invites',
-              sub: 'Saturday live sessions and replays',
-              icon: Calendar,
-            },
-            {
-              key: 'marketing' as const,
-              title: 'New program announcements',
-              sub: 'Launches, batches, occasional offers',
-              icon: Sparkles,
-            },
-          ].map((item) => (
-            <div
-              key={item.key}
-              className="flex items-center gap-3 border-t border-slate-100 py-3 first:border-t-0 first:pt-0"
-            >
-              <item.icon size={16} className="shrink-0 text-slate-400" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-slate-800">{item.title}</div>
-                <div className="text-xs text-slate-500">{item.sub}</div>
-              </div>
-              <Checkbox
-                checked={notif[item.key]}
-                onChange={(checked) => setNotif((prev) => ({ ...prev, [item.key]: checked }))}
-                label=""
-              />
-            </div>
-          ))}
-        </div>
-      </Card>
+      <NotificationPreferencesCard />
 
       <Card>
         <SectionHead title="Security" />

@@ -68,3 +68,19 @@ export async function updateProfile(_prevState: UpdateProfileState, formData: Fo
     return { error: message, success: false };
   }
 }
+
+export async function updateNotificationPreferences(
+  patch: Pick<ProfilePatch, 'notify_whatsapp' | 'notify_email' | 'notify_push'>
+): Promise<UpdateProfileState> {
+  if (Object.keys(patch).length === 0) {
+    return { error: 'No changes to save.', success: false };
+  }
+
+  try {
+    await patchProfile(patch);
+    return { error: null, success: true };
+  } catch (error) {
+    const message = error instanceof ProfileFetchError ? error.message : 'Failed to save preferences.';
+    return { error: message, success: false };
+  }
+}

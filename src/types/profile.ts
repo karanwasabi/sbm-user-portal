@@ -1,6 +1,12 @@
 export type Sex = 'female' | 'male' | 'others';
 export type MealPreference = 'vegan' | 'veg' | 'veg_egg' | 'non_veg';
 
+export type NotificationPreferences = {
+  notify_whatsapp: boolean;
+  notify_email: boolean;
+  notify_push: boolean;
+};
+
 export type Profile = {
   id: string;
   email: string;
@@ -14,7 +20,7 @@ export type Profile = {
   meal_preference: MealPreference | null;
   whatsapp: string | null;
   parental_consent: boolean;
-};
+} & NotificationPreferences;
 
 export type ProfilePatch = Partial<{
   first_name: string;
@@ -27,6 +33,9 @@ export type ProfilePatch = Partial<{
   meal_preference: MealPreference;
   whatsapp: string;
   parental_consent: boolean;
+  notify_whatsapp: boolean;
+  notify_email: boolean;
+  notify_push: boolean;
 }>;
 
 export type UpdateProfileState = {
