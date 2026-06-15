@@ -2,7 +2,7 @@
 
 import { Globe } from 'lucide-react';
 import { useMemo } from 'react';
-import { Combobox } from '@/components/ui/combobox';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { Country } from '@/types/reference';
 
 type CountryComboboxProps = {
@@ -18,14 +18,14 @@ export function CountryCombobox({ value, onChange, countries, disabled }: Countr
       countries.map((c) => ({
         value: c.iso_code,
         label: c.name,
+        keywords: c.iso_code,
         subtitle: c.iso_code,
-        searchText: c.name,
       })),
     [countries]
   );
 
   return (
-    <Combobox
+    <SearchableSelect
       value={value}
       onChange={onChange}
       options={options}

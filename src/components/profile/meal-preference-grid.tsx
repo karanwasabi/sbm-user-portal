@@ -1,15 +1,11 @@
 'use client';
 
-import { Check, Drumstick, Egg, Leaf, Salad, type LucideIcon } from 'lucide-react';
-import { cn } from '@/lib/cn';
-import { fieldShell } from '@/lib/field-shell';
+import { Drumstick, Egg, Leaf, Salad, type LucideIcon } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { cn } from '@/lib/utils';
 import type { MealPreference } from '@/types/profile';
 
-const MEAL_CARD_OPTIONS: {
-  value: MealPreference;
-  label: string;
-  icon: LucideIcon;
-}[] = [
+const MEAL_OPTIONS: { value: MealPreference; label: string; icon: LucideIcon }[] = [
   { value: 'vegan', label: 'Vegan', icon: Leaf },
   { value: 'veg', label: 'Vegetarian', icon: Salad },
   { value: 'veg_egg', label: 'Veg + eggs', icon: Egg },
@@ -24,40 +20,40 @@ type MealPreferenceGridProps = {
 
 export function MealPreferenceGrid({ value, onChange, disabled }: MealPreferenceGridProps) {
   return (
-    <div role="radiogroup" aria-label="Meal preference" className="grid grid-cols-2 gap-2.5">
-      {MEAL_CARD_OPTIONS.map((option) => {
+    <RadioGroup
+      value={value}
+      onValueChange={(next) => onChange(next as MealPreference)}
+      disabled={disabled}
+      aria-label="Meal preference"
+      className="grid grid-cols-2 gap-2"
+    >
+      {MEAL_OPTIONS.map((option) => {
         const Icon = option.icon;
         const selected = value === option.value;
         return (
-          <button
+          <RadioGroupItem
             key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            disabled={disabled}
-            onClick={() => onChange(option.value)}
+            value={option.value}
+            aria-label={option.label}
             className={cn(
-              'relative flex min-h-[96px] flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] px-3 py-4 text-center transition-all duration-120',
-              fieldShell.focusRing,
-              disabled && fieldShell.disabled,
-              !disabled && selected && fieldShell.selected,
-              !disabled && !selected && cn(fieldShell.default, fieldShell.hover, 'text-slate-800')
+              'relative flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-2xl border border-input bg-background p-3',
+              'aspect-auto size-auto shadow-none after:hidden',
+              'focus-visible:ring-2 focus-visible:ring-ring/40',
+              selected
+                ? 'border-primary bg-accent text-foreground ring-1 ring-primary/20'
+                : 'text-muted-foreground hover:bg-muted/40',
+              '[&_[data-slot=radio-group-indicator]]:hidden'
             )}
           >
-            {selected ? (
-              <Check size={14} className="absolute top-2.5 right-2.5 text-brand" strokeWidth={2.5} aria-hidden />
-            ) : null}
             <Icon
-              size={26}
+              size={24}
+              className={selected ? 'text-primary' : 'text-muted-foreground'}
               strokeWidth={selected ? 2.25 : 1.75}
-              className={selected ? 'text-brand' : 'text-slate-400'}
             />
-            <span className={cn('text-sm font-bold', selected ? 'text-slate-900' : 'text-slate-700')}>
-              {option.label}
-            </span>
-          </button>
+            <span className={cn('text-sm font-semibold', selected && 'text-foreground')}>{option.label}</span>
+          </RadioGroupItem>
         );
       })}
-    </div>
+    </RadioGroup>
   );
 }

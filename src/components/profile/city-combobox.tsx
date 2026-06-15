@@ -1,8 +1,10 @@
 'use client';
 
 import { MapPin } from 'lucide-react';
-import { useMemo } from 'react';
-import { Combobox } from '@/components/ui/combobox';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+import { TextInput } from '@/components/ui/text-input';
+import { cn } from '@/lib/utils';
 import type { CountryCity } from '@/types/reference';
 
 type CityComboboxProps = {
@@ -22,33 +24,62 @@ export function CityCombobox({
   disabled,
   loading,
 }: CityComboboxProps) {
-  const options = useMemo(
-    () =>
-      suggestions.map((c) => ({
-        value: c.name,
-        label: c.name,
-        searchText: c.name,
-      })),
-    [suggestions]
-  );
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return suggestions.slice(0, 8);
+    return suggestions.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [suggestions, value]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [open]);
 
   return (
-    <Combobox
-      allowFreeText
-      freeTextValue={value}
-      onFreeTextChange={onChange}
-      value={value}
-      onChange={onChange}
-      options={options}
-      placeholder="City"
-      leftIcon={<MapPin size={16} className="text-slate-400" />}
-      disabled={disabled}
-      loading={loading}
-      emptyMessage="No city suggestions — you can still type your city."
-      onOptionSelect={(option) => {
-        const city = suggestions.find((c) => c.name === option.value);
-        if (city) onSuggestionSelect?.(city);
-      }}
-    />
+    <div ref={rootRef} className="relative">
+      <TextInput
+        value={value}
+        onChange={onChange}
+        placeholder="City"
+        disabled={disabled}
+        leftIcon={<MapPin size={16} />}
+        onFocus={() => setOpen(true)}
+      />
+      {open && !disabled && filtered.length > 0 ? (
+        <div
+          className={cn(
+            'absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-border bg-popover shadow-md ring-1 ring-foreground/5'
+          )}
+        >
+          <Command shouldFilter={false}>
+            <CommandList>
+              <CommandGroup>
+                {filtered.map((city) => (
+                  <CommandItem
+                    key={city.id}
+                    value={city.name}
+                    onSelect={() => {
+                      onChange(city.name);
+                      onSuggestionSelect?.(city);
+                      setOpen(false);
+                    }}
+                  >
+                    {city.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          {loading ? <p className="px-3 py-2 text-xs text-muted-foreground">Loading suggestions…</p> : null}
+        </div>
+      ) : null}
+    </div>
   );
 }

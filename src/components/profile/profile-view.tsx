@@ -10,7 +10,7 @@ import { ProfilePageIllustration } from '@/components/layout/portal/portal-page-
 import { CityCombobox } from '@/components/profile/city-combobox';
 import { CountryCombobox } from '@/components/profile/country-combobox';
 import { MealPreferenceGrid } from '@/components/profile/meal-preference-grid';
-import { SexRadioCards } from '@/components/profile/sex-radio-cards';
+import { SexSegmentedRadio } from '@/components/profile/sex-segmented-radio';
 import { TimezonePicker } from '@/components/profile/timezone-picker';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -217,8 +217,8 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 leftIcon={<Cake size={16} className="text-slate-400" />}
               />
             </Field>
-            <Field label="Sex">
-              <SexRadioCards value={sex} onChange={setSex} disabled={pending} />
+            <Field label="Sex" className="sm:col-span-2">
+              <SexSegmentedRadio value={sex} onChange={setSex} disabled={pending} />
             </Field>
             <Field label="Country">
               <CountryCombobox

@@ -1,7 +1,8 @@
 'use client';
 
-import { type InputHTMLAttributes, type ReactNode, forwardRef, useState } from 'react';
-import { cn } from '@/lib/cn';
+import { type InputHTMLAttributes, type ReactNode, forwardRef } from 'react';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { cn } from '@/lib/utils';
 
 type TextInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & {
   value: string;
@@ -28,21 +29,16 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
   },
   ref
 ) {
-  const [focused, setFocused] = useState(Boolean(autoFocus));
-
-  const iconColorClass = error ? 'text-danger-press' : focused ? 'text-brand' : 'text-slate-400';
-
   return (
-    <div
+    <InputGroup
       className={cn(
-        'relative flex items-center rounded-2xl border-[1.5px] transition-all duration-120',
-        disabled ? 'bg-slate-50' : 'bg-white',
-        error ? 'border-danger-press' : focused ? 'border-brand' : 'border-slate-200',
+        'h-11 rounded-2xl bg-background shadow-none',
+        error && 'border-destructive ring-3 ring-destructive/20',
         className
       )}
     >
-      {leftIcon && <div className={cn('flex pr-0.5 pl-3.5', iconColorClass)}>{leftIcon}</div>}
-      <input
+      {leftIcon ? <InputGroupAddon className="pl-3.5 text-muted-foreground">{leftIcon}</InputGroupAddon> : null}
+      <InputGroupInput
         {...props}
         ref={ref}
         value={value}
@@ -53,20 +49,13 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
         autoComplete={autoComplete}
         autoFocus={autoFocus}
         aria-invalid={error || undefined}
-        onFocus={(e) => {
-          setFocused(true);
-          props.onFocus?.(e);
-        }}
-        onBlur={(e) => {
-          setFocused(false);
-          props.onBlur?.(e);
-        }}
-        className={cn(
-          'min-w-0 flex-1 border-none bg-transparent text-sm font-medium text-slate-800 outline-none',
-          leftIcon ? 'py-3.25 pr-4 pl-2.5' : 'px-4 py-3.25'
-        )}
+        className="px-2 py-3 text-sm font-medium"
       />
-      {rightIcon && <div className={cn('flex pr-3.5 pl-1', iconColorClass)}>{rightIcon}</div>}
-    </div>
+      {rightIcon ? (
+        <InputGroupAddon align="inline-end" className="pr-3.5 text-muted-foreground">
+          {rightIcon}
+        </InputGroupAddon>
+      ) : null}
+    </InputGroup>
   );
 });
