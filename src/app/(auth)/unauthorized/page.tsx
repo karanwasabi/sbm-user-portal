@@ -1,9 +1,23 @@
-import Link from 'next/link';
-import { AuthLayout } from '@/components/layout/auth-layout';
+import { redirect } from 'next/navigation';
+import { signOut } from '@/app/(auth)/actions';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
+import { AuthLayout } from '@/components/layout/auth-layout';
+import { Button } from '@/components/ui/button';
 import { SectionHead } from '@/components/ui/section-head';
+import { createClient } from '@/utils/supabase/server';
 
-export default function UnauthorizedPage() {
+export default async function UnauthorizedPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const email = user.email ?? 'Unknown account';
+
   return (
     <AuthLayout>
       <div className="mb-7">
@@ -12,16 +26,16 @@ export default function UnauthorizedPage() {
       <SectionHead
         title="Access not available"
         subtitle="Your account does not have access to the member portal. If you believe this is a mistake, contact support."
-        className="mb-6"
+        className="mb-5"
       />
-      <div className="flex flex-col gap-3">
-        <Link
-          href="/login"
-          className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand px-5 text-sm font-bold text-white no-underline"
-        >
-          Back to sign in
-        </Link>
-      </div>
+      <p className="mb-6 rounded-2xl border border-slate-200 bg-canvas-cool px-4 py-3 text-[13px] text-slate-700">
+        Signed in as <span className="font-semibold text-slate-900">{email}</span>
+      </p>
+      <form action={signOut}>
+        <Button type="submit" fullWidth>
+          Log out
+        </Button>
+      </form>
     </AuthLayout>
   );
 }
