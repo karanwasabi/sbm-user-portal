@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
 import { PortalShell } from '@/components/layout/portal/portal-shell';
+import { hasProduct, PRODUCT_MEMBER_PORTAL } from '@/lib/access';
+import { getMyAccess } from '@/utils/access-api';
 import { getLatestProfile, ProfileFetchError } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
@@ -11,6 +13,15 @@ export default async function PortalLayout({ children }: { children: React.React
 
   if (!user) {
     redirect('/login');
+  }
+
+  try {
+    const access = await getMyAccess();
+    if (!hasProduct(access.products, PRODUCT_MEMBER_PORTAL)) {
+      redirect('/unauthorized');
+    }
+  } catch {
+    redirect('/unauthorized');
   }
 
   let profile = null;

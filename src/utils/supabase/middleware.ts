@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { hasProduct, parseAccessTokenClaims, PRODUCT_MEMBER_PORTAL } from '@/lib/access';
 
-const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password'];
+const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/unauthorized'];
 
 function isProtectedRoute(pathname: string) {
   if (pathname === '/') return true;
@@ -52,6 +53,18 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);
+  }
+
+  if (user && requiresAuth && pathname !== '/unauthorized') {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const { products } = parseAccessTokenClaims(session?.access_token);
+    if (products.length > 0 && !hasProduct(products, PRODUCT_MEMBER_PORTAL)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/unauthorized';
+      return NextResponse.redirect(url);
+    }
   }
 
   // Allow authenticated users to remain on /signup while finishing registration (step 1 creates the session).
