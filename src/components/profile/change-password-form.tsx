@@ -2,18 +2,17 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
-import { useActionState, useEffect, useRef, useState, type RefObject } from 'react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { changePassword } from '@/app/(portal)/profile/change-password/actions';
+import { PasswordField } from '@/components/auth/password-field';
 import { PASSWORD_REQUIREMENTS_COPY } from '@/lib/password-requirements';
 import type { ChangePasswordField, ChangePasswordState } from '@/types/change-password';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
 import { SecurityPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Field } from '@/components/ui/field';
 import { SectionHead } from '@/components/ui/section-head';
-import { TextInput } from '@/components/ui/text-input';
 
 const initialState: ChangePasswordState = { error: null, success: false };
 
@@ -26,62 +25,6 @@ const layoutProps = {
   glowClassName: 'bg-brand-glow/40',
   footer: PASSWORD_REQUIREMENTS_COPY,
 };
-
-type PasswordFieldProps = {
-  name: ChangePasswordField;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  showPassword: boolean;
-  onToggleShow: () => void;
-  autoComplete: string;
-  disabled: boolean;
-  error: boolean;
-  inputRef?: RefObject<HTMLInputElement | null>;
-  autoFocus?: boolean;
-};
-
-function PasswordField({
-  name,
-  label,
-  value,
-  onChange,
-  showPassword,
-  onToggleShow,
-  autoComplete,
-  disabled,
-  error,
-  inputRef,
-  autoFocus,
-}: PasswordFieldProps) {
-  return (
-    <Field label={label}>
-      <TextInput
-        ref={inputRef}
-        name={name}
-        value={value}
-        onChange={onChange}
-        type={showPassword ? 'text' : 'password'}
-        autoComplete={autoComplete}
-        disabled={disabled}
-        leftIcon={<Lock className="h-4 w-4" />}
-        error={error}
-        autoFocus={autoFocus}
-        rightIcon={
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={onToggleShow}
-            className="flex cursor-pointer border-none bg-transparent p-0"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        }
-      />
-    </Field>
-  );
-}
 
 function BackLink() {
   return (
@@ -116,11 +59,11 @@ export function ChangePasswordForm() {
       setDisplayError(state.error);
       setDisplayErrorFields(state.errorFields ?? []);
       if (state.error && state.focusField) {
-        const refs: Record<ChangePasswordField, RefObject<HTMLInputElement | null>> = {
+        const refs = {
           currentPassword: currentRef,
           newPassword: newRef,
           confirmPassword: confirmRef,
-        };
+        } as const;
         refs[state.focusField].current?.focus();
       }
     }

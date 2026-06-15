@@ -11,25 +11,27 @@ import { CityCombobox } from '@/components/profile/city-combobox';
 import { CountryCombobox } from '@/components/profile/country-combobox';
 import { MealPreferenceSelect } from '@/components/profile/meal-preference-select';
 import { NotificationPreferencesCard } from '@/components/profile/notification-preferences-card';
+import { ParentalConsentBlock } from '@/components/profile/parental-consent-block';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { SexSelect } from '@/components/profile/sex-select';
 import { TimezonePicker } from '@/components/profile/timezone-picker';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Eyebrow } from '@/components/ui/eyebrow';
 import { Field } from '@/components/ui/field';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
+import { useLocationFields } from '@/hooks/use-location-fields';
 import {
   getDateOfBirthInputBounds,
-  PARENTAL_CONSENT_LABEL,
+  isParentalConsentValidationError,
   shouldShowParentalConsent,
   validateDateOfBirth,
 } from '@/lib/date-of-birth';
 import { formatTimezoneLabel } from '@/lib/profile-timezone';
+import { toTitleCase } from '@/lib/title-case';
 import {
   getFullName,
   getInitials,
@@ -38,7 +40,7 @@ import {
   type Sex,
   type UpdateProfileState,
 } from '@/types/profile';
-import type { Country, CountryCity } from '@/types/reference';
+import type { Country } from '@/types/reference';
 
 const initialState: UpdateProfileState = { error: null, success: false };
 
@@ -108,9 +110,14 @@ export function ProfileView({ countries }: ProfileViewProps) {
   const [parentalConsent, setParentalConsent] = useState(profile?.parental_consent ?? false);
   const [savedSnapshot, setSavedSnapshot] = useState<ProfileFormSnapshot>(() => snapshotFromProfile(profile));
   const [phoneSyncToken, setPhoneSyncToken] = useState(0);
-  const [citySuggestions, setCitySuggestions] = useState<CountryCity[]>([]);
-  const [loadingCities, setLoadingCities] = useState(false);
   const formSnapshotRef = useRef<ProfileFormSnapshot>(snapshotFromProfile(profile));
+
+  const { citySuggestions, loadingCities, handleCountryChange, handleCitySuggestion } = useLocationFields({
+    countries,
+    countryCode,
+    setCountryCode,
+    setTimezoneId,
+  });
 
   const email = profile?.email ?? '';
   const fullName = profile ? getFullName(profile) : 'Member';
@@ -169,46 +176,6 @@ export function ProfileView({ countries }: ProfileViewProps) {
     toast({ message: 'Profile saved', variant: 'success' });
     startTransition(() => router.refresh());
   }, [state, router, startTransition, toast]);
-
-  useEffect(() => {
-    if (!countryCode) {
-      setCitySuggestions([]);
-      return;
-    }
-
-    let cancelled = false;
-    setLoadingCities(true);
-    loadCountryCities(countryCode)
-      .then((rows) => {
-        if (!cancelled) setCitySuggestions(rows);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingCities(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [countryCode]);
-
-  const handleCountryChange = (code: string) => {
-    setCountryCode(code);
-    const country = countries.find((c) => c.iso_code === code);
-    if (country?.default_timezone_id) {
-      setTimezoneId(country.default_timezone_id);
-    }
-  };
-
-  const handleCitySuggestion = (entry: CountryCity) => {
-    if (entry.timezone_id) {
-      setTimezoneId(entry.timezone_id);
-      return;
-    }
-    const country = countries.find((c) => c.iso_code === countryCode);
-    if (country?.default_timezone_id) {
-      setTimezoneId(country.default_timezone_id);
-    }
-  };
 
   const resetForm = () => {
     setFirstName(savedSnapshot.firstName);
@@ -314,7 +281,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
               <TextInput
                 name="firstName"
                 value={firstName}
-                onChange={setFirstName}
+                onChange={(value) => setFirstName(toTitleCase(value))}
                 placeholder="First name"
                 disabled={pending}
               />
@@ -323,7 +290,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
               <TextInput
                 name="lastName"
                 value={lastName}
-                onChange={setLastName}
+                onChange={(value) => setLastName(toTitleCase(value))}
                 placeholder="Last name"
                 disabled={pending}
               />
@@ -351,12 +318,11 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 />
               </Field>
               {showParentalConsent ? (
-                <Checkbox
+                <ParentalConsentBlock
                   checked={parentalConsent}
                   onChange={setParentalConsent}
                   disabled={pending}
-                  label={PARENTAL_CONSENT_LABEL}
-                  className="pl-0.5"
+                  error={isParentalConsentValidationError(dateOfBirthError)}
                 />
               ) : null}
             </div>

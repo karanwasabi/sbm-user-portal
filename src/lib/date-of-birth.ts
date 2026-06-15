@@ -69,6 +69,10 @@ export function validateDateOfBirth(dateOfBirth: string, parentalConsent: boolea
   return null;
 }
 
+export function isParentalConsentValidationError(message: string | null | undefined): boolean {
+  return message === 'Parental consent is required for members under 18.';
+}
+
 export function shouldShowParentalConsent(dateOfBirth: string): boolean {
   if (!dateOfBirth.trim()) return false;
   const parsed = parseLocalDate(dateOfBirth);

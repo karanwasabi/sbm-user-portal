@@ -1,6 +1,6 @@
 'use client';
 
-import { type InputHTMLAttributes, type ReactNode, forwardRef } from 'react';
+import { type InputHTMLAttributes, type ReactNode, forwardRef, useCallback, useEffect, useRef } from 'react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +29,28 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
   },
   ref
 ) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const setRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      inputRef.current = node;
+      if (typeof ref === 'function') ref(node);
+      else if (ref) ref.current = node;
+    },
+    [ref]
+  );
+
+  useEffect(() => {
+    if (!autoFocus || disabled) return;
+    const focus = () => inputRef.current?.focus();
+    const frame = requestAnimationFrame(focus);
+    const timer = window.setTimeout(focus, 50);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [autoFocus, disabled]);
+
   return (
     <InputGroup
       className={cn(
@@ -40,14 +62,13 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
       {leftIcon ? <InputGroupAddon className="pl-3.5 text-muted-foreground">{leftIcon}</InputGroupAddon> : null}
       <InputGroupInput
         {...props}
-        ref={ref}
+        ref={setRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         type={type}
         disabled={disabled}
         autoComplete={autoComplete}
-        autoFocus={autoFocus}
         aria-invalid={error || undefined}
         className={cn('py-3 text-sm font-medium', leftIcon ? 'px-2' : 'px-3.5')}
       />

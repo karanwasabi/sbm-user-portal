@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -36,6 +36,8 @@ type SearchableSelectProps = {
   scrollToSelectedOnOpen?: boolean;
   /** When true, focuses the search field when the dropdown opens. */
   focusSearchOnOpen?: boolean;
+  autoFocus?: boolean;
+  focusRef?: RefObject<HTMLButtonElement | null>;
 };
 
 export function SearchableSelect({
@@ -52,12 +54,20 @@ export function SearchableSelect({
   searchable = true,
   scrollToSelectedOnOpen = false,
   focusSearchOnOpen = true,
+  autoFocus = false,
+  focusRef,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const setTriggerRef = (node: HTMLButtonElement | null) => {
+    triggerRef.current = node;
+    if (focusRef) focusRef.current = node;
+  };
 
   const selected = useMemo(() => options.find((o) => o.value === value), [options, value]);
   const triggerIcon = selected?.icon ?? leftIcon;
@@ -79,6 +89,17 @@ export function SearchableSelect({
   }, [open, searchable, focusSearchOnOpen]);
 
   useEffect(() => {
+    if (!autoFocus || disabled) return;
+    const focus = () => triggerRef.current?.focus();
+    const frame = requestAnimationFrame(focus);
+    const timer = window.setTimeout(focus, 50);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [autoFocus, disabled]);
+
+  useEffect(() => {
     if (!open) return;
     if (search.trim()) {
       listRef.current?.scrollTo({ top: 0 });
@@ -97,6 +118,7 @@ export function SearchableSelect({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        ref={setTriggerRef}
         type="button"
         disabled={disabled}
         className={cn(

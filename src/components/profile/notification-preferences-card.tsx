@@ -44,7 +44,7 @@ function preferencesFromProfile(profile: ReturnType<typeof usePortalProfile>['pr
   return {
     notify_whatsapp: profile?.notify_whatsapp ?? true,
     notify_email: profile?.notify_email ?? true,
-    notify_push: profile?.notify_push ?? false,
+    notify_push: profile?.notify_push ?? true,
   };
 }
 

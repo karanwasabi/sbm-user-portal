@@ -54,6 +54,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Allow authenticated users to remain on /signup while finishing registration (step 1 creates the session).
+
   if (!user && !isPublicRoute && !requiresAuth) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';

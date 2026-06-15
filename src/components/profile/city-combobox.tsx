@@ -4,6 +4,7 @@ import { Check, MapPin } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { TextInput } from '@/components/ui/text-input';
+import { toTitleCase } from '@/lib/title-case';
 import { cn } from '@/lib/utils';
 import type { CountryCity } from '@/types/reference';
 
@@ -14,6 +15,7 @@ type CityComboboxProps = {
   onSuggestionSelect?: (city: CountryCity) => void;
   disabled?: boolean;
   loading?: boolean;
+  autoFocus?: boolean;
 };
 
 export function CityCombobox({
@@ -23,6 +25,7 @@ export function CityCombobox({
   onSuggestionSelect,
   disabled,
   loading,
+  autoFocus,
 }: CityComboboxProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -46,11 +49,12 @@ export function CityCombobox({
     <div ref={rootRef} className="relative">
       <TextInput
         value={value}
-        onChange={onChange}
+        onChange={(next) => onChange(toTitleCase(next))}
         placeholder="City"
         disabled={disabled}
         leftIcon={<MapPin size={16} />}
         onFocus={() => setOpen(true)}
+        autoFocus={autoFocus}
       />
       {open && !disabled && filtered.length > 0 ? (
         <div
