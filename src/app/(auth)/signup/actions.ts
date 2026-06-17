@@ -8,6 +8,7 @@ import type { CompleteOnboardingState, CreateAccountState, ResendOtpState, Verif
 import { PENDING_DPDP_COOKIE, SIGNUP_EMAIL_COOKIE } from '@/types/signup';
 import { patchProfile, ProfileFetchError, recordDpdpConsent, registerSignup, resendSignupOTP } from '@/utils/api';
 import { buildProfilePatch } from '@/lib/profile-form';
+import { formatUserFacingError } from '@/lib/format-user-error';
 import { createClient } from '@/utils/supabase/server';
 
 const SIGNUP_COOKIE_MAX_AGE = 60 * 60;
@@ -113,7 +114,7 @@ export async function verifyEmailOtp(_prevState: VerifyEmailState, formData: For
   const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
 
   if (error) {
-    return { error: error.message, success: false };
+    return { error: formatUserFacingError(error.message), success: false };
   }
 
   await supabase.auth.refreshSession();

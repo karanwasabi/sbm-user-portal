@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getPostAuthRedirectPath } from '@/lib/onboarding';
+import { formatUserFacingError } from '@/lib/format-user-error';
 import { getLatestProfile, ProfileFetchError } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
@@ -40,7 +41,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
     const message = error.message.toLowerCase().includes('email not confirmed')
       ? 'Please verify your email before signing in. Check your inbox for the verification code.'
       : error.message;
-    return { error: message, focusField: 'password', errorFields: ['email', 'password'] };
+    return { error: formatUserFacingError(message), focusField: 'password', errorFields: ['email', 'password'] };
   }
 
   if (!data.user?.email_confirmed_at) {

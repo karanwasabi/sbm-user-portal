@@ -1,5 +1,6 @@
 import { getBackendUrl, type Profile, type ProfilePatch } from '@/types/profile';
 import type { Country, CountryCity } from '@/types/reference';
+import { formatUserFacingError } from '@/lib/format-user-error';
 import { createClient } from '@/utils/supabase/server';
 
 export class ProfileFetchError extends Error {
@@ -151,7 +152,10 @@ export async function registerSignup(email: string, password: string, extraHeade
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new ProfileFetchError(payload?.error ?? `Failed to create account (${response.status})`, response.status);
+    throw new ProfileFetchError(
+      formatUserFacingError(payload?.error ?? `Failed to create account (${response.status})`),
+      response.status
+    );
   }
 }
 
@@ -174,7 +178,7 @@ export async function resendSignupOTP(email: string, extraHeaders: HeadersInit =
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new ProfileFetchError(
-      payload?.error ?? `Failed to resend verification code (${response.status})`,
+      formatUserFacingError(payload?.error ?? `Failed to resend verification code (${response.status})`),
       response.status
     );
   }
