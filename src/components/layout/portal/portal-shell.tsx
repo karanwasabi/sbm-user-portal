@@ -5,17 +5,19 @@ import { PortalProfileProvider } from '@/components/layout/portal/portal-profile
 import { PortalSidebar } from '@/components/layout/portal/portal-sidebar';
 import { PortalTopbar } from '@/components/layout/portal/portal-topbar';
 import { ToastProvider } from '@/components/ui/toast';
+import type { Enrollment } from '@/types/enrollment';
 import type { Profile } from '@/types/profile';
 
 type PortalShellProps = {
   profile: Profile | null;
   profileError: string | null;
+  enrollments: Enrollment[];
   children: ReactNode;
 };
 
-export function PortalShell({ profile, profileError, children }: PortalShellProps) {
+export function PortalShell({ profile, profileError, enrollments, children }: PortalShellProps) {
   return (
-    <PortalProfileProvider profile={profile} profileError={profileError}>
+    <PortalProfileProvider profile={profile} profileError={profileError} enrollments={enrollments}>
       <ToastProvider>
         <div className="flex h-dvh min-w-0 bg-white">
           <PortalSidebar />

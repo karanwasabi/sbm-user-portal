@@ -1,5 +1,6 @@
 import { ArrowRight, MessageCircle, Sparkles, Target, Video } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { formatInrFromPaise } from '@/lib/money';
 import { Button } from '@/components/ui/button';
 
 const includes = [
@@ -19,6 +20,14 @@ type TakeControlEnrollPanelProps = {
   error?: string | null;
   compact?: boolean;
   hideFooter?: boolean;
+  upfrontPaise?: number;
+  gstPaise?: number;
+  totalPaise?: number;
+  monthlyBasePaise?: number;
+  monthlyGstPaise?: number;
+  showGst?: boolean;
+  discountPaise?: number;
+  promoCode?: string | null;
 };
 
 export function TakeControlEnrollPanel({
@@ -27,7 +36,18 @@ export function TakeControlEnrollPanel({
   error,
   compact = false,
   hideFooter = false,
+  upfrontPaise = 1_000_000,
+  gstPaise = 180_000,
+  totalPaise,
+  monthlyBasePaise = 150_000,
+  monthlyGstPaise = 27_000,
+  showGst = true,
+  discountPaise = 0,
+  promoCode,
 }: TakeControlEnrollPanelProps) {
+  const displayTotal = totalPaise ?? upfrontPaise + gstPaise;
+  const monthlyTotal = monthlyBasePaise + (showGst ? monthlyGstPaise : 0);
+
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className={cn('flex flex-col gap-4', !compact && 'sm:flex-row sm:items-start sm:justify-between')}>
@@ -39,9 +59,16 @@ export function TakeControlEnrollPanel({
         </div>
         <div className="shrink-0 sm:text-right">
           <p className="text-xl font-extrabold tracking-tight text-slate-900">
-            ₹9,000 <span className="text-base font-bold text-slate-600">+ GST</span>
+            {formatInrFromPaise(upfrontPaise)}
+            {showGst ? <span className="text-base font-bold text-slate-600"> + GST</span> : null}
           </p>
           <p className="mt-0.5 text-xs font-medium text-slate-500">for the first 3 months</p>
+          {discountPaise > 0 ? (
+            <p className="mt-1 text-xs font-semibold text-success">
+              {promoCode ? `${promoCode}: ` : ''}−{formatInrFromPaise(discountPaise)} · pay{' '}
+              {formatInrFromPaise(displayTotal)}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -57,8 +84,7 @@ export function TakeControlEnrollPanel({
       </ul>
 
       <p className="text-xs leading-relaxed text-slate-500">
-        Then ₹3,000 + GST / month · cancel anytime after the initial period. Payment integration coming soon — enrolling
-        now reserves your spot.
+        Then {formatInrFromPaise(monthlyTotal)} / month · cancel anytime after the initial period.
       </p>
 
       {error ? (

@@ -1,0 +1,65 @@
+'use client';
+
+import { getBackendUrl } from '@/types/profile';
+import type { CheckoutPreview, CheckoutQuote, CheckoutQuoteRequest, CheckoutStartResponse } from '@/types/checkout';
+import { createClient } from '@/utils/supabase/client';
+
+async function clientApiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const token = session?.access_token;
+  if (!token) {
+    throw new Error('Not authenticated.');
+  }
+
+  const headers = new Headers(init?.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  if (!headers.has('Content-Type') && init?.body) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(`${getBackendUrl()}${path}`, {
+    ...init,
+    headers,
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? `Request failed (${response.status})`);
+  }
+
+  return response;
+}
+
+export async function getCheckoutPreview(programSlug = 'take-control'): Promise<CheckoutPreview> {
+  const response = await clientApiFetch(`/me/checkout/preview?program_slug=${encodeURIComponent(programSlug)}`);
+  return response.json() as Promise<CheckoutPreview>;
+}
+
+export async function postCheckoutQuote(body: CheckoutQuoteRequest): Promise<CheckoutQuote> {
+  const response = await clientApiFetch('/me/checkout/quote', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json()) as { quote: CheckoutQuote };
+  return payload.quote;
+}
+
+export async function startCheckout(body: CheckoutQuoteRequest): Promise<CheckoutStartResponse> {
+  const response = await clientApiFetch('/me/checkout/start', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return response.json() as Promise<CheckoutStartResponse>;
+}
+
+export async function mockCompleteCheckout(checkoutSessionId: string): Promise<void> {
+  await clientApiFetch('/me/checkout/mock-pay', {
+    method: 'POST',
+    body: JSON.stringify({ checkout_session_id: checkoutSessionId }),
+  });
+}

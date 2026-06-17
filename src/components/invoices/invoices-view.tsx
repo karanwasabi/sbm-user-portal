@@ -1,21 +1,21 @@
 'use client';
 
-import { Download } from 'lucide-react';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
 import { InvoicesPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
+import { formatInrFromPaise } from '@/lib/money';
+import type { Invoice } from '@/types/checkout';
 
-const invoices = [
-  { id: 'INV-2026-0042', date: 'May 11, 2026', amount: '₹3,540', status: 'Paid' },
-  { id: 'INV-2026-0031', date: 'Apr 11, 2026', amount: '₹3,540', status: 'Paid' },
-  { id: 'INV-2026-0018', date: 'Mar 11, 2026', amount: '₹3,540', status: 'Paid' },
-  { id: 'INV-2026-0009', date: 'Feb 11, 2026', amount: '₹3,540', status: 'Paid' },
-];
+type InvoicesViewProps = {
+  invoices: Invoice[];
+  error?: string | null;
+};
 
-export function InvoicesView() {
+export function InvoicesView({ invoices, error }: InvoicesViewProps) {
+  const latest = invoices[0];
+
   return (
     <PortalPageLayout
       eyebrow="Billing records"
@@ -25,60 +25,63 @@ export function InvoicesView() {
       panelClassName="bg-gradient-to-br from-motivation via-amber to-[#E88A0C]"
       glowClassName="bg-white/35"
       highlights={[
-        { label: 'Invoices on file', value: '4' },
-        { label: 'Latest', value: 'May 11' },
-        { label: 'Billing type', value: 'Individual' },
+        { label: 'Invoices on file', value: String(invoices.length) },
+        {
+          label: 'Latest',
+          value: latest
+            ? new Date(latest.issued_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+            : '—',
+        },
+        {
+          label: 'Billing type',
+          value: String(latest?.billing_snapshot?.billing_type ?? 'Individual'),
+        },
       ]}
     >
-      <Card>
-        <SectionHead title="GST billing details" subtitle="Issued on all tax invoices" />
-        <div className="rounded-[14px] border border-slate-100 bg-canvas-cool p-4 text-sm text-slate-600">
-          <div className="font-bold text-slate-800">Individual · no GSTIN</div>
-          <div className="mt-2 leading-relaxed">
-            Flat 304, Vasanth Apartments
-            <br />
-            14th Main, HSR Layout
-            <br />
-            Bengaluru, Karnataka 560102
-          </div>
-          <Button variant="light" size="sm" className="mt-4">
-            Edit billing address
-          </Button>
-        </div>
-      </Card>
+      {error ? (
+        <p className="text-sm font-semibold text-danger-press" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       <Card>
-        <SectionHead title="Invoice history" subtitle="Download GST-compliant PDFs" />
-        <div className="overflow-hidden rounded-[14px] border border-slate-100">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-canvas-cool text-[11px] font-bold tracking-wide text-slate-500 uppercase">
-              <tr>
-                <th className="px-4 py-3">Invoice</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3 text-right">Status</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((inv) => (
-                <tr key={inv.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3 font-medium text-slate-800">{inv.id}</td>
-                  <td className="px-4 py-3 text-slate-700">{inv.date}</td>
-                  <td className="px-4 py-3 text-slate-700">{inv.amount}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Pill tone="success">{inv.status}</Pill>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button variant="light" size="sm" leftIcon={<Download size={14} />}>
-                      PDF
-                    </Button>
-                  </td>
+        <SectionHead title="Invoice history" subtitle="Issued after each successful payment" />
+        {invoices.length === 0 ? (
+          <p className="text-sm text-slate-600">
+            No invoices yet. Your first invoice appears after enrollment payment.
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-[14px] border border-slate-100">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-canvas-cool text-[11px] font-bold tracking-wide text-slate-500 uppercase">
+                <tr>
+                  <th className="px-4 py-3">Invoice</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3 text-right">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="border-t border-slate-100">
+                    <td className="px-4 py-3 font-medium text-slate-800">{inv.invoice_number}</td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {new Date(inv.issued_at).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{formatInrFromPaise(inv.amount_paise)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Pill tone="success">{inv.status}</Pill>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </PortalPageLayout>
   );

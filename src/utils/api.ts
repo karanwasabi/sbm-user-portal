@@ -1,5 +1,6 @@
-import { getBackendUrl, type Profile, type ProfilePatch } from '@/types/profile';
+import type { Invoice } from '@/types/checkout';
 import type { Enrollment } from '@/types/enrollment';
+import { getBackendUrl, type Profile, type ProfilePatch } from '@/types/profile';
 import type { Country, CountryCity } from '@/types/reference';
 import { formatUserFacingError } from '@/lib/format-user-error';
 import { createClient } from '@/utils/supabase/server';
@@ -112,6 +113,15 @@ export async function getMyEnrollments(): Promise<Enrollment[]> {
   return response.json() as Promise<Enrollment[]>;
 }
 
+export async function getMyInvoices(): Promise<Invoice[]> {
+  const response = await requireApiFetch('/me/invoices');
+  if (!response.ok) {
+    throw new ProfileFetchError('Failed to load invoices.', response.status);
+  }
+  return response.json() as Promise<Invoice[]>;
+}
+
+/** @deprecated Use startCheckout via client-api instead */
 export async function enrollInProgram(programSlug = 'take-control'): Promise<Enrollment> {
   const response = await requireApiFetch('/me/enrollments', {
     method: 'POST',

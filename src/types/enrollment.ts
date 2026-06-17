@@ -3,7 +3,12 @@ export type Enrollment = {
   program_name: string;
   program_slug: string;
   cohort_name: string;
-  status: 'upcoming' | 'active' | 'completed';
+  status: 'pending_payment' | 'upcoming' | 'active' | 'completed' | 'cancelled';
   phase?: 'initial' | 'monthly' | null;
   starts_on?: string;
+  days_until_start?: number;
 };
+
+export function hasPendingPayment(enrollments: Enrollment[]): boolean {
+  return enrollments.some((entry) => entry.status === 'pending_payment');
+}

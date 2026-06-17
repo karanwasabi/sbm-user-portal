@@ -1,5 +1,6 @@
 'use client';
 
+import { CohortStartBanner } from '@/components/dashboard/cohort-start-banner';
 import {
   DashboardQuickLink,
   InvoicesIllustration,
@@ -46,7 +47,7 @@ const quickLinks = [
 ] as const;
 
 export function DashboardView() {
-  const { profile } = usePortalProfile();
+  const { profile, enrollments } = usePortalProfile();
   const firstName = profile ? getDisplayName(profile) : 'there';
 
   return (
@@ -59,6 +60,7 @@ export function DashboardView() {
           </p>
         </header>
 
+        <CohortStartBanner enrollments={enrollments} />
         <ProfileCompletionBanner profile={profile} />
 
         <div>

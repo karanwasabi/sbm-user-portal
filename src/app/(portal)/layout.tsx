@@ -53,7 +53,7 @@ export default async function PortalLayout({ children }: { children: React.React
   }
 
   return (
-    <PortalShell profile={profile} profileError={profileError}>
+    <PortalShell profile={profile} profileError={profileError} enrollments={enrollments}>
       {children}
     </PortalShell>
   );

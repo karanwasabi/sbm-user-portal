@@ -1,13 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Cake, Loader2 } from 'lucide-react';
+import { ArrowRight, Cake, Loader2 } from 'lucide-react';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
-import { completeOnboarding, enrollInTakeControl } from '@/app/(auth)/signup/actions';
+import { completeOnboarding } from '@/app/(auth)/signup/actions';
 import { AuthStepIndicator } from '@/components/auth/auth-step-indicator';
 import { OnboardingSessionHeader } from '@/components/auth/onboarding-session-header';
 import { AuthCardBody, AuthLayout } from '@/components/layout/auth-layout';
-import { TakeControlEnrollPanel } from '@/components/programs/take-control-enroll-panel';
+import { EnrollCheckoutPanel } from '@/components/programs/enroll-checkout-panel';
 import { ParentalConsentBlock } from '@/components/profile/parental-consent-block';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { Button } from '@/components/ui/button';
@@ -26,10 +26,9 @@ import { toTitleCase } from '@/lib/title-case';
 import type { Enrollment } from '@/types/enrollment';
 import type { Profile } from '@/types/profile';
 import type { Country } from '@/types/reference';
-import type { CompleteOnboardingState, EnrollState } from '@/types/signup';
+import type { CompleteOnboardingState } from '@/types/signup';
 
 const initialCompleteState: CompleteOnboardingState = { error: null, success: false };
-const initialEnrollState: EnrollState = { error: null, success: false };
 
 type OnboardingFormProps = {
   profile: Profile | null;
@@ -58,7 +57,6 @@ export function OnboardingForm({
   const [whatsapp, setWhatsapp] = useState(profile?.whatsapp ?? '');
 
   const [completeState, completeAction, completePending] = useActionState(completeOnboarding, initialCompleteState);
-  const [enrollState, enrollAction, enrollPending] = useActionState(enrollInTakeControl, initialEnrollState);
 
   const firstNameRef = useRef<HTMLInputElement>(null);
   const verifiedToastShown = useRef(false);
@@ -100,12 +98,6 @@ export function OnboardingForm({
     setStep(2);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot only needed after a successful save
   }, [completeState]);
-
-  useEffect(() => {
-    if (!enrollState.success) return;
-    router.push('/');
-    router.refresh();
-  }, [enrollState.success, router]);
 
   useEffect(() => {
     if (step === 1) {
@@ -151,8 +143,9 @@ export function OnboardingForm({
     setParentalConsent(false);
   };
 
-  const handleEnroll = () => {
-    enrollAction();
+  const handlePaid = () => {
+    router.push('/');
+    router.refresh();
   };
 
   return (
@@ -247,40 +240,7 @@ export function OnboardingForm({
           </form>
         ) : null}
 
-        {step === 2 ? (
-          <div className="flex flex-col gap-3.5">
-            <TakeControlEnrollPanel compact hideFooter pending={enrollPending} error={enrollState.error} />
-
-            <div className="border-t border-slate-100 pt-4">
-              <div className="flex items-stretch gap-2.5">
-                <Button
-                  type="button"
-                  variant="light"
-                  size="md"
-                  leftIcon={<ArrowLeft className="h-4 w-4" />}
-                  onClick={handleBack}
-                  disabled={enrollPending}
-                  className="shrink-0 px-4"
-                >
-                  Back
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  className="flex-1"
-                  disabled={enrollPending}
-                  onClick={handleEnroll}
-                  rightIcon={
-                    enrollPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />
-                  }
-                >
-                  {enrollPending ? 'Enrolling…' : 'Enroll in Take Control'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        {step === 2 ? <EnrollCheckoutPanel onBack={handleBack} onPaid={handlePaid} /> : null}
       </AuthCardBody>
     </AuthLayout>
   );

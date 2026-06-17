@@ -1,5 +1,5 @@
 import { shouldShowParentalConsent } from '@/lib/date-of-birth';
-import type { Enrollment } from '@/types/enrollment';
+import { hasPendingPayment, type Enrollment } from '@/types/enrollment';
 import type { Profile } from '@/types/profile';
 
 export type OnboardingStep = 1 | 2;
@@ -16,6 +16,10 @@ export function isProfileOnboardingComplete(profile: Profile | null): boolean {
 
 export function isEnrolled(enrollments: Enrollment[]): boolean {
   return enrollments.some((entry) => entry.status === 'active' || entry.status === 'upcoming');
+}
+
+export function needsPayment(enrollments: Enrollment[]): boolean {
+  return !isEnrolled(enrollments) && hasPendingPayment(enrollments);
 }
 
 export function isOnboardingComplete(profile: Profile | null, enrollments: Enrollment[] = []): boolean {
