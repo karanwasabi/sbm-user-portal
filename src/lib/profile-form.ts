@@ -20,6 +20,8 @@ export type ProfileFormParseResult = { ok: true; patch: ProfilePatch } | { ok: f
 export type ProfileFormParseOptions = {
   /** When true, all registration-required fields must be present. */
   requireAll?: boolean;
+  /** When true, only onboarding fields are validated. */
+  requireOnboarding?: boolean;
 };
 
 function valuesFromFormData(formData: FormData): ProfileFormValues {
@@ -41,7 +43,24 @@ function valuesFromFormData(formData: FormData): ProfileFormValues {
 
 export function buildProfilePatch(formData: FormData, options: ProfileFormParseOptions = {}): ProfileFormParseResult {
   const values = valuesFromFormData(formData);
-  const { requireAll = false } = options;
+  const { requireAll = false, requireOnboarding = false } = options;
+
+  if (requireOnboarding) {
+    if (!values.firstName) return { ok: false, error: 'First name is required.' };
+    if (!values.dateOfBirth) return { ok: false, error: 'Date of birth is required.' };
+    const dobError = validateDateOfBirth(values.dateOfBirth, values.parentalConsent);
+    if (dobError) return { ok: false, error: dobError };
+    if (!values.whatsapp.trim()) return { ok: false, error: 'WhatsApp number is required.' };
+
+    const patch: ProfilePatch = {
+      first_name: values.firstName,
+      whatsapp: values.whatsapp.trim(),
+      date_of_birth: values.dateOfBirth,
+      parental_consent: values.parentalConsent,
+    };
+    if (values.lastName) patch.last_name = values.lastName;
+    return { ok: true, patch };
+  }
 
   if (requireAll) {
     if (!values.firstName) return { ok: false, error: 'First name is required.' };

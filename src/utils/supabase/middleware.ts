@@ -2,12 +2,21 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/unauthorized'];
+const ONBOARDING_ROUTE = '/onboarding';
+
+function isPublicRoute(pathname: string) {
+  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
 
 function isProtectedRoute(pathname: string) {
   if (pathname === '/') return true;
   return ['/subscription', '/invoices', '/profile'].some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
+}
+
+function isEmailVerified(user: { email_confirmed_at?: string | null }) {
+  return Boolean(user.email_confirmed_at);
 }
 
 export async function updateSession(request: NextRequest) {
@@ -39,8 +48,10 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+  const publicRoute = isPublicRoute(pathname);
   const requiresAuth = isProtectedRoute(pathname);
+  const isVerifyRoute = pathname.startsWith('/signup/verify');
+  const isOnboardingRoute = pathname === ONBOARDING_ROUTE || pathname.startsWith(`${ONBOARDING_ROUTE}/`);
 
   if (!user && requiresAuth) {
     const url = request.nextUrl.clone();
@@ -50,13 +61,45 @@ export async function updateSession(request: NextRequest) {
 
   if (user && pathname === '/login') {
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    if (!isEmailVerified(user)) {
+      url.pathname = '/signup/verify';
+      url.searchParams.set('email', user.email ?? '');
+    } else {
+      url.pathname = ONBOARDING_ROUTE;
+    }
     return NextResponse.redirect(url);
   }
 
-  // Allow authenticated users to remain on /signup while finishing registration (step 1 creates the session).
+  if (user && !isEmailVerified(user)) {
+    const allowed = isVerifyRoute || pathname === '/signup' || pathname.startsWith('/signup/');
+    if (!allowed) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/signup/verify';
+      url.searchParams.set('email', user.email ?? '');
+      return NextResponse.redirect(url);
+    }
+  }
 
-  if (!user && !isPublicRoute && !requiresAuth) {
+  if (user && isEmailVerified(user)) {
+    if (pathname.startsWith('/signup')) {
+      const url = request.nextUrl.clone();
+      url.pathname = ONBOARDING_ROUTE;
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
+  }
+
+  if (user && isEmailVerified(user) && requiresAuth && !isOnboardingRoute) {
+    // Onboarding completion is enforced in the portal layout (needs profile API).
+  }
+
+  if (!user && !publicRoute && !requiresAuth && !isOnboardingRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
+  }
+
+  if (!user && isOnboardingRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

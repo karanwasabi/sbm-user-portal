@@ -132,3 +132,50 @@ export async function recordDpdpConsent(termsUrl: string, privacyUrl: string): P
     throw new ProfileFetchError(payload?.error ?? `Failed to record consent (${response.status})`, response.status);
   }
 }
+
+export async function registerSignup(email: string, password: string, extraHeaders: HeadersInit = {}): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${getBackendUrl()}/auth/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...extraHeaders,
+      },
+      body: JSON.stringify({ email, password }),
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ProfileFetchError('Could not reach the backend. Is it running?', 503);
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ProfileFetchError(payload?.error ?? `Failed to create account (${response.status})`, response.status);
+  }
+}
+
+export async function resendSignupOTP(email: string, extraHeaders: HeadersInit = {}): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${getBackendUrl()}/auth/signup/resend`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...extraHeaders,
+      },
+      body: JSON.stringify({ email }),
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ProfileFetchError('Could not reach the backend. Is it running?', 503);
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ProfileFetchError(
+      payload?.error ?? `Failed to resend verification code (${response.status})`,
+      response.status
+    );
+  }
+}

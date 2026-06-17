@@ -1,12 +1,26 @@
 'use server';
 
-import { buildProfilePatch } from '@/lib/profile-form';
+import { cookies, headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { DPDP_PRIVACY_URL, DPDP_TERMS_URL } from '@/lib/dpdp-consent';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-requirements';
-import type { CreateAccountState, CompleteRegistrationState } from '@/types/signup';
-import type { Country } from '@/types/reference';
-import { fetchCountries, patchProfile, ProfileFetchError, recordDpdpConsent } from '@/utils/api';
+import type { CompleteOnboardingState, CreateAccountState, ResendOtpState, VerifyEmailState } from '@/types/signup';
+import { PENDING_DPDP_COOKIE, SIGNUP_EMAIL_COOKIE } from '@/types/signup';
+import { patchProfile, ProfileFetchError, recordDpdpConsent, registerSignup, resendSignupOTP } from '@/utils/api';
+import { buildProfilePatch } from '@/lib/profile-form';
 import { createClient } from '@/utils/supabase/server';
+
+const SIGNUP_COOKIE_MAX_AGE = 60 * 60;
+
+async function clientIpHeader(): Promise<HeadersInit> {
+  const headerStore = await headers();
+  const forwarded = headerStore.get('x-forwarded-for');
+  const realIp = headerStore.get('x-real-ip');
+  const result: Record<string, string> = {};
+  if (forwarded) result['X-Forwarded-For'] = forwarded;
+  if (realIp) result['X-Real-IP'] = realIp;
+  return result;
+}
 
 export async function createAccount(_prevState: CreateAccountState, formData: FormData): Promise<CreateAccountState> {
   const email = String(formData.get('email') ?? '').trim();
@@ -50,14 +64,10 @@ export async function createAccount(_prevState: CreateAccountState, formData: Fo
     };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({ email, password });
-
-  if (error) {
-    const message = error.message.toLowerCase().includes('already registered')
-      ? 'An account with this email already exists. Try signing in instead.'
-      : error.message;
-
+  try {
+    await registerSignup(email, password, await clientIpHeader());
+  } catch (error) {
+    const message = error instanceof ProfileFetchError ? error.message : 'Failed to create account. Please try again.';
     return {
       error: message,
       success: false,
@@ -66,37 +76,93 @@ export async function createAccount(_prevState: CreateAccountState, formData: Fo
     };
   }
 
+  const cookieStore = await cookies();
+  cookieStore.set(SIGNUP_EMAIL_COOKIE, email.toLowerCase(), {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: SIGNUP_COOKIE_MAX_AGE,
+    path: '/',
+  });
+  if (dpdpConsent) {
+    cookieStore.set(PENDING_DPDP_COOKIE, '1', {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: SIGNUP_COOKIE_MAX_AGE,
+      path: '/',
+    });
+  }
+
+  redirect(`/signup/verify?email=${encodeURIComponent(email.toLowerCase())}`);
+}
+
+export async function verifyEmailOtp(_prevState: VerifyEmailState, formData: FormData): Promise<VerifyEmailState> {
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
+  const token = String(formData.get('otp') ?? '').trim();
+
+  if (!email || !token) {
+    return { error: 'Email and verification code are required.', success: false };
+  }
+
+  if (!/^\d{6}$/.test(token)) {
+    return { error: 'Enter the 6-digit code from your email.', success: false };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+
+  if (error) {
+    return { error: error.message, success: false };
+  }
+
+  await supabase.auth.refreshSession();
+
+  const cookieStore = await cookies();
+  const pendingDpdp = cookieStore.get(PENDING_DPDP_COOKIE)?.value === '1';
+  cookieStore.delete(SIGNUP_EMAIL_COOKIE);
+  cookieStore.delete(PENDING_DPDP_COOKIE);
+
+  if (pendingDpdp) {
+    try {
+      await recordDpdpConsent(DPDP_TERMS_URL, DPDP_PRIVACY_URL);
+    } catch (consentError) {
+      const message =
+        consentError instanceof ProfileFetchError
+          ? consentError.message
+          : 'Your email was verified but we could not save your consent. Please contact support.';
+      return { error: message, success: false };
+    }
+  }
+
+  redirect('/onboarding?verified=1');
+}
+
+export async function resendEmailOtp(_prevState: ResendOtpState, formData: FormData): Promise<ResendOtpState> {
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (!email) {
+    return { error: 'Email is required to resend the verification code.', success: false };
+  }
+
   try {
-    await recordDpdpConsent(DPDP_TERMS_URL, DPDP_PRIVACY_URL);
-  } catch (consentError) {
+    await resendSignupOTP(email, await clientIpHeader());
+  } catch (error) {
     const message =
-      consentError instanceof ProfileFetchError
-        ? consentError.message
-        : 'Your account was created but we could not save your consent. Please try signing in or contact support.';
-    return {
-      error: message,
-      success: false,
-      focusField: 'dpdpConsent',
-      errorFields: ['dpdpConsent'],
-    };
+      error instanceof ProfileFetchError ? error.message : 'Failed to resend verification code. Please try again.';
+    return { error: message, success: false };
   }
 
   return { error: null, success: true };
 }
 
-export async function loadSignupCountries(): Promise<Country[]> {
-  try {
-    return await fetchCountries();
-  } catch {
-    return [];
-  }
-}
-
-export async function completeRegistration(
-  _prevState: CompleteRegistrationState,
+export async function completeOnboarding(
+  _prevState: CompleteOnboardingState,
   formData: FormData
-): Promise<CompleteRegistrationState> {
-  const result = buildProfilePatch(formData, { requireAll: true });
+): Promise<CompleteOnboardingState> {
+  const result = buildProfilePatch(formData, { requireOnboarding: true });
   if (!result.ok) {
     return { error: result.error, success: false };
   }

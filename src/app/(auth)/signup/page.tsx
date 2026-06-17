@@ -1,26 +1,25 @@
 import { redirect } from 'next/navigation';
 import { SignupForm } from '@/components/auth/signup-form';
+import { isOnboardingComplete } from '@/lib/onboarding';
 import { getLatestProfile } from '@/utils/api';
-
-function isRegistrationComplete(profile: Awaited<ReturnType<typeof getLatestProfile>>): boolean {
-  return Boolean(
-    profile.first_name &&
-    profile.date_of_birth &&
-    profile.sex &&
-    profile.country_code &&
-    profile.timezone_id &&
-    profile.meal_preference
-  );
-}
+import { createClient } from '@/utils/supabase/server';
 
 export default async function SignupPage() {
-  try {
-    const profile = await getLatestProfile();
-    if (isRegistrationComplete(profile)) {
-      redirect('/');
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user?.email_confirmed_at) {
+    try {
+      const profile = await getLatestProfile();
+      if (isOnboardingComplete(profile)) {
+        redirect('/');
+      }
+      redirect('/onboarding');
+    } catch {
+      redirect('/onboarding');
     }
-  } catch {
-    // Unauthenticated or profile unavailable — show the wizard.
   }
 
   return <SignupForm />;

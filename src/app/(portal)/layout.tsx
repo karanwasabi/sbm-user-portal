@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { PortalShell } from '@/components/layout/portal/portal-shell';
 import { hasProduct, PRODUCT_MEMBER_PORTAL } from '@/lib/access';
+import { isOnboardingComplete } from '@/lib/onboarding';
 import { getMyAccess } from '@/utils/access-api';
 import { getLatestProfile, ProfileFetchError } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
@@ -13,6 +14,10 @@ export default async function PortalLayout({ children }: { children: React.React
 
   if (!user) {
     redirect('/login');
+  }
+
+  if (!user.email_confirmed_at) {
+    redirect(`/signup/verify?email=${encodeURIComponent(user.email ?? '')}`);
   }
 
   try {
@@ -29,7 +34,13 @@ export default async function PortalLayout({ children }: { children: React.React
 
   try {
     profile = await getLatestProfile();
+    if (!isOnboardingComplete(profile)) {
+      redirect('/onboarding');
+    }
   } catch (error) {
+    if (error instanceof ProfileFetchError && (error.status === 404 || error.status === 403)) {
+      redirect('/onboarding');
+    }
     profileError = error instanceof ProfileFetchError ? error.message : 'Failed to load profile.';
   }
 

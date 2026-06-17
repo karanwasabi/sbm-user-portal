@@ -1,6 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { getPostAuthRedirectPath } from '@/lib/onboarding';
+import { getLatestProfile, ProfileFetchError } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
 export type LoginFocusField = 'email' | 'password';
@@ -32,11 +34,27 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return { error: error.message, focusField: 'password', errorFields: ['email', 'password'] };
+    const message = error.message.toLowerCase().includes('email not confirmed')
+      ? 'Please verify your email before signing in. Check your inbox for the verification code.'
+      : error.message;
+    return { error: message, focusField: 'password', errorFields: ['email', 'password'] };
   }
 
-  redirect('/');
+  if (!data.user?.email_confirmed_at) {
+    redirect(`/signup/verify?email=${encodeURIComponent(email.toLowerCase())}`);
+  }
+
+  let profile = null;
+  try {
+    profile = await getLatestProfile();
+  } catch (loadError) {
+    if (!(loadError instanceof ProfileFetchError && loadError.status === 404)) {
+      redirect('/onboarding');
+    }
+  }
+
+  redirect(getPostAuthRedirectPath(profile));
 }
