@@ -4,9 +4,22 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { DPDP_PRIVACY_URL, DPDP_TERMS_URL } from '@/lib/dpdp-consent';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-requirements';
-import type { CompleteOnboardingState, CreateAccountState, ResendOtpState, VerifyEmailState } from '@/types/signup';
+import type {
+  CompleteOnboardingState,
+  CreateAccountState,
+  EnrollState,
+  ResendOtpState,
+  VerifyEmailState,
+} from '@/types/signup';
 import { PENDING_DPDP_COOKIE, SIGNUP_EMAIL_COOKIE } from '@/types/signup';
-import { patchProfile, ProfileFetchError, recordDpdpConsent, registerSignup, resendSignupOTP } from '@/utils/api';
+import {
+  patchProfile,
+  ProfileFetchError,
+  recordDpdpConsent,
+  registerSignup,
+  resendSignupOTP,
+  enrollInProgram,
+} from '@/utils/api';
 import { buildProfilePatch } from '@/lib/profile-form';
 import { formatUserFacingError } from '@/lib/format-user-error';
 import { createClient } from '@/utils/supabase/server';
@@ -93,7 +106,7 @@ export async function createAccount(_prevState: CreateAccountState, formData: Fo
     });
   }
 
-  redirect(`/signup/verify?email=${encodeURIComponent(email.toLowerCase())}`);
+  redirect('/signup/verify');
 }
 
 export async function verifyEmailOtp(_prevState: VerifyEmailState, formData: FormData): Promise<VerifyEmailState> {
@@ -139,6 +152,18 @@ export async function verifyEmailOtp(_prevState: VerifyEmailState, formData: For
   redirect('/onboarding?verified=1');
 }
 
+/** Clears signup cookies, ends any partial session, and returns to account creation. */
+export async function restartSignup(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(SIGNUP_EMAIL_COOKIE);
+  cookieStore.delete(PENDING_DPDP_COOKIE);
+
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+
+  redirect('/signup');
+}
+
 export async function resendEmailOtp(_prevState: ResendOtpState, formData: FormData): Promise<ResendOtpState> {
   const email = String(formData.get('email') ?? '')
     .trim()
@@ -172,6 +197,17 @@ export async function completeOnboarding(
     await patchProfile(result.patch);
   } catch (error) {
     const message = error instanceof ProfileFetchError ? error.message : 'Failed to save your profile.';
+    return { error: message, success: false };
+  }
+
+  return { error: null, success: true };
+}
+
+export async function enrollInTakeControl(_prevState: EnrollState): Promise<EnrollState> {
+  try {
+    await enrollInProgram('take-control');
+  } catch (error) {
+    const message = error instanceof ProfileFetchError ? error.message : 'Failed to enroll. Please try again.';
     return { error: message, success: false };
   }
 

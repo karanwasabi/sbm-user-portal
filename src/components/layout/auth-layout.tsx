@@ -1,11 +1,19 @@
 import type { ReactNode } from 'react';
+import { cn } from '@/lib/cn';
+
+export type AuthLayoutVariant = 'account' | 'onboarding';
 
 type AuthLayoutProps = {
   children: ReactNode;
-  wide?: boolean;
+  variant?: AuthLayoutVariant;
 };
 
-export function AuthLayout({ children, wide = false }: AuthLayoutProps) {
+const cardClassName: Record<AuthLayoutVariant, string> = {
+  account: 'max-w-[440px] min-h-[42rem]',
+  onboarding: 'max-w-[640px]',
+};
+
+export function AuthLayout({ children, variant = 'account' }: AuthLayoutProps) {
   return (
     <div className="relative flex min-h-dvh w-full flex-1 items-center justify-center overflow-hidden bg-linear-to-br from-brand-deep from-0% via-brand via-60% to-[#6A71E6] p-6">
       <div aria-hidden="true" className="absolute -top-10 -right-10 h-80 w-80 rounded-full bg-white/18 blur-[50px]" />
@@ -14,10 +22,37 @@ export function AuthLayout({ children, wide = false }: AuthLayoutProps) {
         className="absolute -bottom-22 -left-15 h-70 w-70 rounded-full bg-motivation opacity-40 blur-[60px]"
       />
       <div
-        className={`relative z-1 w-full rounded-3xl bg-white p-8 shadow-[0_24px_48px_-12px_rgba(43,24,101,0.35)] sm:p-10 ${wide ? 'max-w-[640px]' : 'max-w-[440px]'}`}
+        className={cn(
+          'relative z-1 flex w-full flex-col rounded-3xl bg-white p-8 shadow-[0_24px_48px_-12px_rgba(43,24,101,0.35)] sm:p-10',
+          cardClassName[variant]
+        )}
       >
         {children}
       </div>
     </div>
+  );
+}
+
+type AuthCardBodyProps = {
+  children: ReactNode;
+  variant?: AuthLayoutVariant;
+  className?: string;
+};
+
+const bodyClassName: Record<AuthLayoutVariant, string> = {
+  account: 'min-h-[28rem]',
+  onboarding: '',
+};
+
+export function AuthCardBody({ children, variant = 'account', className }: AuthCardBodyProps) {
+  return <div className={cn('flex flex-1 flex-col', bodyClassName[variant], className)}>{children}</div>;
+}
+
+/** Matches the signup footer link row so OTP keeps the same card height. */
+export function AuthCardFooterSpacer() {
+  return (
+    <p className="pointer-events-none mt-5.5 text-center text-[13px] font-medium text-transparent" aria-hidden>
+      Already have an account? Sign in
+    </p>
   );
 }

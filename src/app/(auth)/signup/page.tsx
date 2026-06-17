@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { SignupForm } from '@/components/auth/signup-form';
 import { isOnboardingComplete } from '@/lib/onboarding';
-import { getLatestProfile } from '@/utils/api';
+import { getLatestProfile, getMyEnrollments } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
 export default async function SignupPage() {
@@ -13,7 +13,8 @@ export default async function SignupPage() {
   if (user?.email_confirmed_at) {
     try {
       const profile = await getLatestProfile();
-      if (isOnboardingComplete(profile)) {
+      const enrollments = await getMyEnrollments();
+      if (isOnboardingComplete(profile, enrollments)) {
         redirect('/');
       }
       redirect('/onboarding');

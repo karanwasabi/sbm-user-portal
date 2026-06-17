@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { OnboardingForm } from '@/components/auth/onboarding-form';
 import { isOnboardingComplete } from '@/lib/onboarding';
-import { getLatestProfile, fetchCountries } from '@/utils/api';
+import { getLatestProfile, fetchCountries, getMyEnrollments } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
 type OnboardingPageProps = {
@@ -19,17 +19,26 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
   }
 
   if (!user.email_confirmed_at) {
-    redirect(`/signup/verify?email=${encodeURIComponent(user.email ?? '')}`);
+    redirect('/signup/verify');
   }
 
   let profile = null;
+  let enrollments: Awaited<ReturnType<typeof getMyEnrollments>> = [];
+
   try {
     profile = await getLatestProfile();
-    if (isOnboardingComplete(profile)) {
-      redirect('/');
-    }
   } catch {
     // Profile may not be loadable yet; show onboarding from empty state.
+  }
+
+  try {
+    enrollments = await getMyEnrollments();
+  } catch {
+    enrollments = [];
+  }
+
+  if (isOnboardingComplete(profile, enrollments)) {
+    redirect('/');
   }
 
   const params = await searchParams;
@@ -46,6 +55,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
     <OnboardingForm
       profile={profile}
       email={user.email ?? ''}
+      enrollments={enrollments}
       showVerifiedToast={showVerifiedToast}
       countries={countries}
     />

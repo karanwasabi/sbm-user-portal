@@ -1,18 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Cake, Loader2, LogOut } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Cake, Loader2 } from 'lucide-react';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
-import { completeOnboarding } from '@/app/(auth)/signup/actions';
-import { signOut } from '@/app/(auth)/actions';
+import { completeOnboarding, enrollInTakeControl } from '@/app/(auth)/signup/actions';
 import { AuthStepIndicator } from '@/components/auth/auth-step-indicator';
-import { SbmWordmark } from '@/components/brand/sbm-wordmark';
-import { AuthLayout } from '@/components/layout/auth-layout';
+import { OnboardingSessionHeader } from '@/components/auth/onboarding-session-header';
+import { AuthCardBody, AuthLayout } from '@/components/layout/auth-layout';
+import { TakeControlEnrollPanel } from '@/components/programs/take-control-enroll-panel';
 import { ParentalConsentBlock } from '@/components/profile/parental-consent-block';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { SectionHead } from '@/components/ui/section-head';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
 import {
@@ -21,26 +20,35 @@ import {
   shouldShowParentalConsent,
   validateDateOfBirth,
 } from '@/lib/date-of-birth';
-import { getOnboardingStep, type OnboardingStep } from '@/lib/onboarding';
+import { isProfileOnboardingComplete, getOnboardingStep, type OnboardingStep } from '@/lib/onboarding';
 import { ONBOARDING_STEPS } from '@/lib/onboarding-steps';
 import { toTitleCase } from '@/lib/title-case';
+import type { Enrollment } from '@/types/enrollment';
 import type { Profile } from '@/types/profile';
 import type { Country } from '@/types/reference';
-import type { CompleteOnboardingState } from '@/types/signup';
+import type { CompleteOnboardingState, EnrollState } from '@/types/signup';
 
 const initialCompleteState: CompleteOnboardingState = { error: null, success: false };
+const initialEnrollState: EnrollState = { error: null, success: false };
 
 type OnboardingFormProps = {
   profile: Profile | null;
   email: string;
+  enrollments: Enrollment[];
   showVerifiedToast?: boolean;
   countries: Country[];
 };
 
-export function OnboardingForm({ profile, email, showVerifiedToast = false, countries }: OnboardingFormProps) {
+export function OnboardingForm({
+  profile,
+  email,
+  enrollments,
+  showVerifiedToast = false,
+  countries,
+}: OnboardingFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [step, setStep] = useState<OnboardingStep>(() => getOnboardingStep(profile));
+  const [step, setStep] = useState<OnboardingStep>(() => getOnboardingStep(profile, enrollments));
   const [stepError, setStepError] = useState<string | null>(null);
 
   const [firstName, setFirstName] = useState(profile?.first_name ?? '');
@@ -50,9 +58,24 @@ export function OnboardingForm({ profile, email, showVerifiedToast = false, coun
   const [whatsapp, setWhatsapp] = useState(profile?.whatsapp ?? '');
 
   const [completeState, completeAction, completePending] = useActionState(completeOnboarding, initialCompleteState);
+  const [enrollState, enrollAction, enrollPending] = useActionState(enrollInTakeControl, initialEnrollState);
 
   const firstNameRef = useRef<HTMLInputElement>(null);
   const verifiedToastShown = useRef(false);
+  const profileSavedRef = useRef(isProfileOnboardingComplete(profile));
+  const savedFormSnapshotRef = useRef<string | null>(
+    isProfileOnboardingComplete(profile)
+      ? JSON.stringify({
+          firstName: profile?.first_name ?? '',
+          lastName: profile?.last_name ?? '',
+          dateOfBirth: profile?.date_of_birth ?? '',
+          parentalConsent: profile?.parental_consent ?? false,
+          whatsapp: profile?.whatsapp ?? '',
+        })
+      : null
+  );
+
+  const buildFormSnapshot = () => JSON.stringify({ firstName, lastName, dateOfBirth, parentalConsent, whatsapp });
 
   const dateOfBirthBounds = useMemo(() => getDateOfBirthInputBounds(), []);
   const showParentalConsent = useMemo(() => shouldShowParentalConsent(dateOfBirth), [dateOfBirth]);
@@ -64,14 +87,25 @@ export function OnboardingForm({ profile, email, showVerifiedToast = false, coun
   useEffect(() => {
     if (!showVerifiedToast || verifiedToastShown.current) return;
     verifiedToastShown.current = true;
-    toast({ message: 'Your account has been verified.', variant: 'success' });
+
+    window.history.replaceState(null, '', '/onboarding');
+    toast({ message: 'Your account has been verified.', variant: 'success', durationMs: 5000 });
   }, [showVerifiedToast, toast]);
 
   useEffect(() => {
     if (!completeState.success) return;
+    profileSavedRef.current = true;
+    savedFormSnapshotRef.current = buildFormSnapshot();
+    setStepError(null);
+    setStep(2);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot only needed after a successful save
+  }, [completeState]);
+
+  useEffect(() => {
+    if (!enrollState.success) return;
     router.push('/');
     router.refresh();
-  }, [completeState.success, router]);
+  }, [enrollState.success, router]);
 
   useEffect(() => {
     if (step === 1) {
@@ -82,26 +116,34 @@ export function OnboardingForm({ profile, email, showVerifiedToast = false, coun
   const showParentalConsentError =
     showParentalConsent && !parentalConsent && isParentalConsentValidationError(stepError);
 
-  const validateStep1 = (): string | null => {
+  const validateProfileStep = (): string | null => {
     if (!firstName.trim()) return 'First name is required.';
+    if (!lastName.trim()) return 'Last name is required.';
     if (!dateOfBirth) return 'Date of birth is required.';
     if (dateOfBirthError) return dateOfBirthError;
+    if (!whatsapp.trim()) return 'WhatsApp number is required.';
     return null;
   };
 
-  const handleContinueFromStep1 = () => {
-    const error = validateStep1();
+  const handleContinueFromProfile = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const error = validateProfileStep();
     if (error) {
+      event.preventDefault();
       setStepError(error);
       return;
     }
     setStepError(null);
-    setStep(2);
+
+    const snapshot = buildFormSnapshot();
+    if (profileSavedRef.current && savedFormSnapshotRef.current === snapshot) {
+      event.preventDefault();
+      setStep(2);
+    }
   };
 
   const handleBack = () => {
     setStepError(null);
-    if (step > 1) setStep(1);
+    setStep(1);
   };
 
   const handleDateOfBirthChange = (nextDateOfBirth: string) => {
@@ -109,146 +151,137 @@ export function OnboardingForm({ profile, email, showVerifiedToast = false, coun
     setParentalConsent(false);
   };
 
-  const stepTitle =
-    step === 1
-      ? { title: 'About you', subtitle: 'Tell us a little about yourself so we can personalise your program.' }
-      : { title: 'WhatsApp number', subtitle: 'We use WhatsApp for coaching updates and session reminders.' };
+  const handleEnroll = () => {
+    enrollAction();
+  };
 
   return (
-    <AuthLayout wide>
-      <div className="mb-7">
-        <SbmWordmark size="lg" />
-      </div>
-
-      <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-        <p className="min-w-0 text-[13px] leading-snug font-medium text-slate-500">
-          Signed in as <span className="block truncate font-semibold text-slate-800 sm:inline">{email}</span>
-        </p>
-        <form action={signOut} className="shrink-0">
-          <Button type="submit" variant="light" size="sm" leftIcon={<LogOut className="h-4 w-4" />}>
-            Log out
-          </Button>
-        </form>
-      </div>
+    <AuthLayout variant="onboarding">
+      <OnboardingSessionHeader email={email} />
 
       <AuthStepIndicator steps={ONBOARDING_STEPS} currentStep={step} ariaLabel="Onboarding progress" />
-      <SectionHead title={stepTitle.title} subtitle={stepTitle.subtitle} className="mb-5" />
 
-      {step === 1 ? (
-        <div className="flex flex-col gap-3.5">
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-            <Field label="First name">
-              <TextInput
-                ref={firstNameRef}
-                value={firstName}
-                onChange={(value) => setFirstName(toTitleCase(value))}
-                placeholder="First name"
-              />
-            </Field>
-            <Field label="Last name">
-              <TextInput
-                value={lastName}
-                onChange={(value) => setLastName(toTitleCase(value))}
-                placeholder="Last name"
-              />
-            </Field>
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Field
-                label="Date of birth"
-                hint={showParentalConsent ? 'Members aged 13–17 must complete parental consent below.' : undefined}
-                error={dateOfBirthError && !showParentalConsentError ? dateOfBirthError : undefined}
-              >
+      <AuthCardBody variant="onboarding">
+        {step === 1 ? (
+          <form action={completeAction} className="flex flex-col gap-3.5">
+            <input type="hidden" name="firstName" value={firstName} />
+            <input type="hidden" name="lastName" value={lastName} />
+            <input type="hidden" name="dateOfBirth" value={dateOfBirth} />
+            <input type="hidden" name="parentalConsent" value={parentalConsent ? 'true' : 'false'} />
+            <input type="hidden" name="whatsapp" value={whatsapp} />
+
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <Field label="First name">
                 <TextInput
-                  value={dateOfBirth}
-                  onChange={handleDateOfBirthChange}
-                  type="date"
-                  min={dateOfBirthBounds.min}
-                  max={dateOfBirthBounds.max}
-                  error={Boolean(dateOfBirthError) && !showParentalConsentError}
-                  leftIcon={<Cake size={16} className="text-slate-400" />}
+                  ref={firstNameRef}
+                  value={firstName}
+                  onChange={(value) => setFirstName(toTitleCase(value))}
+                  placeholder="First name"
                 />
               </Field>
-              {showParentalConsent ? (
-                <ParentalConsentBlock
-                  checked={parentalConsent}
-                  onChange={(checked) => {
-                    setParentalConsent(checked);
-                    if (checked) setStepError(null);
-                  }}
-                  error={showParentalConsentError}
+              <Field label="Last name">
+                <TextInput
+                  value={lastName}
+                  onChange={(value) => setLastName(toTitleCase(value))}
+                  placeholder="Last name"
                 />
-              ) : null}
+              </Field>
             </div>
-          </div>
-
-          {stepError && !showParentalConsentError ? (
-            <p className="text-[12.5px] leading-snug font-semibold text-danger-press" role="alert">
-              {stepError}
-            </p>
-          ) : null}
-
-          <div className="mt-1 flex flex-col gap-3 border-t border-slate-100 pt-4">
-            <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              fullWidth
-              onClick={handleContinueFromStep1}
-              rightIcon={<ArrowRight className="h-4 w-4" />}
+            <Field
+              label="Date of birth"
+              hint={showParentalConsent ? 'Parental consent required below for ages 13–17.' : undefined}
+              error={dateOfBirthError && !showParentalConsentError ? dateOfBirthError : undefined}
             >
-              Continue
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {step === 2 ? (
-        <form action={completeAction} className="flex flex-col gap-3.5">
-          <input type="hidden" name="firstName" value={firstName} />
-          <input type="hidden" name="lastName" value={lastName} />
-          <input type="hidden" name="dateOfBirth" value={dateOfBirth} />
-          <input type="hidden" name="parentalConsent" value={parentalConsent ? 'true' : 'false'} />
-          <input type="hidden" name="whatsapp" value={whatsapp} />
-
-          <Field label="WhatsApp number">
-            <PhoneInput value={whatsapp} onChange={setWhatsapp} countries={countries} disabled={completePending} />
-          </Field>
-
-          {(stepError || completeState.error) && (
-            <p className="text-[12.5px] leading-snug font-semibold text-danger-press" role="alert">
-              {completeState.error ?? stepError}
-            </p>
-          )}
-
-          <div className="mt-1 flex flex-col gap-3 border-t border-slate-100 pt-4">
-            <div className="flex items-stretch gap-2.5">
-              <Button
-                type="button"
-                variant="light"
-                size="md"
-                leftIcon={<ArrowLeft className="h-4 w-4" />}
-                onClick={handleBack}
+              <TextInput
+                value={dateOfBirth}
+                onChange={handleDateOfBirthChange}
+                type="date"
+                min={dateOfBirthBounds.min}
+                max={dateOfBirthBounds.max}
+                error={Boolean(dateOfBirthError) && !showParentalConsentError}
+                leftIcon={<Cake size={16} className="text-slate-400" />}
+              />
+            </Field>
+            <Field label="WhatsApp number">
+              <PhoneInput
+                name="whatsapp"
+                value={whatsapp}
+                onChange={setWhatsapp}
+                countries={countries}
                 disabled={completePending}
-                className="shrink-0 px-4"
-              >
-                Back
-              </Button>
+              />
+            </Field>
+
+            {showParentalConsent ? (
+              <ParentalConsentBlock
+                checked={parentalConsent}
+                onChange={(checked) => {
+                  setParentalConsent(checked);
+                  if (checked) setStepError(null);
+                }}
+                error={showParentalConsentError}
+              />
+            ) : null}
+
+            {(stepError || completeState.error) && !showParentalConsentError ? (
+              <p className="text-[12.5px] leading-snug font-semibold text-danger-press" role="alert">
+                {completeState.error ?? stepError}
+              </p>
+            ) : null}
+
+            <div className="border-t border-slate-100 pt-4">
               <Button
                 type="submit"
                 variant="primary"
-                size="md"
-                className="flex-1"
+                size="lg"
+                fullWidth
                 disabled={completePending}
+                onClick={handleContinueFromProfile}
                 rightIcon={
                   completePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />
                 }
               >
-                Finish setup
+                Continue
               </Button>
             </div>
+          </form>
+        ) : null}
+
+        {step === 2 ? (
+          <div className="flex flex-col gap-3.5">
+            <TakeControlEnrollPanel compact hideFooter pending={enrollPending} error={enrollState.error} />
+
+            <div className="border-t border-slate-100 pt-4">
+              <div className="flex items-stretch gap-2.5">
+                <Button
+                  type="button"
+                  variant="light"
+                  size="md"
+                  leftIcon={<ArrowLeft className="h-4 w-4" />}
+                  onClick={handleBack}
+                  disabled={enrollPending}
+                  className="shrink-0 px-4"
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  className="flex-1"
+                  disabled={enrollPending}
+                  onClick={handleEnroll}
+                  rightIcon={
+                    enrollPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />
+                  }
+                >
+                  {enrollPending ? 'Enrolling…' : 'Enroll in Take Control'}
+                </Button>
+              </div>
+            </div>
           </div>
-        </form>
-      ) : null}
+        ) : null}
+      </AuthCardBody>
     </AuthLayout>
   );
 }

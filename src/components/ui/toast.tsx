@@ -1,7 +1,7 @@
 'use client';
 
 import { CheckCircle2, CircleAlert, X } from 'lucide-react';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 type ToastVariant = 'success' | 'error' | 'default';
@@ -40,6 +40,11 @@ const variantStyles: Record<ToastVariant, { icon: typeof CheckCircle2; iconClass
 function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: (id: string) => void }) {
   const { icon: Icon, iconClassName } = variantStyles[item.variant ?? 'default'];
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => onDismiss(item.id), item.durationMs ?? 4000);
+    return () => window.clearTimeout(timer);
+  }, [item.durationMs, item.id, onDismiss]);
+
   return (
     <div
       role="status"
@@ -65,36 +70,14 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const dismiss = useCallback((id: string) => {
-    const timer = timersRef.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timersRef.current.delete(id);
-    }
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
-  const toast = useCallback(
-    ({ message, variant = 'default', durationMs = 4000 }: ToastOptions) => {
-      const id = crypto.randomUUID();
-      setToasts((current) => [...current, { id, message, variant, durationMs }]);
-
-      const timer = setTimeout(() => dismiss(id), durationMs);
-      timersRef.current.set(id, timer);
-    },
-    [dismiss]
-  );
-
-  useEffect(() => {
-    const timers = timersRef.current;
-    return () => {
-      for (const timer of timers.values()) {
-        clearTimeout(timer);
-      }
-      timers.clear();
-    };
+  const toast = useCallback(({ message, variant = 'default', durationMs = 4000 }: ToastOptions) => {
+    const id = crypto.randomUUID();
+    setToasts((current) => [...current, { id, message, variant, durationMs }]);
   }, []);
 
   const value = useMemo(() => ({ toast }), [toast]);

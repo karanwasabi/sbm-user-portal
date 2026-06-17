@@ -7,7 +7,7 @@ import { createAccount } from '@/app/(auth)/signup/actions';
 import { DpdpConsentCheckbox } from '@/components/auth/dpdp-consent-checkbox';
 import { PasswordField } from '@/components/auth/password-field';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
-import { AuthLayout } from '@/components/layout/auth-layout';
+import { AuthCardBody, AuthCardFooterSpacer, AuthLayout } from '@/components/layout/auth-layout';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { SectionHead } from '@/components/ui/section-head';
@@ -65,110 +65,116 @@ export function SignupForm() {
   const dpdpConsentError = accountFieldError('dpdpConsent');
 
   return (
-    <AuthLayout wide>
-      <div className="mb-7">
+    <AuthLayout variant="account">
+      <div className="mb-7 shrink-0">
         <SbmWordmark size="lg" />
       </div>
 
-      <SectionHead
-        title="Create your account"
-        subtitle="Enter your email and choose a password to get started."
-        className="mb-5"
-      />
+      <AuthCardBody variant="account">
+        <SectionHead
+          title="Create your account"
+          subtitle="Enter your email and choose a password to get started."
+          className="mb-5 shrink-0"
+        />
 
-      <form action={createAccountAction} className="flex flex-col gap-3.5">
-        <input type="hidden" name="dpdpConsent" value={dpdpConsent ? 'true' : 'false'} />
-        <Field label="Email">
-          <TextInput
-            ref={emailRef}
-            name="email"
-            value={email}
+        <form action={createAccountAction} className="flex flex-1 flex-col gap-3.5">
+          <input type="hidden" name="dpdpConsent" value={dpdpConsent ? 'true' : 'false'} />
+          <Field label="Email">
+            <TextInput
+              ref={emailRef}
+              name="email"
+              value={email}
+              onChange={(value) => {
+                setEmail(value);
+                clearAccountError();
+              }}
+              placeholder="you@example.com"
+              autoComplete="email"
+              type="email"
+              disabled={accountPending}
+              leftIcon={<Mail className="h-4 w-4" />}
+              error={accountFieldError('email')}
+            />
+          </Field>
+
+          <PasswordField
+            name="password"
+            label="Password"
+            value={password}
             onChange={(value) => {
-              setEmail(value);
+              setPassword(value);
               clearAccountError();
             }}
-            placeholder="you@example.com"
-            autoComplete="email"
-            type="email"
+            showPassword={showPassword}
+            onToggleShow={() => setShowPassword(!showPassword)}
+            autoComplete="new-password"
             disabled={accountPending}
-            leftIcon={<Mail className="h-4 w-4" />}
-            error={accountFieldError('email')}
+            error={accountFieldError('password')}
+            inputRef={passwordRef}
           />
-        </Field>
 
-        <PasswordField
-          name="password"
-          label="Password"
-          value={password}
-          onChange={(value) => {
-            setPassword(value);
-            clearAccountError();
-          }}
-          showPassword={showPassword}
-          onToggleShow={() => setShowPassword(!showPassword)}
-          autoComplete="new-password"
-          disabled={accountPending}
-          error={accountFieldError('password')}
-          inputRef={passwordRef}
-        />
+          <PasswordField
+            name="confirmPassword"
+            label="Confirm password"
+            value={confirmPassword}
+            onChange={(value) => {
+              setConfirmPassword(value);
+              clearAccountError();
+            }}
+            showPassword={showConfirmPassword}
+            onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
+            autoComplete="new-password"
+            disabled={accountPending}
+            error={accountFieldError('confirmPassword')}
+            inputRef={confirmRef}
+          />
 
-        <PasswordField
-          name="confirmPassword"
-          label="Confirm password"
-          value={confirmPassword}
-          onChange={(value) => {
-            setConfirmPassword(value);
-            clearAccountError();
-          }}
-          showPassword={showConfirmPassword}
-          onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
-          autoComplete="new-password"
-          disabled={accountPending}
-          error={accountFieldError('confirmPassword')}
-          inputRef={confirmRef}
-        />
+          <p className="text-xs leading-relaxed text-slate-500">{PASSWORD_REQUIREMENTS_COPY}</p>
 
-        <p className="text-xs leading-relaxed text-slate-500">{PASSWORD_REQUIREMENTS_COPY}</p>
+          <DpdpConsentCheckbox
+            checked={dpdpConsent}
+            onChange={(checked) => {
+              setDpdpConsent(checked);
+              clearAccountError();
+            }}
+            disabled={accountPending}
+            error={dpdpConsentError}
+            inputRef={dpdpConsentRef}
+          />
 
-        <DpdpConsentCheckbox
-          checked={dpdpConsent}
-          onChange={(checked) => {
-            setDpdpConsent(checked);
-            clearAccountError();
-          }}
-          disabled={accountPending}
-          error={dpdpConsentError}
-          inputRef={dpdpConsentRef}
-        />
+          <div
+            className="min-h-6 py-0.5"
+            role={displayAccountError && !dpdpConsentError ? 'alert' : undefined}
+            aria-live="polite"
+          >
+            {displayAccountError && !dpdpConsentError ? (
+              <p className="text-[12.5px] leading-snug font-semibold text-danger-press">{displayAccountError}</p>
+            ) : null}
+          </div>
 
-        <div
-          className="min-h-6 py-0.5"
-          role={displayAccountError && !dpdpConsentError ? 'alert' : undefined}
-          aria-live="polite"
-        >
-          {displayAccountError && !dpdpConsentError ? (
-            <p className="text-[12.5px] leading-snug font-semibold text-danger-press">{displayAccountError}</p>
-          ) : null}
-        </div>
+          <div className="mt-auto flex flex-col gap-3.5">
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={accountPending}
+              rightIcon={
+                accountPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />
+              }
+            >
+              Continue
+            </Button>
 
-        <Button
-          type="submit"
-          variant="primary"
-          size="lg"
-          fullWidth
-          disabled={accountPending}
-          rightIcon={accountPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-        >
-          Continue
-        </Button>
-      </form>
-
-      <p className="mt-5.5 text-center text-[13px] font-medium text-slate-500">
-        Already have an account?{' '}
-        <Link href="/login" className="font-bold text-brand no-underline">
-          Sign in
-        </Link>
-      </p>
+            <p className="text-center text-[13px] font-medium text-slate-500">
+              Already have an account?{' '}
+              <Link href="/login" className="font-bold text-brand no-underline">
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </form>
+      </AuthCardBody>
     </AuthLayout>
   );
 }

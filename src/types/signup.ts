@@ -22,5 +22,10 @@ export type CompleteOnboardingState = {
   success: boolean;
 };
 
+export type EnrollState = {
+  error: string | null;
+  success: boolean;
+};
+
 export const SIGNUP_EMAIL_COOKIE = 'sbm_signup_email';
 export const PENDING_DPDP_COOKIE = 'sbm_pending_dpdp';

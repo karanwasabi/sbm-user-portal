@@ -3,7 +3,7 @@ import { PortalShell } from '@/components/layout/portal/portal-shell';
 import { hasProduct, PRODUCT_MEMBER_PORTAL } from '@/lib/access';
 import { isOnboardingComplete } from '@/lib/onboarding';
 import { getMyAccess } from '@/utils/access-api';
-import { getLatestProfile, ProfileFetchError } from '@/utils/api';
+import { getLatestProfile, getMyEnrollments, ProfileFetchError } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +17,7 @@ export default async function PortalLayout({ children }: { children: React.React
   }
 
   if (!user.email_confirmed_at) {
-    redirect(`/signup/verify?email=${encodeURIComponent(user.email ?? '')}`);
+    redirect('/signup/verify');
   }
 
   try {
@@ -31,17 +31,25 @@ export default async function PortalLayout({ children }: { children: React.React
 
   let profile = null;
   let profileError: string | null = null;
+  let enrollments: Awaited<ReturnType<typeof getMyEnrollments>> = [];
 
   try {
     profile = await getLatestProfile();
-    if (!isOnboardingComplete(profile)) {
-      redirect('/onboarding');
-    }
   } catch (error) {
     if (error instanceof ProfileFetchError && (error.status === 404 || error.status === 403)) {
       redirect('/onboarding');
     }
     profileError = error instanceof ProfileFetchError ? error.message : 'Failed to load profile.';
+  }
+
+  try {
+    enrollments = await getMyEnrollments();
+  } catch {
+    enrollments = [];
+  }
+
+  if (profile && !isOnboardingComplete(profile, enrollments)) {
+    redirect('/onboarding');
   }
 
   return (

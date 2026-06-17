@@ -1,10 +1,14 @@
 'use server';
 
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getPostAuthRedirectPath } from '@/lib/onboarding';
 import { formatUserFacingError } from '@/lib/format-user-error';
-import { getLatestProfile, ProfileFetchError } from '@/utils/api';
+import { SIGNUP_EMAIL_COOKIE } from '@/types/signup';
+import { getLatestProfile, getMyEnrollments, ProfileFetchError } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
+
+const SIGNUP_COOKIE_MAX_AGE = 60 * 60;
 
 export type LoginFocusField = 'email' | 'password';
 
@@ -45,17 +49,26 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   }
 
   if (!data.user?.email_confirmed_at) {
-    redirect(`/signup/verify?email=${encodeURIComponent(email.toLowerCase())}`);
+    const cookieStore = await cookies();
+    cookieStore.set(SIGNUP_EMAIL_COOKIE, email.toLowerCase(), {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: SIGNUP_COOKIE_MAX_AGE,
+      path: '/',
+    });
+    redirect('/signup/verify');
   }
 
   let profile = null;
+  let enrollments: Awaited<ReturnType<typeof getMyEnrollments>> = [];
   try {
     profile = await getLatestProfile();
+    enrollments = await getMyEnrollments();
   } catch (loadError) {
     if (!(loadError instanceof ProfileFetchError && loadError.status === 404)) {
       redirect('/onboarding');
     }
   }
 
-  redirect(getPostAuthRedirectPath(profile));
+  redirect(getPostAuthRedirectPath(profile, enrollments));
 }

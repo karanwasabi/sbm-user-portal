@@ -63,7 +63,6 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     if (!isEmailVerified(user)) {
       url.pathname = '/signup/verify';
-      url.searchParams.set('email', user.email ?? '');
     } else {
       url.pathname = ONBOARDING_ROUTE;
     }
@@ -75,7 +74,6 @@ export async function updateSession(request: NextRequest) {
     if (!allowed) {
       const url = request.nextUrl.clone();
       url.pathname = '/signup/verify';
-      url.searchParams.set('email', user.email ?? '');
       return NextResponse.redirect(url);
     }
   }

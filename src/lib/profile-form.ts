@@ -1,4 +1,5 @@
 import { validateDateOfBirth } from '@/lib/date-of-birth';
+import { parseWhatsapp } from '@/lib/phone-number';
 import { normalizeProfileTimezoneForDb } from '@/lib/profile-timezone';
 import type { MealPreference, ProfilePatch, Sex } from '@/types/profile';
 
@@ -47,6 +48,7 @@ export function buildProfilePatch(formData: FormData, options: ProfileFormParseO
 
   if (requireOnboarding) {
     if (!values.firstName) return { ok: false, error: 'First name is required.' };
+    if (!values.lastName) return { ok: false, error: 'Last name is required.' };
     if (!values.dateOfBirth) return { ok: false, error: 'Date of birth is required.' };
     const dobError = validateDateOfBirth(values.dateOfBirth, values.parentalConsent);
     if (dobError) return { ok: false, error: dobError };
@@ -54,11 +56,17 @@ export function buildProfilePatch(formData: FormData, options: ProfileFormParseO
 
     const patch: ProfilePatch = {
       first_name: values.firstName,
+      last_name: values.lastName,
       whatsapp: values.whatsapp.trim(),
       date_of_birth: values.dateOfBirth,
       parental_consent: values.parentalConsent,
     };
-    if (values.lastName) patch.last_name = values.lastName;
+
+    const inferredCountry = parseWhatsapp(values.whatsapp.trim()).dialIso;
+    if (inferredCountry) {
+      patch.country_code = inferredCountry.toUpperCase();
+    }
+
     return { ok: true, patch };
   }
 

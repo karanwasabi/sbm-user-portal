@@ -1,4 +1,5 @@
 import { getBackendUrl, type Profile, type ProfilePatch } from '@/types/profile';
+import type { Enrollment } from '@/types/enrollment';
 import type { Country, CountryCity } from '@/types/reference';
 import { formatUserFacingError } from '@/lib/format-user-error';
 import { createClient } from '@/utils/supabase/server';
@@ -101,6 +102,28 @@ export async function patchProfile(body: ProfilePatch): Promise<Profile> {
   }
 
   return response.json() as Promise<Profile>;
+}
+
+export async function getMyEnrollments(): Promise<Enrollment[]> {
+  const response = await requireApiFetch('/me/enrollments');
+  if (!response.ok) {
+    throw new ProfileFetchError('Failed to load enrollments.', response.status);
+  }
+  return response.json() as Promise<Enrollment[]>;
+}
+
+export async function enrollInProgram(programSlug = 'take-control'): Promise<Enrollment> {
+  const response = await requireApiFetch('/me/enrollments', {
+    method: 'POST',
+    body: JSON.stringify({ program_slug: programSlug }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ProfileFetchError(payload?.error ?? `Failed to enroll (${response.status})`, response.status);
+  }
+
+  return response.json() as Promise<Enrollment>;
 }
 
 export async function fetchCountries(): Promise<Country[]> {
