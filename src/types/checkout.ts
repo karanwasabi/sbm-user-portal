@@ -31,6 +31,14 @@ export type CheckoutQuoteRequest = {
   gstin?: string;
   legal_name?: string;
   billing_state?: string;
+  billing_address?: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+  };
   promo_code?: string;
 };
 

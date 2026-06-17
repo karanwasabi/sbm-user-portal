@@ -240,7 +240,13 @@ export function OnboardingForm({
           </form>
         ) : null}
 
-        {step === 2 ? <EnrollCheckoutPanel onBack={handleBack} onPaid={handlePaid} /> : null}
+        {step === 2 ? (
+          <EnrollCheckoutPanel
+            onBack={handleBack}
+            onPaid={handlePaid}
+            defaultLegalName={`${firstName} ${lastName}`.trim()}
+          />
+        ) : null}
       </AuthCardBody>
     </AuthLayout>
   );

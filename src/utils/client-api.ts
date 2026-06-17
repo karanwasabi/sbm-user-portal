@@ -2,6 +2,7 @@
 
 import { getBackendUrl } from '@/types/profile';
 import type { CheckoutPreview, CheckoutQuote, CheckoutQuoteRequest, CheckoutStartResponse } from '@/types/checkout';
+import type { Country, CountryCity, CountryState } from '@/types/reference';
 import { createClient } from '@/utils/supabase/client';
 
 async function clientApiFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -62,4 +63,19 @@ export async function mockCompleteCheckout(checkoutSessionId: string): Promise<v
     method: 'POST',
     body: JSON.stringify({ checkout_session_id: checkoutSessionId }),
   });
+}
+
+export async function getCountries(): Promise<Country[]> {
+  const response = await clientApiFetch('/reference/countries');
+  return response.json() as Promise<Country[]>;
+}
+
+export async function getCountryCities(countryCode: string): Promise<CountryCity[]> {
+  const response = await clientApiFetch(`/reference/countries/${encodeURIComponent(countryCode)}/cities`);
+  return response.json() as Promise<CountryCity[]>;
+}
+
+export async function getCountryStates(countryCode: string): Promise<CountryState[]> {
+  const response = await clientApiFetch(`/reference/countries/${encodeURIComponent(countryCode)}/states`);
+  return response.json() as Promise<CountryState[]>;
 }

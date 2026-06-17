@@ -1,16 +1,28 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
+import { CityCombobox } from '@/components/profile/city-combobox';
+import { CountryCombobox } from '@/components/profile/country-combobox';
 import { TakeControlEnrollPanel } from '@/components/programs/take-control-enroll-panel';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
 import type { CheckoutPreview, CheckoutQuote } from '@/types/checkout';
-import { getCheckoutPreview, postCheckoutQuote, startCheckout, mockCompleteCheckout } from '@/utils/client-api';
+import type { Country, CountryCity, CountryState } from '@/types/reference';
+import {
+  getCheckoutPreview,
+  postCheckoutQuote,
+  startCheckout,
+  mockCompleteCheckout,
+  getCountries,
+  getCountryCities,
+  getCountryStates,
+} from '@/utils/client-api';
 
 declare global {
   interface Window {
@@ -21,6 +33,32 @@ declare global {
 type EnrollCheckoutPanelProps = {
   onBack?: () => void;
   onPaid?: () => void;
+  defaultLegalName?: string;
+};
+
+const SUBDIVISION_LABEL_BY_COUNTRY: Record<string, string> = {
+  US: 'State',
+  IN: 'State',
+  AU: 'State / Territory',
+  BR: 'State',
+  MX: 'State',
+  MY: 'State',
+  NG: 'State',
+  DE: 'State',
+  AT: 'State',
+  CH: 'Canton',
+  CA: 'Province / Territory',
+  PK: 'Province',
+  CN: 'Province',
+  JP: 'Prefecture',
+  IT: 'Region',
+  ES: 'Autonomous community',
+  FR: 'Region',
+  PH: 'Province',
+  ID: 'Province',
+  TH: 'Province',
+  AE: 'Emirate',
+  ZA: 'Province',
 };
 
 function loadRazorpayScript(): Promise<void> {
@@ -37,7 +75,7 @@ function loadRazorpayScript(): Promise<void> {
   });
 }
 
-export function EnrollCheckoutPanel({ onBack, onPaid }: EnrollCheckoutPanelProps) {
+export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: EnrollCheckoutPanelProps) {
   const router = useRouter();
   const [preview, setPreview] = useState<CheckoutPreview | null>(null);
   const [quote, setQuote] = useState<CheckoutQuote | null>(null);
@@ -47,11 +85,30 @@ export function EnrollCheckoutPanel({ onBack, onPaid }: EnrollCheckoutPanelProps
   const [error, setError] = useState<string | null>(null);
   const [billingOpen, setBillingOpen] = useState(false);
 
-  const [pricingRegion, setPricingRegion] = useState<'domestic' | 'international'>('domestic');
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [countryCities, setCountryCities] = useState<CountryCity[]>([]);
+  const [countryStates, setCountryStates] = useState<CountryState[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingStates, setLoadingStates] = useState(false);
+  const [billingCountryCode, setBillingCountryCode] = useState('IN');
+  const pricingRegion = useMemo<'domestic' | 'international'>(
+    () => (billingCountryCode === 'IN' ? 'domestic' : 'international'),
+    [billingCountryCode]
+  );
   const [billingType, setBillingType] = useState<'personal' | 'business'>('personal');
   const [gstin, setGstin] = useState('');
-  const [legalName, setLegalName] = useState('');
+  const [legalName, setLegalName] = useState(defaultLegalName.trim());
+  const [legalNameTouched, setLegalNameTouched] = useState(false);
   const [billingState, setBillingState] = useState('');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [billingCity, setBillingCity] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const selectedCountry = useMemo(
+    () => countries.find((country) => country.iso_code === billingCountryCode),
+    [countries, billingCountryCode]
+  );
+  const billingCountry = selectedCountry?.name ?? billingCountryCode;
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState('');
 
@@ -59,10 +116,16 @@ export function EnrollCheckoutPanel({ onBack, onPaid }: EnrollCheckoutPanelProps
     let cancelled = false;
     (async () => {
       try {
-        const data = await getCheckoutPreview('take-control');
+        const [data, countryRows] = await Promise.all([getCheckoutPreview('take-control'), getCountries()]);
         if (cancelled) return;
         setPreview(data);
         setQuote(data.domestic);
+        setCountries(countryRows);
+        if (countryRows.some((entry) => entry.iso_code === 'IN')) {
+          setBillingCountryCode('IN');
+        } else if (countryRows[0]) {
+          setBillingCountryCode(countryRows[0].iso_code);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load checkout preview.');
@@ -76,17 +139,84 @@ export function EnrollCheckoutPanel({ onBack, onPaid }: EnrollCheckoutPanelProps
     };
   }, []);
 
+  useEffect(() => {
+    if (legalNameTouched) return;
+    setLegalName(defaultLegalName.trim());
+  }, [defaultLegalName, legalNameTouched]);
+
+  useEffect(() => {
+    if (!billingCountryCode) {
+      setCountryCities([]);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingCities(true);
+    getCountryCities(billingCountryCode)
+      .then((rows) => {
+        if (!cancelled) setCountryCities(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setCountryCities([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCities(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [billingCountryCode]);
+
+  useEffect(() => {
+    setBillingCity('');
+    setBillingState('');
+  }, [billingCountryCode]);
+
+  useEffect(() => {
+    if (!billingCountryCode) {
+      setCountryStates([]);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingStates(true);
+    getCountryStates(billingCountryCode)
+      .then((rows) => {
+        if (!cancelled) setCountryStates(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setCountryStates([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingStates(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [billingCountryCode]);
+
   const refreshQuote = useCallback(async () => {
     setQuotePending(true);
     setError(null);
     try {
+      const trimmedGstin = gstin.trim().toUpperCase();
       const next = await postCheckoutQuote({
         program_slug: 'take-control',
         pricing_region: pricingRegion,
         billing_type: billingType,
-        gstin: billingType === 'business' && pricingRegion === 'domestic' ? gstin : undefined,
+        gstin: billingType === 'business' && pricingRegion === 'domestic' && trimmedGstin ? trimmedGstin : undefined,
         legal_name: legalName || undefined,
         billing_state: billingState || undefined,
+        billing_address: {
+          line1: addressLine1,
+          line2: addressLine2 || undefined,
+          city: billingCity,
+          state: hasSubdivisions ? billingState : '',
+          postal_code: postalCode,
+          country: billingCountry,
+        },
         promo_code: appliedPromo || undefined,
       });
       setQuote(next);
@@ -95,7 +225,19 @@ export function EnrollCheckoutPanel({ onBack, onPaid }: EnrollCheckoutPanelProps
     } finally {
       setQuotePending(false);
     }
-  }, [appliedPromo, billingState, billingType, gstin, legalName, pricingRegion]);
+  }, [
+    addressLine1,
+    addressLine2,
+    appliedPromo,
+    billingCity,
+    billingCountry,
+    billingState,
+    billingType,
+    gstin,
+    legalName,
+    postalCode,
+    pricingRegion,
+  ]);
 
   useEffect(() => {
     if (loading) return;
@@ -106,7 +248,49 @@ export function EnrollCheckoutPanel({ onBack, onPaid }: EnrollCheckoutPanelProps
     setAppliedPromo(promoCode.trim().toUpperCase());
   };
 
+  const handleLegalNameChange = (value: string) => {
+    setLegalNameTouched(true);
+    setLegalName(value);
+  };
+
+  const stateOptions = useMemo(
+    () =>
+      countryStates.map((state) => ({
+        value: state.name,
+        label: state.name,
+        searchText: [state.name, state.state_code ?? ''].join(' ').trim(),
+      })),
+    [countryStates]
+  );
+  const hasSubdivisions = stateOptions.length > 0;
+  const subdivisionLabel = SUBDIVISION_LABEL_BY_COUNTRY[billingCountryCode] ?? 'Region';
+
+  const handleCitySuggestion = (city: CountryCity) => {
+    if (!city.state_code) return;
+    const matchedState = countryStates.find((state) => state.state_code === city.state_code);
+    if (matchedState) {
+      setBillingState(matchedState.name);
+    }
+  };
+
   const handlePay = async () => {
+    const trimmedGstin = gstin.trim().toUpperCase();
+    const trimmedLegalName = legalName.trim();
+    if (!trimmedLegalName) {
+      setError('Legal name is required for billing.');
+      return;
+    }
+    if (billingType === 'business' && pricingRegion === 'domestic') {
+      if (!trimmedGstin) {
+        setError('GSTIN is required for India business billing.');
+        return;
+      }
+      if (trimmedGstin.length !== 15) {
+        setError('GSTIN must be 15 characters.');
+        return;
+      }
+    }
+
     setPayPending(true);
     setError(null);
     try {
@@ -114,9 +298,17 @@ export function EnrollCheckoutPanel({ onBack, onPaid }: EnrollCheckoutPanelProps
         program_slug: 'take-control',
         pricing_region: pricingRegion,
         billing_type: billingType,
-        gstin: billingType === 'business' && pricingRegion === 'domestic' ? gstin : undefined,
-        legal_name: legalName || undefined,
+        gstin: billingType === 'business' && pricingRegion === 'domestic' ? trimmedGstin : undefined,
+        legal_name: trimmedLegalName,
         billing_state: billingState || undefined,
+        billing_address: {
+          line1: addressLine1,
+          line2: addressLine2 || undefined,
+          city: billingCity,
+          state: hasSubdivisions ? billingState : '',
+          postal_code: postalCode,
+          country: billingCountry,
+        },
         promo_code: appliedPromo || undefined,
       });
 
@@ -201,7 +393,6 @@ export function EnrollCheckoutPanel({ onBack, onPaid }: EnrollCheckoutPanelProps
         gstPaise={quote.gst_paise}
         totalPaise={quote.total_paise}
         monthlyBasePaise={quote.monthly_base_paise}
-        monthlyGstPaise={quote.monthly_gst_paise}
         showGst={pricingRegion === 'domestic'}
         discountPaise={quote.discount_paise}
         promoCode={quote.promo_code}
@@ -219,23 +410,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid }: EnrollCheckoutPanelProps
         {billingOpen ? (
           <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3">
             <Field label="Billing country">
-              <div className="grid grid-cols-2 gap-2">
-                {(['domestic', 'international'] as const).map((region) => (
-                  <button
-                    key={region}
-                    type="button"
-                    className={cn(
-                      'rounded-lg border px-3 py-2 text-sm font-medium',
-                      pricingRegion === region
-                        ? 'border-brand bg-brand/10 text-brand-deep'
-                        : 'border-slate-200 text-slate-600'
-                    )}
-                    onClick={() => setPricingRegion(region)}
-                  >
-                    {region === 'domestic' ? 'India' : 'Outside India'}
-                  </button>
-                ))}
-              </div>
+              <CountryCombobox value={billingCountryCode} onChange={setBillingCountryCode} countries={countries} />
             </Field>
 
             <Field label="Billing type">
@@ -264,15 +439,57 @@ export function EnrollCheckoutPanel({ onBack, onPaid }: EnrollCheckoutPanelProps
               </Field>
             ) : null}
 
-            <Field label="Legal name (optional)">
-              <TextInput value={legalName} onChange={setLegalName} placeholder="Name on invoice" />
+            <Field label="Legal name">
+              <TextInput value={legalName} onChange={handleLegalNameChange} placeholder="Name on invoice" />
             </Field>
 
-            {pricingRegion === 'domestic' ? (
-              <Field label="State (optional)">
-                <TextInput value={billingState} onChange={setBillingState} placeholder="Billing state" />
+            <Field label="Address line 1">
+              <TextInput value={addressLine1} onChange={setAddressLine1} placeholder="House / street / area" />
+            </Field>
+
+            <Field label="Address line 2 (optional)">
+              <TextInput value={addressLine2} onChange={setAddressLine2} placeholder="Apartment, landmark" />
+            </Field>
+
+            <div className={cn('grid grid-cols-1 gap-3', hasSubdivisions ? 'sm:grid-cols-2' : '')}>
+              <Field label="City">
+                <CityCombobox
+                  value={billingCity}
+                  onChange={setBillingCity}
+                  suggestions={countryCities}
+                  onSuggestionSelect={handleCitySuggestion}
+                  loading={loadingCities}
+                  showIcon={false}
+                />
               </Field>
-            ) : null}
+              {hasSubdivisions ? (
+                <Field label={subdivisionLabel}>
+                  <SearchableSelect
+                    value={billingState}
+                    onChange={setBillingState}
+                    options={stateOptions}
+                    placeholder={
+                      loadingStates
+                        ? `Loading ${subdivisionLabel.toLowerCase()}s…`
+                        : `Select ${subdivisionLabel.toLowerCase()}`
+                    }
+                    searchPlaceholder={`Search ${subdivisionLabel.toLowerCase()}`}
+                    emptyMessage={`No ${subdivisionLabel.toLowerCase()}s found.`}
+                    disabled={loadingStates}
+                    scrollToSelectedOnOpen
+                  />
+                </Field>
+              ) : null}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Postal code">
+                <TextInput value={postalCode} onChange={setPostalCode} placeholder="PIN / ZIP code" />
+              </Field>
+              <Field label="Country">
+                <TextInput value={billingCountry} onChange={() => {}} disabled />
+              </Field>
+            </div>
 
             <Field label="Promo code">
               <div className="flex gap-2">

@@ -24,7 +24,6 @@ type TakeControlEnrollPanelProps = {
   gstPaise?: number;
   totalPaise?: number;
   monthlyBasePaise?: number;
-  monthlyGstPaise?: number;
   showGst?: boolean;
   discountPaise?: number;
   promoCode?: string | null;
@@ -40,17 +39,15 @@ export function TakeControlEnrollPanel({
   gstPaise = 180_000,
   totalPaise,
   monthlyBasePaise = 150_000,
-  monthlyGstPaise = 27_000,
   showGst = true,
   discountPaise = 0,
   promoCode,
 }: TakeControlEnrollPanelProps) {
   const displayTotal = totalPaise ?? upfrontPaise + gstPaise;
-  const monthlyTotal = monthlyBasePaise + (showGst ? monthlyGstPaise : 0);
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className={cn('flex flex-col gap-4', !compact && 'sm:flex-row sm:items-start sm:justify-between')}>
+      <div className={cn('flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between', compact && 'gap-3')}>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold text-slate-900">Take Control</h2>
           <p className="mt-1 text-sm leading-relaxed text-slate-600">
@@ -84,7 +81,8 @@ export function TakeControlEnrollPanel({
       </ul>
 
       <p className="text-xs leading-relaxed text-slate-500">
-        Then {formatInrFromPaise(monthlyTotal)} / month · cancel anytime after the initial period.
+        Then {formatInrFromPaise(monthlyBasePaise)}
+        {showGst ? ' + GST' : ''} / month · cancel anytime after the initial period.
       </p>
 
       {error ? (

@@ -10,4 +10,14 @@ export type CountryCity = {
   name: string;
   popular_rank: number;
   timezone_id: string | null;
+  state_code: string | null;
+};
+
+export type CountryState = {
+  id: number;
+  country_code: string;
+  state_code: string | null;
+  name: string;
+  popular_rank: number;
+  timezone_id: string | null;
 };

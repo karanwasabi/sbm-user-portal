@@ -16,6 +16,7 @@ type CityComboboxProps = {
   disabled?: boolean;
   loading?: boolean;
   autoFocus?: boolean;
+  showIcon?: boolean;
 };
 
 export function CityCombobox({
@@ -26,6 +27,7 @@ export function CityCombobox({
   disabled,
   loading,
   autoFocus,
+  showIcon = true,
 }: CityComboboxProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -52,7 +54,7 @@ export function CityCombobox({
         onChange={(next) => onChange(toTitleCase(next))}
         placeholder="City"
         disabled={disabled}
-        leftIcon={<MapPin size={16} />}
+        leftIcon={showIcon ? <MapPin size={16} /> : undefined}
         onFocus={() => setOpen(true)}
         autoFocus={autoFocus}
       />
