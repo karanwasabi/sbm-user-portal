@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Loader2, Mail } from 'lucide-react';
 import { useActionState, useEffect, useRef, useState } from 'react';
@@ -11,9 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { SectionHead } from '@/components/ui/section-head';
 import { TextInput } from '@/components/ui/text-input';
+import { OTP_RESEND_COOLDOWN_SECONDS } from '@/lib/onboarding-steps';
 import type { ResendOtpState, VerifyEmailState } from '@/types/signup';
-
-const RESEND_COOLDOWN_SECONDS = 60;
 
 const initialVerifyState: VerifyEmailState = { error: null, success: false };
 const initialResendState: ResendOtpState = { error: null, success: false };
@@ -25,7 +23,7 @@ type VerifyEmailFormProps = {
 export function VerifyEmailForm({ email }: VerifyEmailFormProps) {
   const router = useRouter();
   const [otp, setOtp] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS);
+  const [resendCooldown, setResendCooldown] = useState(OTP_RESEND_COOLDOWN_SECONDS);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   const [verifyState, verifyAction, verifyPending] = useActionState(verifyEmailOtp, initialVerifyState);
@@ -56,12 +54,14 @@ export function VerifyEmailForm({ email }: VerifyEmailFormProps) {
   useEffect(() => {
     if (!resendState.success) return;
     setResendMessage('A new verification code has been sent.');
-    setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    setResendCooldown(OTP_RESEND_COOLDOWN_SECONDS);
   }, [resendState.success]);
 
   const handleWrongEmail = () => {
     router.push('/signup');
   };
+
+  const canResend = resendCooldown <= 0 && !resendPending;
 
   return (
     <AuthLayout wide>
@@ -117,19 +117,22 @@ export function VerifyEmailForm({ email }: VerifyEmailFormProps) {
         </Button>
       </form>
 
-      <form action={resendAction} className="mt-3">
-        <input type="hidden" name="email" value={email} />
-        <Button
-          type="submit"
-          variant="light"
-          size="md"
-          fullWidth
-          disabled={resendPending || resendCooldown > 0}
-          rightIcon={resendPending ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
-        >
-          {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend verification code'}
-        </Button>
-      </form>
+      <div className="mt-4 text-center text-[13px]" aria-live="polite">
+        {resendCooldown > 0 ? (
+          <p className="font-medium text-slate-500">Resend code in {resendCooldown}s</p>
+        ) : (
+          <form action={resendAction} className="inline">
+            <input type="hidden" name="email" value={email} />
+            <button
+              type="submit"
+              disabled={!canResend}
+              className="cursor-pointer border-none bg-transparent p-0 text-[13px] font-bold text-brand no-underline hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {resendPending ? 'Sending code…' : 'Resend verification code'}
+            </button>
+          </form>
+        )}
+      </div>
 
       {(resendState.error || resendMessage) && (
         <p

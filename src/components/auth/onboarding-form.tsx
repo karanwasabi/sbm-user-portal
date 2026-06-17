@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Cake, Loader2, LogOut } from 'lucide-react';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { completeOnboarding } from '@/app/(auth)/signup/actions';
 import { signOut } from '@/app/(auth)/actions';
+import { AuthStepIndicator } from '@/components/auth/auth-step-indicator';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { ParentalConsentBlock } from '@/components/profile/parental-consent-block';
@@ -21,6 +22,7 @@ import {
   validateDateOfBirth,
 } from '@/lib/date-of-birth';
 import { getOnboardingStep, type OnboardingStep } from '@/lib/onboarding';
+import { ONBOARDING_STEPS } from '@/lib/onboarding-steps';
 import { toTitleCase } from '@/lib/title-case';
 import type { Profile } from '@/types/profile';
 import type { Country } from '@/types/reference';
@@ -114,19 +116,22 @@ export function OnboardingForm({ profile, email, showVerifiedToast = false, coun
 
   return (
     <AuthLayout wide>
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-7">
         <SbmWordmark size="lg" />
-        <form action={signOut}>
+      </div>
+
+      <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+        <p className="min-w-0 text-[13px] leading-snug font-medium text-slate-500">
+          Signed in as <span className="block truncate font-semibold text-slate-800 sm:inline">{email}</span>
+        </p>
+        <form action={signOut} className="shrink-0">
           <Button type="submit" variant="light" size="sm" leftIcon={<LogOut className="h-4 w-4" />}>
             Log out
           </Button>
         </form>
       </div>
 
-      <p className="mb-5 text-[13px] font-medium text-slate-500">
-        Signed in as <span className="font-semibold text-slate-800">{email}</span>
-      </p>
-
+      <AuthStepIndicator steps={ONBOARDING_STEPS} currentStep={step} ariaLabel="Onboarding progress" />
       <SectionHead title={stepTitle.title} subtitle={stepTitle.subtitle} className="mb-5" />
 
       {step === 1 ? (
