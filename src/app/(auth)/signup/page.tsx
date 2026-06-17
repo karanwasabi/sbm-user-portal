@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { SignupForm } from '@/components/auth/signup-form';
-import { isOnboardingComplete } from '@/lib/onboarding';
+import { getPostAuthRedirectPath } from '@/lib/onboarding';
 import { getLatestProfile, getMyEnrollments } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
@@ -14,10 +14,7 @@ export default async function SignupPage() {
     try {
       const profile = await getLatestProfile();
       const enrollments = await getMyEnrollments();
-      if (isOnboardingComplete(profile, enrollments)) {
-        redirect('/');
-      }
-      redirect('/onboarding');
+      redirect(getPostAuthRedirectPath(profile, enrollments));
     } catch {
       redirect('/onboarding');
     }

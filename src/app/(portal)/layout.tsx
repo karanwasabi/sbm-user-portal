@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { PortalShell } from '@/components/layout/portal/portal-shell';
 import { hasProduct, PRODUCT_MEMBER_PORTAL } from '@/lib/access';
-import { isOnboardingComplete } from '@/lib/onboarding';
+import { hasPortalAccess } from '@/lib/onboarding';
 import { getMyAccess } from '@/utils/access-api';
 import { getLatestProfile, getMyEnrollments, ProfileFetchError } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
@@ -48,7 +48,7 @@ export default async function PortalLayout({ children }: { children: React.React
     enrollments = [];
   }
 
-  if (profile && !isOnboardingComplete(profile, enrollments)) {
+  if (profile && !hasPortalAccess(profile, enrollments)) {
     redirect('/onboarding');
   }
 

@@ -18,6 +18,12 @@ export function isEnrolled(enrollments: Enrollment[]): boolean {
   return enrollments.some((entry) => entry.status === 'active' || entry.status === 'upcoming');
 }
 
+/** Enrolled members keep portal access even if they later clear onboarding fields (e.g. WhatsApp). */
+export function hasPortalAccess(profile: Profile | null, enrollments: Enrollment[] = []): boolean {
+  if (!profile) return false;
+  return isEnrolled(enrollments);
+}
+
 export function needsPayment(enrollments: Enrollment[]): boolean {
   return !isEnrolled(enrollments) && hasPendingPayment(enrollments);
 }
@@ -33,5 +39,5 @@ export function getOnboardingStep(profile: Profile | null, enrollments: Enrollme
 }
 
 export function getPostAuthRedirectPath(profile: Profile | null, enrollments: Enrollment[] = []): '/onboarding' | '/' {
-  return isOnboardingComplete(profile, enrollments) ? '/' : '/onboarding';
+  return hasPortalAccess(profile, enrollments) || isOnboardingComplete(profile, enrollments) ? '/' : '/onboarding';
 }

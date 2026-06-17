@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { OnboardingForm } from '@/components/auth/onboarding-form';
-import { isOnboardingComplete } from '@/lib/onboarding';
+import { hasPortalAccess, isOnboardingComplete } from '@/lib/onboarding';
 import { getLatestProfile, fetchCountries, getMyEnrollments } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
@@ -37,7 +37,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
     enrollments = [];
   }
 
-  if (isOnboardingComplete(profile, enrollments)) {
+  if (hasPortalAccess(profile, enrollments) || isOnboardingComplete(profile, enrollments)) {
     redirect('/');
   }
 

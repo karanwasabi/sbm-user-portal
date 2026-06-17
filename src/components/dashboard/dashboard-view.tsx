@@ -1,13 +1,12 @@
 'use client';
 
-import { CohortStartBanner } from '@/components/dashboard/cohort-start-banner';
+import { DashboardHero } from '@/components/dashboard/dashboard-hero';
 import {
   DashboardQuickLink,
   InvoicesIllustration,
   ProfileIllustration,
   SubscriptionIllustration,
 } from '@/components/dashboard/dashboard-quick-link';
-import { ProfileCompletionBanner } from '@/components/dashboard/profile-completion-banner';
 import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
 import { PortalPageShell } from '@/components/layout/portal/portal-page-shell';
 import { SectionHead } from '@/components/ui/section-head';
@@ -52,20 +51,12 @@ export function DashboardView() {
 
   return (
     <PortalPageShell>
-      <div className="flex flex-col gap-6">
-        <header>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Hey {firstName}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
-            Welcome to your member portal. Manage billing, update your profile, and stay on track with your program.
-          </p>
-        </header>
-
-        <CohortStartBanner enrollments={enrollments} />
-        <ProfileCompletionBanner profile={profile} />
+      <div className="flex flex-col gap-8">
+        <DashboardHero firstName={firstName} profile={profile} enrollments={enrollments} />
 
         <div>
           <SectionHead title="Quick links" subtitle="Billing, invoices, and account settings" />
-          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {quickLinks.map((link) => (
               <DashboardQuickLink key={link.href} {...link} />
             ))}
