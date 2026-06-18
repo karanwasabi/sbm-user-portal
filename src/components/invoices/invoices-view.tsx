@@ -1,5 +1,6 @@
 'use client';
 
+import { Download } from 'lucide-react';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
 import { InvoicesPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { Card } from '@/components/ui/card';
@@ -59,6 +60,7 @@ export function InvoicesView({ invoices, error }: InvoicesViewProps) {
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Amount</th>
                   <th className="px-4 py-3 text-right">Status</th>
+                  <th className="px-4 py-3 text-right">PDF</th>
                 </tr>
               </thead>
               <tbody>
@@ -75,6 +77,21 @@ export function InvoicesView({ invoices, error }: InvoicesViewProps) {
                     <td className="px-4 py-3 text-slate-700">{formatInrFromPaise(inv.amount_paise)}</td>
                     <td className="px-4 py-3 text-right">
                       <Pill tone="success">{inv.status}</Pill>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {inv.pdf_url ? (
+                        <a
+                          href={inv.pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:text-brand-deep"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Download
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

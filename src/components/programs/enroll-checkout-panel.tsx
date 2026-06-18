@@ -320,7 +320,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
         return;
       }
 
-      if (!start.razorpay_key_id || !start.razorpay_order_id) {
+      if (!start.razorpay_key_id || !start.razorpay_subscription_id) {
         throw new Error('Payment is not configured yet.');
       }
 
@@ -331,7 +331,6 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
 
       const rzp = new window.Razorpay({
         key: start.razorpay_key_id,
-        order_id: start.razorpay_order_id,
         subscription_id: start.razorpay_subscription_id,
         name: 'Strong Body Method',
         description: `Take Control · ${start.cohort_name}`,

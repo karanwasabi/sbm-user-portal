@@ -63,5 +63,6 @@ export type Invoice = {
   currency: string;
   status: string;
   issued_at: string;
+  pdf_url?: string;
   billing_snapshot: Record<string, unknown>;
 };
