@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { resendEmailOtp, restartSignup, verifyEmailOtp } from '@/app/(auth)/signup/actions';
-import { AuthCardBody, AuthCardFooterSpacer, AuthLayout } from '@/components/layout/auth-layout';
+import { AuthCardBody, AuthLayout } from '@/components/layout/auth-layout';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -149,7 +149,7 @@ export function VerifyEmailForm({ email }: VerifyEmailFormProps) {
             ) : null}
           </div>
 
-          <div className="mt-auto flex flex-col gap-3.5">
+          <div className="flex flex-col gap-3.5">
             <Button
               type="submit"
               variant="primary"
@@ -162,8 +162,6 @@ export function VerifyEmailForm({ email }: VerifyEmailFormProps) {
             >
               Verify and continue
             </Button>
-
-            <AuthCardFooterSpacer />
           </div>
         </form>
       </AuthCardBody>

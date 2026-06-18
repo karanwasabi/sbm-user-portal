@@ -7,7 +7,7 @@ import { createAccount } from '@/app/(auth)/signup/actions';
 import { DpdpConsentCheckbox } from '@/components/auth/dpdp-consent-checkbox';
 import { PasswordField } from '@/components/auth/password-field';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
-import { AuthCardBody, AuthCardFooterSpacer, AuthLayout } from '@/components/layout/auth-layout';
+import { AuthCardBody, AuthLayout } from '@/components/layout/auth-layout';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { SectionHead } from '@/components/ui/section-head';

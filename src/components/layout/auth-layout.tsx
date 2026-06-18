@@ -9,7 +9,7 @@ type AuthLayoutProps = {
 };
 
 const cardClassName: Record<AuthLayoutVariant, string> = {
-  account: 'max-w-[440px] min-h-[42rem]',
+  account: 'max-w-[400px]',
   onboarding: 'max-w-[640px]',
 };
 
@@ -40,19 +40,10 @@ type AuthCardBodyProps = {
 };
 
 const bodyClassName: Record<AuthLayoutVariant, string> = {
-  account: 'min-h-[28rem]',
+  account: '',
   onboarding: '',
 };
 
 export function AuthCardBody({ children, variant = 'account', className }: AuthCardBodyProps) {
   return <div className={cn('flex flex-1 flex-col', bodyClassName[variant], className)}>{children}</div>;
-}
-
-/** Matches the signup footer link row so OTP keeps the same card height. */
-export function AuthCardFooterSpacer() {
-  return (
-    <p className="pointer-events-none mt-5.5 text-center text-[13px] font-medium text-transparent" aria-hidden>
-      Already have an account? Sign in
-    </p>
-  );
 }
