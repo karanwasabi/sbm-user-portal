@@ -3,6 +3,7 @@
 import { getBackendUrl } from '@/types/profile';
 import type { CheckoutPreview, CheckoutQuote, CheckoutQuoteRequest, CheckoutStartResponse } from '@/types/checkout';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
+import type { PaymentMethodUpdateResponse, Subscription } from '@/types/subscription';
 import { createClient } from '@/utils/supabase/client';
 
 async function clientApiFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -78,4 +79,19 @@ export async function getCountryCities(countryCode: string): Promise<CountryCity
 export async function getCountryStates(countryCode: string): Promise<CountryState[]> {
   const response = await clientApiFetch(`/reference/countries/${encodeURIComponent(countryCode)}/states`);
   return response.json() as Promise<CountryState[]>;
+}
+
+export async function cancelSubscription(cancelAtPeriodEnd = true): Promise<Subscription> {
+  const response = await clientApiFetch('/me/subscription/cancel', {
+    method: 'POST',
+    body: JSON.stringify({ cancel_at_period_end: cancelAtPeriodEnd }),
+  });
+  return response.json() as Promise<Subscription>;
+}
+
+export async function startPaymentMethodUpdate(): Promise<PaymentMethodUpdateResponse> {
+  const response = await clientApiFetch('/me/subscription/payment-method', {
+    method: 'POST',
+  });
+  return response.json() as Promise<PaymentMethodUpdateResponse>;
 }

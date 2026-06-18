@@ -1,5 +1,6 @@
 import type { Invoice } from '@/types/checkout';
 import type { Enrollment } from '@/types/enrollment';
+import type { Subscription } from '@/types/subscription';
 import { getBackendUrl, type Profile, type ProfilePatch } from '@/types/profile';
 import type { Country, CountryCity } from '@/types/reference';
 import { formatUserFacingError } from '@/lib/format-user-error';
@@ -119,6 +120,18 @@ export async function getMyInvoices(): Promise<Invoice[]> {
     throw new ProfileFetchError('Failed to load invoices.', response.status);
   }
   return response.json() as Promise<Invoice[]>;
+}
+
+export async function getMySubscription(): Promise<Subscription> {
+  const response = await requireApiFetch('/me/subscription');
+  if (response.status === 404) {
+    throw new ProfileFetchError('No subscription found.', 404);
+  }
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ProfileFetchError(payload?.error ?? 'Failed to load subscription.', response.status);
+  }
+  return response.json() as Promise<Subscription>;
 }
 
 /** @deprecated Use startCheckout via client-api instead */
