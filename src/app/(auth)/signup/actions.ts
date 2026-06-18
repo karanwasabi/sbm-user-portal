@@ -2,7 +2,7 @@
 
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { DPDP_PRIVACY_URL, DPDP_TERMS_URL } from '@/lib/dpdp-consent';
+import { completeSignupVerification } from '@/lib/complete-signup-verification';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-requirements';
 import type {
   CompleteOnboardingState,
@@ -12,15 +12,9 @@ import type {
   VerifyEmailState,
 } from '@/types/signup';
 import { PENDING_DPDP_COOKIE, SIGNUP_EMAIL_COOKIE } from '@/types/signup';
-import {
-  patchProfile,
-  ProfileFetchError,
-  recordDpdpConsent,
-  registerSignup,
-  resendSignupOTP,
-  enrollInProgram,
-} from '@/utils/api';
+import { patchProfile, ProfileFetchError, registerSignup, resendSignupOTP, enrollInProgram } from '@/utils/api';
 import { buildProfilePatch } from '@/lib/profile-form';
+import { emailOtpInvalidMessage, isValidEmailOtp } from '@/lib/email-otp';
 import { formatUserFacingError } from '@/lib/format-user-error';
 import { createClient } from '@/utils/supabase/server';
 
@@ -119,37 +113,23 @@ export async function verifyEmailOtp(_prevState: VerifyEmailState, formData: For
     return { error: 'Email and verification code are required.', success: false };
   }
 
-  if (!/^\d{6}$/.test(token)) {
-    return { error: 'Enter the 6-digit code from your email.', success: false };
+  if (!isValidEmailOtp(token)) {
+    return { error: emailOtpInvalidMessage(), success: false };
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
 
   if (error) {
     return { error: formatUserFacingError(error.message), success: false };
   }
 
-  await supabase.auth.refreshSession();
-
-  const cookieStore = await cookies();
-  const pendingDpdp = cookieStore.get(PENDING_DPDP_COOKIE)?.value === '1';
-  cookieStore.delete(SIGNUP_EMAIL_COOKIE);
-  cookieStore.delete(PENDING_DPDP_COOKIE);
-
-  if (pendingDpdp) {
-    try {
-      await recordDpdpConsent(DPDP_TERMS_URL, DPDP_PRIVACY_URL);
-    } catch (consentError) {
-      const message =
-        consentError instanceof ProfileFetchError
-          ? consentError.message
-          : 'Your email was verified but we could not save your consent. Please contact support.';
-      return { error: message, success: false };
-    }
+  const completion = await completeSignupVerification();
+  if (completion.error) {
+    return { error: completion.error, success: false };
   }
 
-  redirect('/onboarding?verified=1');
+  return { error: null, success: true };
 }
 
 /** Clears signup cookies, ends any partial session, and returns to account creation. */

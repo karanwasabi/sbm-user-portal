@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password', '/unauthorized'];
+const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password', '/auth/confirm', '/unauthorized'];
 const ONBOARDING_ROUTE = '/onboarding';
 
 function isPublicRoute(pathname: string) {
@@ -50,7 +50,7 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const publicRoute = isPublicRoute(pathname);
   const requiresAuth = isProtectedRoute(pathname);
-  const isVerifyRoute = pathname.startsWith('/signup/verify');
+  const isVerifyRoute = pathname.startsWith('/signup/verify') || pathname === '/auth/confirm';
   const isOnboardingRoute = pathname === ONBOARDING_ROUTE || pathname.startsWith(`${ONBOARDING_ROUTE}/`);
 
   if (!user && requiresAuth) {

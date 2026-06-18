@@ -9,6 +9,7 @@ import { Field } from '@/components/ui/field';
 import { SectionHead } from '@/components/ui/section-head';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
+import { emailOtpHint, EMAIL_OTP_MAX_LENGTH, isValidEmailOtp } from '@/lib/email-otp';
 import { OTP_RESEND_COOLDOWN_SECONDS } from '@/lib/onboarding-steps';
 import type { ResendOtpState, VerifyEmailState } from '@/types/signup';
 import { ArrowRight, Loader2, Mail } from 'lucide-react';
@@ -93,11 +94,7 @@ export function VerifyEmailForm({ email }: VerifyEmailFormProps) {
       </div>
 
       <AuthCardBody variant="account">
-        <SectionHead
-          title="Verify your email"
-          subtitle="Enter the 6-digit code we sent to your inbox."
-          className="mb-5 shrink-0"
-        />
+        <SectionHead title="Verify your email" subtitle={emailOtpHint()} className="mb-5 shrink-0" />
 
         <form action={verifyAction} className="flex flex-1 flex-col gap-3.5">
           <input type="hidden" name="email" value={email} />
@@ -134,7 +131,7 @@ export function VerifyEmailForm({ email }: VerifyEmailFormProps) {
               ref={otpRef}
               name="otp"
               value={otp}
-              onChange={(value) => setOtp(value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(value) => setOtp(value.replace(/\D/g, '').slice(0, EMAIL_OTP_MAX_LENGTH))}
               inputMode="numeric"
               autoComplete="one-time-code"
               disabled={verifyPending}
@@ -155,7 +152,7 @@ export function VerifyEmailForm({ email }: VerifyEmailFormProps) {
               variant="primary"
               size="lg"
               fullWidth
-              disabled={verifyPending || otp.length !== 6}
+              disabled={verifyPending || !isValidEmailOtp(otp)}
               rightIcon={
                 verifyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />
               }
