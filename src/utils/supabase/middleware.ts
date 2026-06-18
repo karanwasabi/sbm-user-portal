@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/unauthorized'];
+const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password', '/unauthorized'];
 const ONBOARDING_ROUTE = '/onboarding';
 
 function isPublicRoute(pathname: string) {

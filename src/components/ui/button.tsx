@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { type ButtonHTMLAttributes, type ReactNode, useState } from 'react';
 import { cn } from '@/lib/cn';
 
@@ -12,6 +13,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   fullWidth?: boolean;
+  href?: string;
 };
 
 const variantClasses: Record<ButtonVariant, { base: string; lip: string; pressedLip: string; shadow: string }> = {
@@ -81,6 +83,7 @@ export function Button({
   disabled,
   className,
   type = 'button',
+  href,
   ...props
 }: ButtonProps) {
   const [pressed, setPressed] = useState(false);
@@ -88,42 +91,56 @@ export function Button({
   const sizeStyle = sizeClasses[size];
   const isPressed = pressed && !disabled;
 
-  return (
-    <button
-      {...props}
-      type={type}
-      disabled={disabled}
-      onPointerDown={(e) => {
-        if (!disabled) setPressed(true);
-        props.onPointerDown?.(e);
-      }}
-      onPointerUp={(e) => {
-        setPressed(false);
-        props.onPointerUp?.(e);
-      }}
-      onPointerLeave={(e) => {
-        setPressed(false);
-        props.onPointerLeave?.(e);
-      }}
-      className={cn(
-        'inline-flex cursor-pointer items-center justify-center gap-2 border-x-0 border-t-0 font-semibold transition-all duration-100 outline-none',
-        sizeStyle.base,
-        sizeStyle.lip,
-        fullWidth && 'w-full',
-        disabled
-          ? 'cursor-not-allowed border-b-slate-200 bg-slate-100 text-slate-400 shadow-none'
-          : cn(
-              variantStyle.base,
-              isPressed ? variantStyle.pressedLip : variantStyle.lip,
-              isPressed ? 'shadow-none' : variantStyle.shadow,
-              isPressed && sizeStyle.pressOffset
-            ),
-        className
-      )}
-    >
+  const sharedClassName = cn(
+    'inline-flex cursor-pointer items-center justify-center gap-2 border-x-0 border-t-0 font-semibold no-underline transition-all duration-100 outline-none',
+    sizeStyle.base,
+    sizeStyle.lip,
+    fullWidth && 'w-full',
+    disabled
+      ? 'pointer-events-none cursor-not-allowed border-b-slate-200 bg-slate-100 text-slate-400 shadow-none'
+      : cn(
+          variantStyle.base,
+          isPressed ? variantStyle.pressedLip : variantStyle.lip,
+          isPressed ? 'shadow-none' : variantStyle.shadow,
+          isPressed && sizeStyle.pressOffset
+        ),
+    className
+  );
+
+  const pressHandlers = {
+    onPointerDown: (e: React.PointerEvent<HTMLButtonElement | HTMLAnchorElement>) => {
+      if (!disabled) setPressed(true);
+      props.onPointerDown?.(e as React.PointerEvent<HTMLButtonElement>);
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLButtonElement | HTMLAnchorElement>) => {
+      setPressed(false);
+      props.onPointerUp?.(e as React.PointerEvent<HTMLButtonElement>);
+    },
+    onPointerLeave: (e: React.PointerEvent<HTMLButtonElement | HTMLAnchorElement>) => {
+      setPressed(false);
+      props.onPointerLeave?.(e as React.PointerEvent<HTMLButtonElement>);
+    },
+  };
+
+  const content = (
+    <>
       {leftIcon}
       <span>{children}</span>
       {rightIcon}
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={sharedClassName} aria-disabled={disabled || undefined} {...pressHandlers}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button {...props} type={type} disabled={disabled} className={sharedClassName} {...pressHandlers}>
+      {content}
     </button>
   );
 }
