@@ -59,6 +59,18 @@ export async function startCheckout(body: CheckoutQuoteRequest): Promise<Checkou
   return response.json() as Promise<CheckoutStartResponse>;
 }
 
+export async function getCheckoutResume(
+  programSlug = 'take-control'
+): Promise<import('@/types/checkout').CheckoutResumeResponse> {
+  const response = await clientApiFetch(`/me/checkout/resume?program_slug=${encodeURIComponent(programSlug)}`);
+  return response.json() as Promise<import('@/types/checkout').CheckoutResumeResponse>;
+}
+
+export async function getMyEnrollments(): Promise<import('@/types/enrollment').Enrollment[]> {
+  const response = await clientApiFetch('/me/enrollments');
+  return response.json() as Promise<import('@/types/enrollment').Enrollment[]>;
+}
+
 export async function mockCompleteCheckout(checkoutSessionId: string): Promise<void> {
   await clientApiFetch('/me/checkout/mock-pay', {
     method: 'POST',

@@ -12,12 +12,24 @@ type PortalShellProps = {
   profile: Profile | null;
   profileError: string | null;
   enrollments: Enrollment[];
+  showPasswordBanner?: boolean;
   children: ReactNode;
 };
 
-export function PortalShell({ profile, profileError, enrollments, children }: PortalShellProps) {
+export function PortalShell({
+  profile,
+  profileError,
+  enrollments,
+  showPasswordBanner = false,
+  children,
+}: PortalShellProps) {
   return (
-    <PortalProfileProvider profile={profile} profileError={profileError} enrollments={enrollments}>
+    <PortalProfileProvider
+      profile={profile}
+      profileError={profileError}
+      enrollments={enrollments}
+      showPasswordBanner={showPasswordBanner}
+    >
       <ToastProvider>
         <div className="flex h-dvh min-w-0 bg-white">
           <PortalSidebar />

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { PortalShell } from '@/components/layout/portal/portal-shell';
 import { hasProduct, PRODUCT_MEMBER_PORTAL } from '@/lib/access';
 import { hasPortalAccess } from '@/lib/onboarding';
+import { userNeedsPassword } from '@/lib/razorpay-checkout';
 import { getMyAccess } from '@/utils/access-api';
 import { getLatestProfile, getMyEnrollments, ProfileFetchError } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
@@ -52,8 +53,15 @@ export default async function PortalLayout({ children }: { children: React.React
     redirect('/onboarding');
   }
 
+  const showPasswordBanner = userNeedsPassword(user);
+
   return (
-    <PortalShell profile={profile} profileError={profileError} enrollments={enrollments}>
+    <PortalShell
+      profile={profile}
+      profileError={profileError}
+      enrollments={enrollments}
+      showPasswordBanner={showPasswordBanner}
+    >
       {children}
     </PortalShell>
   );

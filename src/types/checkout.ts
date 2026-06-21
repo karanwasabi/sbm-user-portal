@@ -55,6 +55,10 @@ export type CheckoutStartResponse = {
   starts_on: string;
 };
 
+export type CheckoutResumeResponse = CheckoutStartResponse & {
+  status: string;
+};
+
 export type Invoice = {
   id: string;
   invoice_number: string;

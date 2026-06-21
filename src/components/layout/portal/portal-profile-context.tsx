@@ -8,22 +8,25 @@ type PortalProfileContextValue = {
   profile: Profile | null;
   profileError: string | null;
   enrollments: Enrollment[];
+  showPasswordBanner: boolean;
 };
 
 const PortalProfileContext = createContext<PortalProfileContextValue>({
   profile: null,
   profileError: null,
   enrollments: [],
+  showPasswordBanner: false,
 });
 
 export function PortalProfileProvider({
   profile,
   profileError,
   enrollments,
+  showPasswordBanner,
   children,
 }: PortalProfileContextValue & { children: ReactNode }) {
   return (
-    <PortalProfileContext.Provider value={{ profile, profileError, enrollments }}>
+    <PortalProfileContext.Provider value={{ profile, profileError, enrollments, showPasswordBanner }}>
       {children}
     </PortalProfileContext.Provider>
   );

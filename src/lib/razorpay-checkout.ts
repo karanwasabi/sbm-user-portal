@@ -1,3 +1,7 @@
+import type { CheckoutStartResponse } from '@/types/checkout';
+import type { Enrollment } from '@/types/enrollment';
+import { getMyEnrollments } from '@/utils/client-api';
+
 declare global {
   interface Window {
     Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
@@ -43,7 +47,7 @@ export async function openRazorpaySubscriptionCheckout({
   const options: Record<string, unknown> = {
     key,
     subscription_id: subscriptionId,
-    name: 'Strong Body Method',
+    name: 'Slow Burn Method',
     description,
     handler: onSuccess,
     modal: {
@@ -57,4 +61,54 @@ export async function openRazorpaySubscriptionCheckout({
 
   const rzp = new window.Razorpay(options);
   rzp.open();
+}
+
+type OpenEnrollmentCheckoutOptions = {
+  start: CheckoutStartResponse;
+  onSuccess: () => void;
+  onDismiss?: () => void;
+};
+
+export async function openRazorpayEnrollmentCheckout({
+  start,
+  onSuccess,
+  onDismiss,
+}: OpenEnrollmentCheckoutOptions): Promise<void> {
+  if (!start.razorpay_key_id || !start.razorpay_subscription_id) {
+    throw new Error('Payment is not configured yet.');
+  }
+
+  await openRazorpaySubscriptionCheckout({
+    key: start.razorpay_key_id,
+    subscriptionId: start.razorpay_subscription_id,
+    orderId: start.razorpay_order_id,
+    description: `Take Control · ${start.cohort_name}`,
+    onSuccess,
+    onDismiss,
+  });
+}
+
+export function isEnrolledStatus(status: Enrollment['status']): boolean {
+  return status === 'upcoming' || status === 'active';
+}
+
+export async function pollUntilEnrolled(options?: { intervalMs?: number; timeoutMs?: number }): Promise<boolean> {
+  const intervalMs = options?.intervalMs ?? 2000;
+  const timeoutMs = options?.timeoutMs ?? 30000;
+  const started = Date.now();
+
+  while (Date.now() - started < timeoutMs) {
+    const enrollments = await getMyEnrollments();
+    if (enrollments.some((entry) => isEnrolledStatus(entry.status))) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  return false;
+}
+
+export function userNeedsPassword(user: { app_metadata?: Record<string, unknown> } | null): boolean {
+  if (!user) return false;
+  return user.app_metadata?.password_set !== 'true';
 }

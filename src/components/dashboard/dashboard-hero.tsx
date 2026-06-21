@@ -1,7 +1,10 @@
+import { PaymentRetryCard } from '@/components/dashboard/payment-retry-card';
+import { PasswordSetBanner } from '@/components/dashboard/password-set-banner';
 import { EnrollmentStatusCard } from '@/components/dashboard/enrollment-status-card';
 import { PreStartDashboardPanel } from '@/components/dashboard/pre-start-dashboard-panel';
 import { ProfileCompletionBanner } from '@/components/dashboard/profile-completion-banner';
 import { isProfileFullyComplete } from '@/lib/profile-completion';
+import { hasPendingPayment } from '@/types/enrollment';
 import type { Enrollment } from '@/types/enrollment';
 import type { Profile } from '@/types/profile';
 
@@ -9,6 +12,8 @@ type DashboardHeroProps = {
   firstName: string;
   profile: Profile | null;
   enrollments: Enrollment[];
+  showPasswordBanner?: boolean;
+  paymentRetryLegalName?: string;
 };
 
 function formatStartDate(startsOn: string): string {
@@ -18,12 +23,19 @@ function formatStartDate(startsOn: string): string {
   });
 }
 
-export function DashboardHero({ firstName, profile, enrollments }: DashboardHeroProps) {
+export function DashboardHero({
+  firstName,
+  profile,
+  enrollments,
+  showPasswordBanner = false,
+  paymentRetryLegalName = 'Member',
+}: DashboardHeroProps) {
   const upcoming = enrollments.find(
     (entry) =>
       entry.status === 'upcoming' && entry.starts_on && entry.days_until_start != null && entry.days_until_start > 0
   );
   const showPreStartPanel = Boolean(upcoming && isProfileFullyComplete(profile));
+  const pendingPayment = hasPendingPayment(enrollments);
 
   return (
     <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)] lg:items-start">
@@ -42,6 +54,9 @@ export function DashboardHero({ firstName, profile, enrollments }: DashboardHero
             </p>
           )}
         </header>
+
+        {pendingPayment ? <PaymentRetryCard legalName={paymentRetryLegalName} /> : null}
+        {showPasswordBanner ? <PasswordSetBanner /> : null}
 
         {showPreStartPanel && upcoming ? (
           <PreStartDashboardPanel profile={profile} enrollment={upcoming} />

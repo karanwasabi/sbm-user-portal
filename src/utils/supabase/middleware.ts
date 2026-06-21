@@ -1,7 +1,15 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password', '/auth/confirm', '/unauthorized'];
+const PUBLIC_ROUTES = [
+  '/login',
+  '/signup',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/auth/confirm',
+  '/unauthorized',
+];
 const ONBOARDING_ROUTE = '/onboarding';
 
 function isPublicRoute(pathname: string) {
@@ -70,7 +78,12 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && !isEmailVerified(user)) {
-    const allowed = isVerifyRoute || pathname === '/signup' || pathname.startsWith('/signup/');
+    const allowed =
+      isVerifyRoute ||
+      pathname === '/signup' ||
+      pathname.startsWith('/signup/') ||
+      pathname === '/register' ||
+      pathname.startsWith('/register/');
     if (!allowed) {
       const url = request.nextUrl.clone();
       url.pathname = '/signup/verify';

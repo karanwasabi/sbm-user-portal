@@ -1,0 +1,247 @@
+'use server';
+
+import { cookies, headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { validateDateOfBirth } from '@/lib/date-of-birth';
+import { DPDP_PRIVACY_URL, DPDP_TERMS_URL } from '@/lib/dpdp-consent';
+import { emailOtpInvalidMessage, isValidEmailOtp } from '@/lib/email-otp';
+import { formatUserFacingError } from '@/lib/format-user-error';
+import { buildMergeProfilePatch, type RegisterFormValues } from '@/lib/merge-profile-patch';
+import {
+  getLatestProfile,
+  markPasswordSetComplete,
+  patchProfile,
+  ProfileFetchError,
+  recordDpdpConsent,
+  registerMember,
+} from '@/utils/api';
+import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
+import { REGISTER_EMAIL_COOKIE } from '@/types/register';
+import { createClient } from '@/utils/supabase/server';
+
+const REGISTER_FLOW_COOKIE = 'sbm_register_flow';
+const REGISTER_DPDP_COOKIE = 'sbm_pending_dpdp';
+
+async function getForwardedHeaders(): Promise<HeadersInit> {
+  const headerStore = await headers();
+  const forwarded = headerStore.get('x-forwarded-for');
+  const realIp = headerStore.get('x-real-ip');
+  const out: Record<string, string> = {};
+  if (forwarded) out['X-Forwarded-For'] = forwarded;
+  if (realIp) out['X-Real-IP'] = realIp;
+  return out;
+}
+
+function parseRegisterForm(formData: FormData): RegisterFormValues & { dpdpConsent: boolean } {
+  return {
+    firstName: String(formData.get('firstName') ?? '').trim(),
+    lastName: String(formData.get('lastName') ?? '').trim(),
+    email: String(formData.get('email') ?? '')
+      .trim()
+      .toLowerCase(),
+    whatsapp: String(formData.get('whatsapp') ?? '').trim(),
+    sex: String(formData.get('sex') ?? '') as RegisterFormValues['sex'],
+    dateOfBirth: String(formData.get('dateOfBirth') ?? '').trim(),
+    parentalConsent: formData.get('parentalConsent') === 'true',
+    dpdpConsent: formData.get('dpdpConsent') === 'true',
+  };
+}
+
+function validateRegisterForm(values: ReturnType<typeof parseRegisterForm>): string | null {
+  if (!values.firstName) return 'First name is required.';
+  if (!values.lastName) return 'Last name is required.';
+  if (!values.email) return 'Email is required.';
+  if (!values.whatsapp) return 'WhatsApp number is required.';
+  if (!values.sex) return 'Sex is required.';
+  if (!values.dateOfBirth) return 'Date of birth is required.';
+  const dobError = validateDateOfBirth(values.dateOfBirth, values.parentalConsent);
+  if (dobError) return dobError;
+  if (!values.dpdpConsent) return 'You must accept the Terms and Privacy Policy to continue.';
+  return null;
+}
+
+export async function startRegister(_prev: RegisterStartState, formData: FormData): Promise<RegisterStartState> {
+  const values = parseRegisterForm(formData);
+  const error = validateRegisterForm(values);
+  if (error) {
+    return { error, status: null, email: null };
+  }
+
+  try {
+    const result = await registerMember(
+      {
+        email: values.email,
+        first_name: values.firstName,
+        last_name: values.lastName,
+        whatsapp: values.whatsapp,
+        sex: values.sex,
+        date_of_birth: values.dateOfBirth,
+        parental_consent: values.parentalConsent,
+        dpdp_consent: values.dpdpConsent,
+      },
+      await getForwardedHeaders()
+    );
+
+    if (result.status === 'already_enrolled') {
+      redirect('/');
+    }
+
+    const cookieStore = await cookies();
+    cookieStore.set(REGISTER_EMAIL_COOKIE, values.email, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60,
+      path: '/',
+    });
+    cookieStore.set(REGISTER_DPDP_COOKIE, values.dpdpConsent ? '1' : '0', {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60,
+      path: '/',
+    });
+
+    const supabase = await createClient();
+
+    if (result.status === 'resume') {
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: values.email,
+        options: { shouldCreateUser: false },
+      });
+      if (otpError) {
+        return { error: formatUserFacingError(otpError.message), status: null, email: null };
+      }
+      cookieStore.set(REGISTER_FLOW_COOKIE, 'resume', {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60,
+        path: '/',
+      });
+    } else {
+      cookieStore.set(REGISTER_FLOW_COOKIE, 'signup', {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60,
+        path: '/',
+      });
+    }
+
+    return { error: null, status: result.status, email: values.email };
+  } catch (err) {
+    const message = err instanceof ProfileFetchError ? err.message : 'Failed to start registration.';
+    return { error: message, status: null, email: null };
+  }
+}
+
+export async function verifyRegisterOtp(_prev: RegisterVerifyState, formData: FormData): Promise<RegisterVerifyState> {
+  const cookieStore = await cookies();
+  const email =
+    cookieStore.get(REGISTER_EMAIL_COOKIE)?.value ??
+    String(formData.get('email') ?? '')
+      .trim()
+      .toLowerCase();
+  const token = String(formData.get('otp') ?? '').trim();
+  const flow = cookieStore.get(REGISTER_FLOW_COOKIE)?.value ?? 'signup';
+
+  if (!email) {
+    return { error: 'Enter your email and request a verification code first.', verified: false };
+  }
+  if (!isValidEmailOtp(token)) {
+    return { error: emailOtpInvalidMessage(), verified: false };
+  }
+
+  const supabase = await createClient();
+  const otpType = flow === 'resume' ? 'email' : 'signup';
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: otpType });
+  if (error) {
+    return { error: formatUserFacingError(error.message), verified: false };
+  }
+
+  try {
+    await completeRegisterProfile(formData);
+  } catch (err) {
+    const message = err instanceof ProfileFetchError ? err.message : 'Failed to save your profile.';
+    return { error: message, verified: false };
+  }
+
+  return { error: null, verified: true };
+}
+
+async function completeRegisterProfile(formData: FormData): Promise<void> {
+  const values = parseRegisterForm(formData);
+  const profile = await getLatestProfile().catch(() => null);
+  const patch = buildMergeProfilePatch(profile, values);
+  if (Object.keys(patch).length > 0) {
+    await patchProfile(patch);
+  }
+
+  const cookieStore = await cookies();
+  if (cookieStore.get(REGISTER_DPDP_COOKIE)?.value === '1') {
+    await recordDpdpConsent(DPDP_TERMS_URL, DPDP_PRIVACY_URL, 'register');
+    cookieStore.delete(REGISTER_DPDP_COOKIE);
+  }
+}
+
+export async function resendRegisterOtp(): Promise<{ error: string | null }> {
+  const cookieStore = await cookies();
+  const email = cookieStore.get(REGISTER_EMAIL_COOKIE)?.value;
+  const flow = cookieStore.get(REGISTER_FLOW_COOKIE)?.value ?? 'signup';
+
+  if (!email) {
+    return { error: 'Enter your email and request a verification code first.' };
+  }
+
+  const supabase = await createClient();
+
+  if (flow === 'resume') {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    });
+    if (error) {
+      return { error: formatUserFacingError(error.message) };
+    }
+    return { error: null };
+  }
+
+  try {
+    const { resendSignupOTP } = await import('@/utils/api');
+    await resendSignupOTP(email, await getForwardedHeaders());
+    return { error: null };
+  } catch (err) {
+    return {
+      error: err instanceof ProfileFetchError ? err.message : 'Failed to resend verification code.',
+    };
+  }
+}
+
+export async function setInitialPassword(
+  _prev: { error: string | null; success: boolean },
+  formData: FormData
+): Promise<{ error: string | null; success: boolean }> {
+  const newPassword = String(formData.get('newPassword') ?? '');
+  const confirmPassword = String(formData.get('confirmPassword') ?? '');
+
+  if (!newPassword) {
+    return { error: 'Password is required.', success: false };
+  }
+  if (newPassword.length < 8) {
+    return { error: 'Password must be at least 8 characters.', success: false };
+  }
+  if (newPassword !== confirmPassword) {
+    return { error: 'Passwords do not match.', success: false };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    return { error: formatUserFacingError(error.message), success: false };
+  }
+
+  try {
+    await markPasswordSetComplete();
+  } catch {
+    // Non-fatal; password was updated in Supabase.
+  }
+
+  return { error: null, success: true };
+}

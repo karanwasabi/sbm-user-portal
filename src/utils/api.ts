@@ -165,18 +165,67 @@ export async function fetchCountryCities(countryCode: string): Promise<CountryCi
   return response.json() as Promise<CountryCity[]>;
 }
 
-export async function recordDpdpConsent(termsUrl: string, privacyUrl: string): Promise<void> {
+export async function recordDpdpConsent(termsUrl: string, privacyUrl: string, source = 'signup'): Promise<void> {
   const response = await requireApiFetch('/me/consents/dpdp', {
     method: 'POST',
     body: JSON.stringify({
       terms_url: termsUrl,
       privacy_url: privacyUrl,
+      source,
     }),
   });
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new ProfileFetchError(payload?.error ?? `Failed to record consent (${response.status})`, response.status);
+  }
+}
+
+export type RegisterStartResponse = {
+  status: 'otp_sent' | 'resume' | 'already_enrolled';
+  email: string;
+};
+
+export async function registerMember(
+  body: import('@/types/register').RegisterStartInput,
+  extraHeaders: HeadersInit = {}
+): Promise<RegisterStartResponse> {
+  let response: Response;
+  try {
+    response = await fetch(`${getBackendUrl()}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...extraHeaders,
+      },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ProfileFetchError('Could not reach the backend. Is it running?', 503);
+  }
+
+  const payload = (await response.json().catch(() => null)) as RegisterStartResponse & { error?: string };
+
+  if (response.status === 409 && payload?.status === 'already_enrolled') {
+    return payload;
+  }
+
+  if (!response.ok) {
+    throw new ProfileFetchError(
+      formatUserFacingError(payload?.error ?? `Failed to start registration (${response.status})`),
+      response.status
+    );
+  }
+
+  return payload;
+}
+
+export async function markPasswordSetComplete(): Promise<void> {
+  const response = await requireApiFetch('/me/password-set-complete', { method: 'POST' });
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ProfileFetchError(payload?.error ?? 'Failed to update password status.', response.status);
   }
 }
 

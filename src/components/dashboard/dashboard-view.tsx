@@ -10,7 +10,7 @@ import {
 import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
 import { PortalPageShell } from '@/components/layout/portal/portal-page-shell';
 import { SectionHead } from '@/components/ui/section-head';
-import { getDisplayName } from '@/types/profile';
+import { getDisplayName, getFullName } from '@/types/profile';
 
 const quickLinks = [
   {
@@ -46,13 +46,21 @@ const quickLinks = [
 ] as const;
 
 export function DashboardView() {
-  const { profile, enrollments } = usePortalProfile();
+  const { profile, enrollments, showPasswordBanner } = usePortalProfile();
   const firstName = profile ? getDisplayName(profile) : 'there';
+
+  const legalName = profile ? getFullName(profile) : 'Member';
 
   return (
     <PortalPageShell>
       <div className="flex flex-col gap-8">
-        <DashboardHero firstName={firstName} profile={profile} enrollments={enrollments} />
+        <DashboardHero
+          firstName={firstName}
+          profile={profile}
+          enrollments={enrollments}
+          showPasswordBanner={showPasswordBanner}
+          paymentRetryLegalName={legalName}
+        />
 
         <div>
           <SectionHead title="Quick links" subtitle="Billing, invoices, and account settings" />

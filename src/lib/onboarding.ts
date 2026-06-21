@@ -21,7 +21,7 @@ export function isEnrolled(enrollments: Enrollment[]): boolean {
 /** Enrolled members keep portal access even if they later clear onboarding fields (e.g. WhatsApp). */
 export function hasPortalAccess(profile: Profile | null, enrollments: Enrollment[] = []): boolean {
   if (!profile) return false;
-  return isEnrolled(enrollments);
+  return isEnrolled(enrollments) || hasPendingPayment(enrollments);
 }
 
 export function needsPayment(enrollments: Enrollment[]): boolean {
