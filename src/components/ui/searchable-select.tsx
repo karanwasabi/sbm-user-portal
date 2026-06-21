@@ -28,6 +28,7 @@ type SearchableSelectProps = {
   searchPlaceholder?: string;
   emptyMessage?: string;
   disabled?: boolean;
+  error?: boolean;
   leftIcon?: ReactNode;
   className?: string;
   popoverClassName?: string;
@@ -48,6 +49,7 @@ export function SearchableSelect({
   searchPlaceholder = 'Search…',
   emptyMessage = 'No results found.',
   disabled,
+  error = false,
   leftIcon,
   className,
   popoverClassName,
@@ -125,6 +127,7 @@ export function SearchableSelect({
           'flex h-11 w-full items-center justify-between rounded-2xl border border-input bg-background px-3.5 text-sm font-medium shadow-none transition-colors outline-none',
           'hover:bg-muted/30 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
           'disabled:cursor-not-allowed disabled:opacity-50',
+          error && 'border-destructive ring-3 ring-destructive/20',
           !selected && 'text-muted-foreground',
           className
         )}

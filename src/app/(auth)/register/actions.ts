@@ -2,13 +2,16 @@
 
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { validateDateOfBirth } from '@/lib/date-of-birth';
 import { DPDP_PRIVACY_URL, DPDP_TERMS_URL } from '@/lib/dpdp-consent';
 import { emailOtpInvalidMessage, isValidEmailOtp } from '@/lib/email-otp';
 import { formatUserFacingError } from '@/lib/format-user-error';
-import { buildMergeProfilePatch, type RegisterFormValues } from '@/lib/merge-profile-patch';
+import { buildRegisterProfilePatch, registerDraftFromValues, type RegisterFormValues } from '@/lib/merge-profile-patch';
 import {
-  getLatestProfile,
+  firstRegisterFieldError,
+  validateRegisterForm,
+  type RegisterFieldErrors,
+} from '@/lib/register-form-validation';
+import {
   markPasswordSetComplete,
   patchProfile,
   ProfileFetchError,
@@ -16,7 +19,7 @@ import {
   registerMember,
 } from '@/utils/api';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
-import { REGISTER_EMAIL_COOKIE } from '@/types/register';
+import { REGISTER_DRAFT_COOKIE, REGISTER_EMAIL_COOKIE } from '@/types/register';
 import { createClient } from '@/utils/supabase/server';
 
 const REGISTER_FLOW_COOKIE = 'sbm_register_flow';
@@ -47,24 +50,21 @@ function parseRegisterForm(formData: FormData): RegisterFormValues & { dpdpConse
   };
 }
 
-function validateRegisterForm(values: ReturnType<typeof parseRegisterForm>): string | null {
-  if (!values.firstName) return 'First name is required.';
-  if (!values.lastName) return 'Last name is required.';
-  if (!values.email) return 'Email is required.';
-  if (!values.whatsapp) return 'WhatsApp number is required.';
-  if (!values.sex) return 'Sex is required.';
-  if (!values.dateOfBirth) return 'Date of birth is required.';
-  const dobError = validateDateOfBirth(values.dateOfBirth, values.parentalConsent);
-  if (dobError) return dobError;
-  if (!values.dpdpConsent) return 'You must accept the Terms and Privacy Policy to continue.';
-  return null;
+function validateRegisterFormValues(values: ReturnType<typeof parseRegisterForm>): RegisterFieldErrors {
+  return validateRegisterForm(values);
 }
 
 export async function startRegister(_prev: RegisterStartState, formData: FormData): Promise<RegisterStartState> {
   const values = parseRegisterForm(formData);
-  const error = validateRegisterForm(values);
-  if (error) {
-    return { error, status: null, email: null };
+  const fieldErrors = validateRegisterFormValues(values);
+  if (Object.keys(fieldErrors).length > 0) {
+    return {
+      error: null,
+      fieldErrors,
+      focusField: firstRegisterFieldError(fieldErrors),
+      status: null,
+      email: null,
+    };
   }
 
   try {
@@ -87,6 +87,7 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
     }
 
     const cookieStore = await cookies();
+    cookieStore.delete(REGISTER_DRAFT_COOKIE);
     cookieStore.set(REGISTER_EMAIL_COOKIE, values.email, {
       httpOnly: true,
       sameSite: 'lax',
@@ -100,16 +101,7 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
       path: '/',
     });
 
-    const supabase = await createClient();
-
     if (result.status === 'resume') {
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: values.email,
-        options: { shouldCreateUser: false },
-      });
-      if (otpError) {
-        return { error: formatUserFacingError(otpError.message), status: null, email: null };
-      }
       cookieStore.set(REGISTER_FLOW_COOKIE, 'resume', {
         httpOnly: true,
         sameSite: 'lax',
@@ -168,8 +160,7 @@ export async function verifyRegisterOtp(_prev: RegisterVerifyState, formData: Fo
 
 async function completeRegisterProfile(formData: FormData): Promise<void> {
   const values = parseRegisterForm(formData);
-  const profile = await getLatestProfile().catch(() => null);
-  const patch = buildMergeProfilePatch(profile, values);
+  const patch = buildRegisterProfilePatch(values);
   if (Object.keys(patch).length > 0) {
     await patchProfile(patch);
   }
@@ -181,6 +172,41 @@ async function completeRegisterProfile(formData: FormData): Promise<void> {
   }
 }
 
+/** Signs out, saves the current form as a draft, and returns to registration for edits. */
+export async function restartRegisterEditing(formData: FormData): Promise<void> {
+  const values = parseRegisterForm(formData);
+  const cookieStore = await cookies();
+
+  cookieStore.set(REGISTER_DRAFT_COOKIE, JSON.stringify(registerDraftFromValues(values)), {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 60 * 60,
+    path: '/',
+  });
+  cookieStore.delete(REGISTER_EMAIL_COOKIE);
+  cookieStore.delete(REGISTER_FLOW_COOKIE);
+  if (values.dpdpConsent) {
+    cookieStore.set(REGISTER_DPDP_COOKIE, '1', {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60,
+      path: '/',
+    });
+  } else {
+    cookieStore.delete(REGISTER_DPDP_COOKIE);
+  }
+
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+
+  redirect('/register');
+}
+
+export async function clearRegisterDraft(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(REGISTER_DRAFT_COOKIE);
+}
+
 export async function resendRegisterOtp(): Promise<{ error: string | null }> {
   const cookieStore = await cookies();
   const email = cookieStore.get(REGISTER_EMAIL_COOKIE)?.value;
@@ -190,22 +216,9 @@ export async function resendRegisterOtp(): Promise<{ error: string | null }> {
     return { error: 'Enter your email and request a verification code first.' };
   }
 
-  const supabase = await createClient();
-
-  if (flow === 'resume') {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false },
-    });
-    if (error) {
-      return { error: formatUserFacingError(error.message) };
-    }
-    return { error: null };
-  }
-
   try {
-    const { resendSignupOTP } = await import('@/utils/api');
-    await resendSignupOTP(email, await getForwardedHeaders());
+    const { resendRegisterOTP } = await import('@/utils/api');
+    await resendRegisterOTP(email, flow as 'signup' | 'resume', await getForwardedHeaders());
     return { error: null };
   } catch (err) {
     return {

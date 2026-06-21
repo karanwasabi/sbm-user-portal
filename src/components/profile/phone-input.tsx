@@ -1,7 +1,7 @@
 'use client';
 
 import { Phone } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { DialCodePicker } from '@/components/profile/dial-code-picker';
 import { TextInput } from '@/components/ui/text-input';
 import { getMobileDigitHint, sanitizeNationalDigits, validateMobileNational } from '@/lib/country-mobile-rules';
@@ -21,6 +21,12 @@ type PhoneInputProps = {
   name?: string;
   disabled?: boolean;
   className?: string;
+  dialCodeClassName?: string;
+  mobileClassName?: string;
+  error?: boolean;
+  inputRef?: RefObject<HTMLInputElement | null>;
+  /** When true, feedback renders in the wrapping Field instead of below the mobile input. */
+  useFieldFeedback?: boolean;
 };
 
 function initialParts(value: string, suggestedCountryIso?: string) {
@@ -70,6 +76,11 @@ export function PhoneInput({
   name,
   disabled,
   className,
+  dialCodeClassName = 'w-35 shrink-0',
+  mobileClassName,
+  error = false,
+  inputRef,
+  useFieldFeedback = false,
 }: PhoneInputProps) {
   const initial = initialParts(value, suggestedCountryIso);
   const [dialCode, setDialCode] = useState(initial.dialCode);
@@ -118,9 +129,10 @@ export function PhoneInput({
 
   const digitHint = useMemo(() => getMobileDigitHint(dialIso), [dialIso]);
   const validationError = useMemo(() => {
+    if (error || useFieldFeedback) return null;
     if (!nationalNumber) return null;
-    return validateMobileNational(nationalNumber, dialIso, dialCode);
-  }, [nationalNumber, dialIso, dialCode]);
+    return validateMobileNational(nationalNumber, dialIso);
+  }, [error, useFieldFeedback, nationalNumber, dialIso, dialCode]);
 
   const updateCombined = (nextDial: string, nextIso: string, nextNational: string) => {
     const sanitized = nextIso ? sanitizeNationalDigits(nextNational, nextIso) : nextNational.replace(/\D/g, '');
@@ -135,7 +147,7 @@ export function PhoneInput({
   const combinedValue = combineWhatsapp(dialCode, nationalNumber, dialIso);
 
   return (
-    <div className={cn('flex items-start gap-2', className)}>
+    <div className={cn('flex w-full items-start gap-2', className)}>
       <DialCodePicker
         dialIso={dialIso}
         onChange={({ dialCode: nextDial, dialIso: nextIso }) => {
@@ -144,10 +156,12 @@ export function PhoneInput({
         }}
         countries={countries}
         disabled={disabled}
-        className="w-35 shrink-0"
+        className={dialCodeClassName}
+        error={error}
       />
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className={cn('flex min-w-0 flex-col gap-1.5', mobileClassName ?? 'flex-1')}>
         <TextInput
+          ref={inputRef}
           value={nationalNumber}
           onChange={(nextNational) => {
             updateCombined(dialCode, dialIso, nextNational);
@@ -156,24 +170,26 @@ export function PhoneInput({
           disabled={disabled}
           inputMode="tel"
           autoComplete="tel-national"
-          error={Boolean(validationError)}
+          error={error || Boolean(validationError)}
           leftIcon={<Phone size={16} className="text-slate-400" />}
         />
-        <div className="min-h-[18px]">
-          <p
-            className={cn(
-              'pl-0.5 text-[11.5px] leading-[18px]',
-              validationError
-                ? 'font-semibold text-destructive'
-                : digitHint
-                  ? 'font-medium text-muted-foreground'
-                  : 'invisible'
-            )}
-            aria-live="polite"
-          >
-            {validationError ?? digitHint ?? 'Enter digits without the country code.'}
-          </p>
-        </div>
+        {!useFieldFeedback ? (
+          <div className="min-h-[18px]">
+            <p
+              className={cn(
+                'pl-0.5 text-[11.5px] leading-[18px]',
+                validationError
+                  ? 'font-semibold text-destructive'
+                  : digitHint
+                    ? 'font-medium text-muted-foreground'
+                    : 'invisible'
+              )}
+              aria-live="polite"
+            >
+              {validationError ?? digitHint ?? 'Enter digits without the country code.'}
+            </p>
+          </div>
+        ) : null}
         {name ? <input type="hidden" name={name} value={combinedValue} /> : null}
       </div>
     </div>

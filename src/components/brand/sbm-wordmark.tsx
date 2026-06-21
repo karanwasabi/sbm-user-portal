@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 type SbmWordmarkProps = {
   size?: 'sm' | 'md' | 'lg';
   tone?: 'dark' | 'light';
+  showSubtitle?: boolean;
   className?: string;
 };
 
@@ -13,7 +14,7 @@ const sizeConfig = {
   lg: { logo: 56, title: 'text-[19px]', subtitle: 'text-[11px]' },
 } as const;
 
-export function SbmWordmark({ size = 'md', tone = 'dark', className }: SbmWordmarkProps) {
+export function SbmWordmark({ size = 'md', tone = 'dark', showSubtitle = true, className }: SbmWordmarkProps) {
   const config = sizeConfig[size];
 
   return (
@@ -32,15 +33,17 @@ export function SbmWordmark({ size = 'md', tone = 'dark', className }: SbmWordma
         >
           SLOW BURN METHOD
         </div>
-        <div
-          className={cn(
-            'mt-0.5 font-semibold tracking-[0.16em] uppercase',
-            config.subtitle,
-            tone === 'light' ? 'text-white/75' : 'text-slate-500'
-          )}
-        >
-          Member portal
-        </div>
+        {showSubtitle ? (
+          <div
+            className={cn(
+              'mt-0.5 font-semibold tracking-[0.16em] uppercase',
+              config.subtitle,
+              tone === 'light' ? 'text-white/75' : 'text-slate-500'
+            )}
+          >
+            Member portal
+          </div>
+        ) : null}
       </div>
     </div>
   );

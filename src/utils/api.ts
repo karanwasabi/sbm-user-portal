@@ -150,10 +150,17 @@ export async function enrollInProgram(programSlug = 'take-control'): Promise<Enr
 }
 
 export async function fetchCountries(): Promise<Country[]> {
-  const response = await requireApiFetch('/reference/countries');
+  let response: Response;
+  try {
+    response = await apiFetch('/reference/countries');
+  } catch {
+    throw new ProfileFetchError('Could not reach the backend. Is it running?', 503);
+  }
+
   if (!response.ok) {
     throw new ProfileFetchError('Failed to load countries.', response.status);
   }
+
   return response.json() as Promise<Country[]>;
 }
 
@@ -264,6 +271,35 @@ export async function resendSignupOTP(email: string, extraHeaders: HeadersInit =
         ...extraHeaders,
       },
       body: JSON.stringify({ email }),
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ProfileFetchError('Could not reach the backend. Is it running?', 503);
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ProfileFetchError(
+      formatUserFacingError(payload?.error ?? `Failed to resend verification code (${response.status})`),
+      response.status
+    );
+  }
+}
+
+export async function resendRegisterOTP(
+  email: string,
+  flow: 'signup' | 'resume',
+  extraHeaders: HeadersInit = {}
+): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${getBackendUrl()}/auth/register/resend`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...extraHeaders,
+      },
+      body: JSON.stringify({ email, flow }),
       cache: 'no-store',
     });
   } catch {

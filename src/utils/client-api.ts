@@ -6,6 +6,50 @@ import type { Country, CountryCity, CountryState } from '@/types/reference';
 import type { PaymentMethodUpdateResponse, Subscription } from '@/types/subscription';
 import { createClient } from '@/utils/supabase/client';
 
+async function publicApiFetch(path: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has('Content-Type') && init?.body) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(`${getBackendUrl()}${path}`, {
+    ...init,
+    headers,
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? `Request failed (${response.status})`);
+  }
+
+  return response;
+}
+
+export async function getPublicCheckoutPreview(programSlug = 'take-control'): Promise<CheckoutPreview> {
+  const response = await publicApiFetch(`/reference/programs/${encodeURIComponent(programSlug)}/checkout-preview`);
+  return response.json() as Promise<CheckoutPreview>;
+}
+
+export async function postPublicCheckoutQuote(programSlug: string, body: CheckoutQuoteRequest): Promise<CheckoutQuote> {
+  const response = await publicApiFetch(`/reference/programs/${encodeURIComponent(programSlug)}/checkout-quote`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json()) as { quote: CheckoutQuote };
+  return payload.quote;
+}
+
+export async function getPublicCountryCities(countryCode: string): Promise<CountryCity[]> {
+  const response = await publicApiFetch(`/reference/countries/${encodeURIComponent(countryCode)}/cities`);
+  return response.json() as Promise<CountryCity[]>;
+}
+
+export async function getPublicCountryStates(countryCode: string): Promise<CountryState[]> {
+  const response = await publicApiFetch(`/reference/countries/${encodeURIComponent(countryCode)}/states`);
+  return response.json() as Promise<CountryState[]>;
+}
+
 async function clientApiFetch(path: string, init?: RequestInit): Promise<Response> {
   const supabase = createClient();
   const {

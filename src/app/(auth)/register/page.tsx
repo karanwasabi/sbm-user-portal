@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { RegisterView } from '@/components/auth/register-view';
-import { profileToRegisterDefaults } from '@/lib/merge-profile-patch';
+import { parseRegisterDraft, profileToRegisterDefaults, registerDraftToFormValues } from '@/lib/merge-profile-patch';
 import { hasPortalAccess, isEnrolled } from '@/lib/onboarding';
+import { getRequestCountryIso } from '@/lib/request-country-code';
+import { PENDING_DPDP_COOKIE } from '@/types/signup';
+import { REGISTER_DRAFT_COOKIE } from '@/types/register';
 import { fetchCountries, getLatestProfile, getMyEnrollments } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
@@ -13,9 +17,21 @@ export default async function RegisterPage() {
 
   let initialValues = null;
   let emailVerified = false;
-  const countries = await fetchCountries().catch(() => []);
+  let initialDpdpConsent = false;
+  const cookieStore = await cookies();
+  const draft = parseRegisterDraft(cookieStore.get(REGISTER_DRAFT_COOKIE)?.value);
 
-  if (user?.email_confirmed_at) {
+  if (draft) {
+    initialValues = registerDraftToFormValues(draft);
+    initialDpdpConsent = draft.dpdpConsent;
+  }
+
+  const [countries, suggestedCountryIso] = await Promise.all([
+    fetchCountries().catch(() => []),
+    getRequestCountryIso(),
+  ]);
+
+  if (!draft && user?.email_confirmed_at) {
     emailVerified = true;
     try {
       const [profile, enrollments] = await Promise.all([
@@ -33,5 +49,18 @@ export default async function RegisterPage() {
     }
   }
 
-  return <RegisterView initialValues={initialValues} emailVerified={emailVerified} countries={countries} />;
+  if (!draft) {
+    initialDpdpConsent = emailVerified || cookieStore.get(PENDING_DPDP_COOKIE)?.value === '1';
+  }
+
+  return (
+    <RegisterView
+      initialValues={initialValues}
+      emailVerified={emailVerified}
+      initialDpdpConsent={initialDpdpConsent}
+      fromDraft={Boolean(draft)}
+      countries={countries}
+      suggestedCountryIso={initialValues?.whatsapp?.trim() ? undefined : suggestedCountryIso}
+    />
+  );
 }

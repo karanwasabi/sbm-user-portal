@@ -1,5 +1,9 @@
 export type RegisterStartStatus = 'otp_sent' | 'resume' | 'already_enrolled';
 
+import type { RegisterField, RegisterFieldErrors } from '@/lib/register-form-validation';
+
+export type { RegisterField, RegisterFieldErrors };
+
 export type RegisterStartResponse = {
   status: RegisterStartStatus;
   email: string;
@@ -23,8 +27,22 @@ export type RegisterVerifyState = {
 
 export type RegisterStartState = {
   error: string | null;
+  fieldErrors?: RegisterFieldErrors;
+  focusField?: RegisterField;
   status: RegisterStartStatus | null;
   email: string | null;
 };
 
 export const REGISTER_EMAIL_COOKIE = 'sbm_register_email';
+export const REGISTER_DRAFT_COOKIE = 'sbm_register_draft';
+
+export type RegisterDraft = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  whatsapp: string;
+  sex: string;
+  dateOfBirth: string;
+  parentalConsent: boolean;
+  dpdpConsent: boolean;
+};

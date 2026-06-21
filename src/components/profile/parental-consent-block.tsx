@@ -1,5 +1,6 @@
 'use client';
 
+import type { Ref } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PARENTAL_CONSENT_LABEL } from '@/lib/date-of-birth';
 import { cn } from '@/lib/cn';
@@ -9,9 +10,10 @@ type ParentalConsentBlockProps = {
   onChange: (checked: boolean) => void;
   disabled?: boolean;
   error?: boolean;
+  inputRef?: Ref<HTMLButtonElement>;
 };
 
-export function ParentalConsentBlock({ checked, onChange, disabled, error }: ParentalConsentBlockProps) {
+export function ParentalConsentBlock({ checked, onChange, disabled, error, inputRef }: ParentalConsentBlockProps) {
   return (
     <div
       className={cn(
@@ -31,6 +33,7 @@ export function ParentalConsentBlock({ checked, onChange, disabled, error }: Par
         checked={checked}
         onChange={onChange}
         disabled={disabled}
+        inputRef={inputRef}
         label={PARENTAL_CONSENT_LABEL}
         className="mt-3"
       />

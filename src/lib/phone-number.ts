@@ -48,7 +48,11 @@ export function parseWhatsapp(value: string, preferredIso?: string): ParsedPhone
 
 export function combineWhatsapp(dialCode: string, nationalNumber: string, dialIso?: string): string {
   const national = nationalNumber.replace(/\D/g, '');
-  if (!national) return '';
+  const dial = normalizeDialCode(dialCode);
+
+  if (!national) {
+    return dial || '';
+  }
 
   const country = asCountryCode(dialIso);
   if (country) {
@@ -58,7 +62,6 @@ export function combineWhatsapp(dialCode: string, nationalNumber: string, dialIs
     }
   }
 
-  const dial = normalizeDialCode(dialCode);
   if (!dial) return national;
 
   if (country) {

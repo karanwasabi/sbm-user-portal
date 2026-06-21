@@ -1,4 +1,5 @@
 import type { Profile, ProfilePatch, Sex } from '@/types/profile';
+import type { RegisterDraft } from '@/types/register';
 
 export type RegisterFormValues = {
   firstName: string;
@@ -39,6 +40,73 @@ export function buildMergeProfilePatch(profile: Profile | null, values: Register
   }
 
   return patch;
+}
+
+export function buildRegisterProfilePatch(values: RegisterFormValues): ProfilePatch {
+  const patch: ProfilePatch = {};
+
+  const firstName = values.firstName.trim();
+  const lastName = values.lastName.trim();
+  const whatsapp = values.whatsapp.trim();
+  const dateOfBirth = values.dateOfBirth.trim();
+
+  if (firstName) patch.first_name = firstName;
+  if (lastName) patch.last_name = lastName;
+  if (whatsapp) patch.whatsapp = whatsapp;
+  if (values.sex) patch.sex = values.sex;
+  if (dateOfBirth) {
+    patch.date_of_birth = dateOfBirth;
+    patch.parental_consent = values.parentalConsent;
+  }
+
+  return patch;
+}
+
+export function registerDraftFromValues(values: RegisterFormValues & { dpdpConsent: boolean }): RegisterDraft {
+  return {
+    firstName: values.firstName,
+    lastName: values.lastName,
+    email: values.email,
+    whatsapp: values.whatsapp,
+    sex: values.sex,
+    dateOfBirth: values.dateOfBirth,
+    parentalConsent: values.parentalConsent,
+    dpdpConsent: values.dpdpConsent,
+  };
+}
+
+export function registerDraftToFormValues(draft: RegisterDraft): RegisterFormValues {
+  return {
+    firstName: draft.firstName,
+    lastName: draft.lastName,
+    email: draft.email,
+    whatsapp: draft.whatsapp,
+    sex: (draft.sex || '') as RegisterFormValues['sex'],
+    dateOfBirth: draft.dateOfBirth,
+    parentalConsent: draft.parentalConsent,
+  };
+}
+
+export function parseRegisterDraft(raw: string | undefined): RegisterDraft | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<RegisterDraft>;
+    if (typeof parsed.email !== 'string') return null;
+    return {
+      firstName: String(parsed.firstName ?? ''),
+      lastName: String(parsed.lastName ?? ''),
+      email: String(parsed.email ?? '')
+        .trim()
+        .toLowerCase(),
+      whatsapp: String(parsed.whatsapp ?? ''),
+      sex: String(parsed.sex ?? ''),
+      dateOfBirth: String(parsed.dateOfBirth ?? ''),
+      parentalConsent: parsed.parentalConsent === true,
+      dpdpConsent: parsed.dpdpConsent === true,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function profileToRegisterDefaults(profile: Profile | null, email: string): RegisterFormValues {

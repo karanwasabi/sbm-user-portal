@@ -18,7 +18,11 @@ export function Field({ label, hint, error, children, className }: FieldProps) {
       {label ? <Label className="pl-0.5 text-[12.5px] font-semibold text-slate-700">{label}</Label> : null}
       {children}
       {hint && !error ? <p className="pl-0.5 text-[11.5px] font-medium text-muted-foreground">{hint}</p> : null}
-      {error ? <p className="pl-0.5 text-[11.5px] font-semibold text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="pl-0.5 text-[11.5px] font-semibold text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

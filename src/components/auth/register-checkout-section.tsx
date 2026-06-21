@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
 import { CityCombobox } from '@/components/profile/city-combobox';
 import { CountryCombobox } from '@/components/profile/country-combobox';
-import { TakeControlEnrollPanel } from '@/components/programs/take-control-enroll-panel';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -16,13 +15,12 @@ import { openRazorpayEnrollmentCheckout, pollUntilEnrolled } from '@/lib/razorpa
 import type { CheckoutPreview, CheckoutQuote, CheckoutQuoteRequest } from '@/types/checkout';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
 import {
-  getCheckoutPreview,
   getCheckoutResume,
-  getCountries,
-  getCountryCities,
-  getCountryStates,
+  getPublicCheckoutPreview,
+  getPublicCountryCities,
+  getPublicCountryStates,
   mockCompleteCheckout,
-  postCheckoutQuote,
+  postPublicCheckoutQuote,
   startCheckout,
 } from '@/utils/client-api';
 
@@ -53,10 +51,28 @@ const SUBDIVISION_LABEL_BY_COUNTRY: Record<string, string> = {
 
 type RegisterCheckoutSectionProps = {
   defaultLegalName: string;
+  defaultBillingCountryCode?: string;
+  countries: Country[];
   enabled: boolean;
 };
 
-export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterCheckoutSectionProps) {
+function resolveDefaultBillingCountry(countryRows: Country[], preferredIso?: string): string {
+  const preferred = preferredIso?.trim().toUpperCase();
+  if (preferred && countryRows.some((entry) => entry.iso_code === preferred)) {
+    return preferred;
+  }
+  if (countryRows.some((entry) => entry.iso_code === 'IN')) {
+    return 'IN';
+  }
+  return countryRows[0]?.iso_code ?? 'IN';
+}
+
+export function RegisterCheckoutSection({
+  defaultLegalName,
+  defaultBillingCountryCode,
+  countries: initialCountries,
+  enabled,
+}: RegisterCheckoutSectionProps) {
   const router = useRouter();
   const [preview, setPreview] = useState<CheckoutPreview | null>(null);
   const [quote, setQuote] = useState<CheckoutQuote | null>(null);
@@ -67,12 +83,15 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
   const [error, setError] = useState<string | null>(null);
   const [billingOpen, setBillingOpen] = useState(false);
 
-  const [countries, setCountries] = useState<Country[]>([]);
+  const [countries, setCountries] = useState<Country[]>(initialCountries);
   const [countryCities, setCountryCities] = useState<CountryCity[]>([]);
   const [countryStates, setCountryStates] = useState<CountryState[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [loadingStates, setLoadingStates] = useState(false);
-  const [billingCountryCode, setBillingCountryCode] = useState('IN');
+  const [billingCountryCode, setBillingCountryCode] = useState(
+    () => defaultBillingCountryCode?.trim().toUpperCase() || 'IN'
+  );
+  const [billingCountryTouched, setBillingCountryTouched] = useState(false);
   const pricingRegion = useMemo<'domestic' | 'international'>(
     () => (billingCountryCode === 'IN' ? 'domestic' : 'international'),
     [billingCountryCode]
@@ -95,20 +114,16 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
   const [appliedPromo, setAppliedPromo] = useState('');
 
   useEffect(() => {
-    if (!enabled) return;
+    setCountries(initialCountries);
+  }, [initialCountries]);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [data, countryRows] = await Promise.all([getCheckoutPreview('take-control'), getCountries()]);
+        const data = await getPublicCheckoutPreview('take-control');
         if (cancelled) return;
         setPreview(data);
-        setQuote(data.domestic);
-        setCountries(countryRows);
-        if (countryRows.some((entry) => entry.iso_code === 'IN')) {
-          setBillingCountryCode('IN');
-        } else if (countryRows[0]) {
-          setBillingCountryCode(countryRows[0].iso_code);
-        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load checkout preview.');
@@ -120,7 +135,21 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
     return () => {
       cancelled = true;
     };
-  }, [enabled]);
+  }, []);
+
+  useEffect(() => {
+    if (billingCountryTouched || countries.length === 0) return;
+    const billingCode = resolveDefaultBillingCountry(countries, defaultBillingCountryCode);
+    setBillingCountryCode(billingCode);
+    if (preview) {
+      setQuote(billingCode === 'IN' ? preview.domestic : preview.international);
+    }
+  }, [billingCountryTouched, defaultBillingCountryCode, countries, preview]);
+
+  const handleBillingCountryChange = (code: string) => {
+    setBillingCountryTouched(true);
+    setBillingCountryCode(code);
+  };
 
   useEffect(() => {
     if (legalNameTouched) return;
@@ -134,7 +163,7 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
     }
     let cancelled = false;
     setLoadingCities(true);
-    getCountryCities(billingCountryCode)
+    getPublicCountryCities(billingCountryCode)
       .then((rows) => {
         if (!cancelled) setCountryCities(rows);
       })
@@ -161,7 +190,7 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
     }
     let cancelled = false;
     setLoadingStates(true);
-    getCountryStates(billingCountryCode)
+    getPublicCountryStates(billingCountryCode)
       .then((rows) => {
         if (!cancelled) setCountryStates(rows);
       })
@@ -215,7 +244,7 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
     setQuotePending(true);
     setError(null);
     try {
-      const next = await postCheckoutQuote(buildQuoteRequest());
+      const next = await postPublicCheckoutQuote('take-control', buildQuoteRequest());
       setQuote(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to calculate price.');
@@ -225,9 +254,9 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
   }, [buildQuoteRequest]);
 
   useEffect(() => {
-    if (loading || !enabled) return;
+    if (loading) return;
     void refreshQuote();
-  }, [loading, enabled, pricingRegion, billingType, appliedPromo, refreshQuote]);
+  }, [loading, pricingRegion, billingType, appliedPromo, refreshQuote]);
 
   const stateOptions = useMemo(
     () =>
@@ -254,7 +283,9 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
     router.refresh();
   };
 
-  const openPayment = async (useResume: boolean) => {
+  const openPayment = async () => {
+    if (!enabled) return;
+
     const trimmedLegalName = legalName.trim();
     if (!trimmedLegalName) {
       setError('Legal name is required for billing.');
@@ -265,13 +296,9 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
     setError(null);
     try {
       let start;
-      if (useResume) {
-        try {
-          start = await getCheckoutResume('take-control');
-        } catch {
-          start = await startCheckout({ ...buildQuoteRequest(), legal_name: trimmedLegalName });
-        }
-      } else {
+      try {
+        start = await getCheckoutResume('take-control');
+      } catch {
         start = await startCheckout({ ...buildQuoteRequest(), legal_name: trimmedLegalName });
       }
 
@@ -286,7 +313,10 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
         onSuccess: () => {
           void finishPayment();
         },
-        onDismiss: () => setPayPending(false),
+        onDismiss: () => {
+          setPayPending(false);
+          setError('Payment was not completed. Tap Enroll to try again.');
+        },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed to start.');
@@ -295,17 +325,9 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
     }
   };
 
-  if (!enabled) {
-    return (
-      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-        Verify your email to see pricing and enroll.
-      </div>
-    );
-  }
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-10">
+      <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-brand" />
       </div>
     );
@@ -324,27 +346,35 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
     month: 'long',
     year: 'numeric',
   });
+  const showGst = pricingRegion === 'domestic';
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-xl border border-brand/20 bg-brand/5 px-4 py-3">
-        <p className="text-xs font-semibold tracking-wide text-brand uppercase">Your batch</p>
-        <p className="mt-1 text-sm font-bold text-slate-900">
-          {preview.cohort_name} · starts {batchDate}
+    <div className="flex flex-col gap-3">
+      <div className="rounded-xl border border-slate-200 px-4 py-3.5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-base font-bold text-slate-900">Take Control</p>
+            <p className="mt-0.5 text-xs font-medium text-slate-500">Starts {batchDate}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-lg font-extrabold tracking-tight text-slate-900">
+              {formatInrFromPaise(quote.upfront_base_paise)}
+              {showGst ? <span className="text-sm font-bold text-slate-600"> + GST</span> : null}
+            </p>
+            <p className="mt-0.5 text-[11px] font-medium text-slate-500">first 3 months</p>
+          </div>
+        </div>
+        {quote.discount_paise > 0 ? (
+          <p className="mt-2 text-xs font-semibold text-success">
+            {quote.promo_code ? `${quote.promo_code}: ` : ''}−{formatInrFromPaise(quote.discount_paise)} · pay{' '}
+            {formatInrFromPaise(quote.total_paise)}
+          </p>
+        ) : null}
+        <p className="mt-2 border-t border-slate-100 pt-2 text-xs leading-relaxed text-slate-500">
+          Then {formatInrFromPaise(quote.monthly_base_paise)}
+          {showGst ? ' + GST' : ''} / month · cancel anytime.
         </p>
       </div>
-
-      <TakeControlEnrollPanel
-        compact
-        hideFooter
-        upfrontPaise={quote.upfront_base_paise}
-        gstPaise={quote.gst_paise}
-        totalPaise={quote.total_paise}
-        monthlyBasePaise={quote.monthly_base_paise}
-        showGst={pricingRegion === 'domestic'}
-        discountPaise={quote.discount_paise}
-        promoCode={quote.promo_code}
-      />
 
       <div className="rounded-xl border border-slate-200">
         <button
@@ -358,7 +388,7 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
         {billingOpen ? (
           <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3">
             <Field label="Billing country">
-              <CountryCombobox value={billingCountryCode} onChange={setBillingCountryCode} countries={countries} />
+              <CountryCombobox value={billingCountryCode} onChange={handleBillingCountryChange} countries={countries} />
             </Field>
             <Field label="Billing type">
               <div className="grid grid-cols-2 gap-2">
@@ -432,7 +462,10 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
           </div>
         ) : (
           <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
-            Legal name defaults to your registration name. Expand to add GSTIN or a billing address.
+            Legal name defaults to your registration name.{' '}
+            {pricingRegion === 'domestic'
+              ? 'Expand to add GSTIN or a billing address.'
+              : 'Expand to add a billing address.'}
           </p>
         )}
       </div>
@@ -475,26 +508,21 @@ export function RegisterCheckoutSection({ defaultLegalName, enabled }: RegisterC
         </div>
       ) : (
         <div className="flex flex-col gap-2">
+          {!enabled ? (
+            <p className="text-[12.5px] leading-snug font-medium text-slate-500">
+              Generate and confirm OTP before enrolling.
+            </p>
+          ) : null}
           <Button
             type="button"
             variant="primary"
             size="md"
             className="w-full"
-            disabled={payPending || quotePending}
-            onClick={() => void openPayment(false)}
+            disabled={!enabled || payPending || quotePending}
+            onClick={() => void openPayment()}
             rightIcon={payPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
           >
-            {payPending ? 'Opening payment…' : `Enroll · ${formatInrFromPaise(quote.total_paise)}`}
-          </Button>
-          <Button
-            type="button"
-            variant="light"
-            size="md"
-            className="w-full"
-            disabled={payPending || quotePending}
-            onClick={() => void openPayment(true)}
-          >
-            Retry payment
+            {payPending ? 'Opening payment…' : 'Enroll'}
           </Button>
         </div>
       )}
