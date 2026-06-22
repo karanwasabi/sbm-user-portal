@@ -73,7 +73,7 @@ export function PortalUserMenu() {
               className="flex w-full cursor-pointer items-center gap-2.5 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-canvas-cool"
             >
               <LogOut size={16} className="text-slate-500" />
-              Sign out
+              Sign Out
             </button>
           </form>
         </div>

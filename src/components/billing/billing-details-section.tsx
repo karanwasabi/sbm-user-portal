@@ -358,7 +358,7 @@ export function BillingDetailsSection({ initialProfile, initialCountries }: Bill
 
   return (
     <Card>
-      <SectionHead title="Billing details" subtitle="Name and address printed on tax invoices." />
+      <SectionHead title="Billing Details" subtitle="Name and address printed on tax invoices." />
 
       {editing ? (
         <div className="flex flex-col gap-3">
@@ -433,7 +433,7 @@ export function BillingDetailsSection({ initialProfile, initialCountries }: Bill
               aria-busy={pending}
             >
               <span className="relative inline-flex items-center justify-center">
-                <span className={pending ? 'opacity-0' : undefined}>Save changes</span>
+                <span className={pending ? 'opacity-0' : undefined}>Save Changes</span>
                 {pending ? <Loader2 size={16} className="absolute animate-spin" aria-hidden /> : null}
               </span>
             </Button>

@@ -16,7 +16,7 @@ const initialState = { error: null as string | null, success: false };
 
 const layoutProps = {
   eyebrow: 'Security',
-  title: 'Protect your account',
+  title: 'Protect Your Account',
   description: 'Choose a strong password for email sign-in. You will stay signed in after saving.',
   illustration: <SecurityPageIllustration />,
   panelClassName: 'bg-gradient-to-br from-brand-deep via-brand to-brand-deep-press',
@@ -44,12 +44,12 @@ export function SetPasswordForm() {
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 no-underline hover:text-slate-700"
         >
           <ArrowLeft size={16} />
-          Back to profile
+          Back to Profile
         </Link>
         <Card>
-          <SectionHead title="Password saved" subtitle="You can now sign in with your email and password." />
+          <SectionHead title="Password Saved" subtitle="You can now sign in with your email and password." />
           <Button variant="primary" size="md" className="mt-5" href="/">
-            Go to dashboard
+            Go to Dashboard
           </Button>
         </Card>
       </PortalPageLayout>
@@ -63,14 +63,14 @@ export function SetPasswordForm() {
         className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 no-underline hover:text-slate-700"
       >
         <ArrowLeft size={16} />
-        Back to profile
+        Back to Profile
       </Link>
       <Card>
-        <SectionHead title="Set password" subtitle="No current password is required for your account." />
+        <SectionHead title="Set Password" subtitle="No current password is required for your account." />
         <form action={formAction} className="mt-4 flex flex-col gap-3.5">
           <PasswordField
             name="newPassword"
-            label="New password"
+            label="New Password"
             value={newPassword}
             onChange={setNewPassword}
             showPassword={showNew}
@@ -82,7 +82,7 @@ export function SetPasswordForm() {
           />
           <PasswordField
             name="confirmPassword"
-            label="Confirm new password"
+            label="Confirm New Password"
             value={confirmPassword}
             onChange={setConfirmPassword}
             showPassword={showConfirm}
@@ -103,7 +103,7 @@ export function SetPasswordForm() {
                 Saving…
               </>
             ) : (
-              'Save password'
+              'Save Password'
             )}
           </Button>
         </form>

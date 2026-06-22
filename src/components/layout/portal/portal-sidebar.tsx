@@ -76,7 +76,7 @@ export function PortalSidebar() {
           )}
         >
           <HelpCircle size={16} className={pathname === '/support' ? 'text-brand' : 'text-slate-500'} />
-          Help &amp; support
+          Help &amp; Support
         </Link>
       </div>
     </aside>

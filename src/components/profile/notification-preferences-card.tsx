@@ -34,7 +34,7 @@ const CHANNELS: {
   },
   {
     key: 'notify_push',
-    title: 'Push notifications',
+    title: 'Push Notifications',
     subtitle: 'Coach updates and reminders in the app',
     icon: Bell,
   },
@@ -83,7 +83,7 @@ export function NotificationPreferencesCard() {
 
   return (
     <Card>
-      <SectionHead title="Notification preferences" subtitle="Choose how we reach you." />
+      <SectionHead title="Notification Preferences" subtitle="Choose how we reach you." />
       <div className="flex flex-col gap-1">
         {CHANNELS.map((item) => {
           const checked = preferences[item.key];

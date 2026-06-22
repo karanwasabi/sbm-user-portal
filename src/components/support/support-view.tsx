@@ -36,20 +36,20 @@ export function SupportView() {
 
   return (
     <PortalPageLayout
-      eyebrow="Help & support"
-      title="Contact our team"
+      eyebrow="Help & Support"
+      title="Contact Our Team"
       description="For billing, enrollment, account or any other questions, email us and we will get back to you within one to two business days."
       illustration={<SupportPageIllustration />}
       panelClassName="bg-gradient-to-br from-brand via-brand-deep to-brand-deep-press"
       glowClassName="bg-white/30"
       highlights={[
         { label: 'Channel', value: 'Email' },
-        { label: 'Reply time', value: '1-2 business days' },
+        { label: 'Reply Time', value: '1-2 business days' },
       ]}
     >
       <Card>
         <SectionHead
-          title="Email support"
+          title="Email Support"
           subtitle="Tap the address to compose a message. Use Copy if your device does not open a mail app."
         />
         <div className="rounded-[14px] border border-slate-100 bg-canvas-cool p-4 sm:p-5">
@@ -75,7 +75,7 @@ export function SupportView() {
               onClick={() => void handleCopy()}
               leftIcon={copied ? <Check size={16} /> : <Copy size={16} />}
             >
-              {copied ? 'Copied' : 'Copy email'}
+              {copied ? 'Copied' : 'Copy Email'}
             </Button>
           </div>
         </div>

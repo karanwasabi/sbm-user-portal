@@ -24,7 +24,7 @@ export async function InvoicesHistorySection() {
         </p>
       ) : null}
       <Card>
-        <SectionHead title="Invoice history" subtitle="Issued after each successful payment" />
+        <SectionHead title="Invoice History" subtitle="Issued after each successful payment" />
         {invoices.length === 0 ? (
           <p className="text-sm text-slate-600">
             No invoices yet. Your first invoice appears after enrollment payment.

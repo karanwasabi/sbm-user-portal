@@ -9,16 +9,16 @@ type InvoicesPageShellProps = {
 export function InvoicesPageShell({ children }: InvoicesPageShellProps) {
   return (
     <PortalPageLayout
-      eyebrow="Billing records"
-      title="Tax invoices"
+      eyebrow="Billing Records"
+      title="Tax Invoices"
       description="Manage billing details for your invoices and download GST-compliant PDFs for your records."
       illustration={<InvoicesPageIllustration />}
       panelClassName="bg-gradient-to-br from-motivation via-amber to-[#E88A0C]"
       glowClassName="bg-white/35"
       highlights={[
-        { label: 'Invoices on file', value: '—' },
+        { label: 'Invoices on File', value: '—' },
         { label: 'Latest', value: '—' },
-        { label: 'Billing type', value: '—' },
+        { label: 'Billing Type', value: '—' },
       ]}
     >
       {children}

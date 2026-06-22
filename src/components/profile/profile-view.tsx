@@ -258,13 +258,13 @@ export function ProfileView({ countries }: ProfileViewProps) {
     <PortalPageLayout
       eyebrow="Account"
       title={fullName}
-      description="Keep your details up to date so your coach and billing stay in sync."
+      description="Keep your contact and program details up to date so your coach can personalise your experience."
       illustration={<ProfilePageIllustration />}
       panelClassName="bg-gradient-to-br from-lilac via-[#B794F6] to-brand-deep"
       glowClassName="bg-white/35"
       highlights={[
         { label: 'Status', value: 'Active' },
-        { label: 'Member since', value: 'Sep 2025' },
+        { label: 'Member Since', value: 'Sep 2025' },
         { label: 'Timezone', value: timezoneHighlight },
       ]}
     >
@@ -274,7 +274,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
             {initials}
           </div>
           <div className="flex-1">
-            <Eyebrow>Member since · Sep 13, 2025</Eyebrow>
+            <Eyebrow>Member Since · Sep 13, 2025</Eyebrow>
             <div className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">{fullName}</div>
             <div className="mt-1.5 flex flex-wrap items-center gap-3.5 text-xs font-medium text-slate-500">
               {email && (
@@ -283,7 +283,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
                   {email}
                 </span>
               )}
-              <Pill tone="success">Active member</Pill>
+              <Pill tone="success">Active Member</Pill>
             </div>
           </div>
           <ProfileCompletionRing percent={completionPercent} className="self-start sm:self-center" />
@@ -291,7 +291,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
       </Card>
 
       <Card>
-        <SectionHead title="Personal details" subtitle="Used to personalise your program experience." />
+        <SectionHead title="Personal Details" subtitle="Used to personalise your program experience." />
         <form
           action={formAction}
           onSubmit={(event) => {
@@ -307,7 +307,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
           <input type="hidden" name="city" value={city} />
           <input type="hidden" name="parentalConsent" value={parentalConsent ? 'true' : 'false'} />
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-            <Field label="First name">
+            <Field label="First Name">
               <TextInput
                 name="firstName"
                 value={firstName}
@@ -316,7 +316,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 disabled={pending}
               />
             </Field>
-            <Field label="Last name">
+            <Field label="Last Name">
               <TextInput
                 name="lastName"
                 value={lastName}
@@ -348,7 +348,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
               />
             </Field>
             <div className="flex flex-col gap-2">
-              <Field label="Date of birth" error={dateOfBirthError ?? undefined}>
+              <Field label="Date of Birth" error={dateOfBirthError ?? undefined}>
                 <TextInput
                   name="dateOfBirth"
                   value={dateOfBirth}
@@ -391,7 +391,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
             <Field label="Timezone">
               <TimezonePicker value={timezoneId} onChange={setTimezoneId} disabled={pending} />
             </Field>
-            <Field label="Meal preference">
+            <Field label="Meal Preference">
               <MealPreferenceSelect value={mealPreference} onChange={setMealPreference} disabled={pending} />
             </Field>
           </div>
@@ -404,7 +404,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
             </Button>
             <Button type="submit" variant="primary" size="md" disabled={pending || !canSave} aria-busy={pending}>
               <span className="relative inline-flex items-center justify-center">
-                <span className={pending ? 'opacity-0' : undefined}>Save changes</span>
+                <span className={pending ? 'opacity-0' : undefined}>Save Changes</span>
                 {pending ? <Loader2 size={16} className="absolute animate-spin" aria-hidden /> : null}
               </span>
             </Button>
@@ -430,7 +430,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
             className="shrink-0 self-start sm:self-center"
             onClick={() => router.push('/profile/change-password')}
           >
-            Change password
+            Change Password
           </Button>
         </div>
       </Card>

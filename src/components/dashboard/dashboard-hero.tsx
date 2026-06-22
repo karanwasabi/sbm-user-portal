@@ -45,8 +45,7 @@ export function DashboardHero({
           {showPreStartPanel && upcoming ? (
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
               You&apos;re enrolled in {upcoming.program_name}
-              {upcoming.starts_on ? `, starting ${formatStartDate(upcoming.starts_on)}` : ''}. Hang tight — your coach
-              will reach out on WhatsApp before day one.
+              {upcoming.starts_on ? ` — your program begins ${formatStartDate(upcoming.starts_on)}.` : '.'}
             </p>
           ) : (
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">

@@ -23,14 +23,14 @@ export function InvoicesView({ invoices, billingProfile, error }: InvoicesViewPr
 
   return (
     <PortalPageLayout
-      eyebrow="Billing records"
-      title="Tax invoices"
+      eyebrow="Billing Records"
+      title="Tax Invoices"
       description="Manage billing details for your invoices and download GST-compliant PDFs for your records."
       illustration={<InvoicesPageIllustration />}
       panelClassName="bg-gradient-to-br from-motivation via-amber to-[#E88A0C]"
       glowClassName="bg-white/35"
       highlights={[
-        { label: 'Invoices on file', value: String(invoices.length) },
+        { label: 'Invoices on File', value: String(invoices.length) },
         {
           label: 'Latest',
           value: latest
@@ -38,7 +38,7 @@ export function InvoicesView({ invoices, billingProfile, error }: InvoicesViewPr
             : '—',
         },
         {
-          label: 'Billing type',
+          label: 'Billing Type',
           value: formatBillingTypeDisplay(
             billingProfile?.billing_type ?? (latest?.billing_snapshot?.billing_type as string | undefined)
           ),
@@ -54,7 +54,7 @@ export function InvoicesView({ invoices, billingProfile, error }: InvoicesViewPr
       <BillingDetailsSection initialProfile={billingProfile} />
 
       <Card>
-        <SectionHead title="Invoice history" subtitle="Issued after each successful payment" />
+        <SectionHead title="Invoice History" subtitle="Issued after each successful payment" />
         {invoices.length === 0 ? (
           <p className="text-sm text-slate-600">
             No invoices yet. Your first invoice appears after enrollment payment.

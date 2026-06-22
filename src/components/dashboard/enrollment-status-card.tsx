@@ -48,7 +48,7 @@ export function EnrollmentStatusCard({ enrollments, profile }: EnrollmentStatusC
             <p className="text-6xl leading-none font-extrabold tracking-tight">{days}</p>
             <p className="pb-1 text-lg font-semibold text-white/85">
               day{days === 1 ? '' : 's'}
-              <span className="block text-sm font-medium text-white/70">until start</span>
+              <span className="block text-sm font-medium text-white/70">Until Start</span>
             </p>
           </div>
 
@@ -73,7 +73,7 @@ export function EnrollmentStatusCard({ enrollments, profile }: EnrollmentStatusC
         <div className="flex h-full flex-col">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold tracking-wide text-success uppercase">Program active</p>
+              <p className="text-xs font-semibold tracking-wide text-success uppercase">Program Active</p>
               <p className="mt-1 text-sm font-medium text-slate-600">{active.program_name}</p>
             </div>
             <span className="rounded-full bg-success/15 px-2.5 py-1 text-[11px] font-semibold text-success">Live</span>
@@ -91,7 +91,7 @@ export function EnrollmentStatusCard({ enrollments, profile }: EnrollmentStatusC
               href="/profile"
               className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand-press"
             >
-              Complete your profile
+              Complete Your Profile
               <ArrowRight className="h-4 w-4" />
             </Link>
           ) : null}
@@ -107,10 +107,10 @@ export function EnrollmentStatusCard({ enrollments, profile }: EnrollmentStatusC
       <div className="flex h-full flex-col">
         <div className="flex items-center gap-2 text-brand">
           <Sparkles className="h-4 w-4" />
-          <p className="text-xs font-semibold tracking-wide uppercase">Getting started</p>
+          <p className="text-xs font-semibold tracking-wide uppercase">Getting Started</p>
         </div>
 
-        <p className="mt-4 text-2xl leading-tight font-extrabold tracking-tight text-slate-900">Your member hub</p>
+        <p className="mt-4 text-2xl leading-tight font-extrabold tracking-tight text-slate-900">Your Member Hub</p>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
           Manage billing, download invoices, and keep your profile up to date so your coach can personalise your
           experience.
@@ -124,7 +124,7 @@ export function EnrollmentStatusCard({ enrollments, profile }: EnrollmentStatusC
           />
           <StatusRow
             label="Enrollment"
-            value={enrollments.length > 0 ? 'On file' : 'Not enrolled yet'}
+            value={enrollments.length > 0 ? 'On File' : 'Not Enrolled Yet'}
             ok={enrollments.length > 0}
           />
         </div>
@@ -137,7 +137,7 @@ export function EnrollmentStatusCard({ enrollments, profile }: EnrollmentStatusC
               'transition hover:bg-brand-press focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none'
             )}
           >
-            Complete profile
+            Complete Profile
             <ArrowRight className="h-4 w-4" />
           </Link>
         ) : null}

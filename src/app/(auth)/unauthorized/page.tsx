@@ -24,7 +24,7 @@ export default async function UnauthorizedPage() {
         <SbmWordmark size="lg" />
       </div>
       <SectionHead
-        title="Access not available"
+        title="Access Not Available"
         subtitle="Your account does not have access to the member portal. If you believe this is a mistake, contact support."
         className="mb-5"
       />

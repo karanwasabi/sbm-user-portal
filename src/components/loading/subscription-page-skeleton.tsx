@@ -32,7 +32,7 @@ function RenewalCardSkeletonBody() {
 
 export function SubscriptionRenewalCardSkeleton() {
   return (
-    <Card className="overflow-hidden border-slate-200 p-0" aria-busy="true" aria-label="Loading subscription">
+    <Card className="overflow-hidden border-slate-200 p-0" aria-busy="true" aria-label="Loading Subscription">
       <div className="border-b border-slate-100 bg-gradient-to-br from-canvas-cool to-white px-5 py-6 sm:px-6">
         <RenewalCardSkeletonBody />
       </div>

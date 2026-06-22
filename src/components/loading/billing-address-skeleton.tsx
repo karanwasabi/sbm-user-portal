@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/loading/skeleton';
 
 export function BillingAddressSkeleton() {
   return (
-    <div className="flex items-start gap-2" aria-busy="true" aria-label="Loading billing details">
+    <div className="flex items-start gap-2" aria-busy="true" aria-label="Loading Billing Details">
       <div className="min-w-0 flex-1 overflow-hidden rounded-[14px] border border-slate-100">
         <div className="flex items-start justify-between gap-3 px-4 py-3">
           <div className="min-w-0 flex-1 space-y-2.5">

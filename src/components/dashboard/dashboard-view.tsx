@@ -16,7 +16,7 @@ const quickLinks = [
   {
     href: '/subscription',
     label: 'Subscription',
-    sub: 'Plan & billing',
+    sub: 'Plan & Billing',
     illustration: <SubscriptionIllustration />,
     accentClass: 'bg-gradient-to-br from-success via-[#34D399] to-success-press',
     glowClass: 'bg-white',
@@ -26,7 +26,7 @@ const quickLinks = [
   {
     href: '/invoices',
     label: 'Invoices',
-    sub: 'Download receipts',
+    sub: 'Download Receipts',
     illustration: <InvoicesIllustration />,
     accentClass: 'bg-gradient-to-br from-motivation via-amber to-[#E88A0C]',
     glowClass: 'bg-white',
@@ -36,7 +36,7 @@ const quickLinks = [
   {
     href: '/profile',
     label: 'Profile',
-    sub: 'Your details',
+    sub: 'Your Details',
     illustration: <ProfileIllustration />,
     accentClass: 'bg-gradient-to-br from-lilac via-[#B794F6] to-brand-deep',
     glowClass: 'bg-white',
@@ -63,7 +63,7 @@ export function DashboardView() {
         />
 
         <div>
-          <SectionHead title="Quick links" subtitle="Billing, invoices, and account settings" />
+          <SectionHead title="Quick Links" subtitle="Billing, invoices, and account settings" />
           <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {quickLinks.map((link) => (
               <DashboardQuickLink key={link.href} {...link} />

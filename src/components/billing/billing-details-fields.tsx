@@ -83,7 +83,7 @@ export function BillingDetailsFields({
 
   return (
     <div className="flex flex-col gap-3">
-      <Field label="Billing country">
+      <Field label="Billing Country">
         <CountryCombobox
           value={billingCountryCode}
           onChange={onBillingCountryChange}
@@ -91,7 +91,7 @@ export function BillingDetailsFields({
           disabled={disabled}
         />
       </Field>
-      <Field label="Billing type">
+      <Field label="Billing Type">
         <div className="grid grid-cols-2 gap-2">
           {(['personal', 'business'] as const).map((type) => (
             <button
@@ -115,11 +115,11 @@ export function BillingDetailsFields({
         </Field>
       ) : null}
       {showLegalName ? (
-        <Field label="Legal name">
+        <Field label="Legal Name">
           <TextInput value={legalName} onChange={onLegalNameChange} placeholder="Name on invoice" disabled={disabled} />
         </Field>
       ) : null}
-      <Field label="Address line 1">
+      <Field label="Address Line 1">
         <TextInput
           value={addressLine1}
           onChange={onAddressLine1Change}
@@ -127,7 +127,7 @@ export function BillingDetailsFields({
           disabled={disabled}
         />
       </Field>
-      <Field label="Address line 2 (optional)">
+      <Field label="Address Line 2 (Optional)">
         <TextInput
           value={addressLine2}
           onChange={onAddressLine2Change}
@@ -164,7 +164,7 @@ export function BillingDetailsFields({
           </Field>
         ) : null}
       </div>
-      <Field label="Postal code">
+      <Field label="Postal Code">
         <TextInput value={postalCode} onChange={onPostalCodeChange} placeholder="PIN / ZIP code" disabled={disabled} />
       </Field>
     </div>

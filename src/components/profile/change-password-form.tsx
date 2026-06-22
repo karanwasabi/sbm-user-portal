@@ -18,7 +18,7 @@ const initialState: ChangePasswordState = { error: null, success: false };
 
 const layoutProps = {
   eyebrow: 'Security',
-  title: 'Protect your account',
+  title: 'Protect Your Account',
   description: 'Choose a strong, unique password. You will stay signed in after updating.',
   illustration: <SecurityPageIllustration />,
   panelClassName: 'bg-gradient-to-br from-brand-deep via-brand to-brand-deep-press',
@@ -33,7 +33,7 @@ function BackLink() {
       className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 no-underline hover:text-slate-700"
     >
       <ArrowLeft size={16} />
-      Back to profile
+      Back to Profile
     </Link>
   );
 }
@@ -82,12 +82,12 @@ export function ChangePasswordForm() {
       <PortalPageLayout {...layoutProps}>
         <BackLink />
         <Card>
-          <SectionHead title="Password updated" subtitle="Your sign-in password has been changed." />
+          <SectionHead title="Password Updated" subtitle="Your sign-in password has been changed." />
           <p className="text-sm leading-relaxed text-slate-600">
             Use your new password the next time you sign in on another device. This session stays active.
           </p>
           <Button variant="primary" size="md" className="mt-5" onClick={() => router.push('/profile')}>
-            Return to profile
+            Return to Profile
           </Button>
         </Card>
       </PortalPageLayout>
@@ -98,12 +98,12 @@ export function ChangePasswordForm() {
     <PortalPageLayout {...layoutProps}>
       <BackLink />
       <Card>
-        <SectionHead title="Change password" subtitle="Enter your current password, then choose a new one." />
+        <SectionHead title="Change Password" subtitle="Enter your current password, then choose a new one." />
 
         <form action={formAction} className="mt-4 flex flex-col gap-3.5">
           <PasswordField
             name="currentPassword"
-            label="Current password"
+            label="Current Password"
             value={currentPassword}
             onChange={(value) => {
               setCurrentPassword(value);
@@ -120,7 +120,7 @@ export function ChangePasswordForm() {
 
           <PasswordField
             name="newPassword"
-            label="New password"
+            label="New Password"
             value={newPassword}
             onChange={(value) => {
               setNewPassword(value);
@@ -136,7 +136,7 @@ export function ChangePasswordForm() {
 
           <PasswordField
             name="confirmPassword"
-            label="Confirm new password"
+            label="Confirm New Password"
             value={confirmPassword}
             onChange={(value) => {
               setConfirmPassword(value);
@@ -163,7 +163,7 @@ export function ChangePasswordForm() {
                 Updating…
               </>
             ) : (
-              'Update password'
+              'Update Password'
             )}
           </Button>
         </form>

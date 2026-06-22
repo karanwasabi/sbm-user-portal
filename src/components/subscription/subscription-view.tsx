@@ -50,10 +50,10 @@ function daysUntil(iso?: string | null): number | null {
 }
 
 function renewalCountdownLabel(days: number | null): string {
-  if (days == null) return 'Renewal date pending';
-  if (days < 0) return 'Renewal overdue';
-  if (days === 0) return 'Renews today';
-  if (days === 1) return 'Renews tomorrow';
+  if (days == null) return 'Renewal Date Pending';
+  if (days < 0) return 'Renewal Overdue';
+  if (days === 0) return 'Renews Today';
+  if (days === 1) return 'Renews Tomorrow';
   return `Renews in ${days} days`;
 }
 
@@ -67,9 +67,9 @@ function statusLabel(status: string): string {
     case 'cancelled':
       return 'Cancelled';
     case 'pending':
-      return 'Payment pending';
+      return 'Payment Pending';
     case 'halted':
-      return 'Payment issue';
+      return 'Payment Issue';
     default:
       return status.charAt(0).toUpperCase() + status.slice(1);
   }
@@ -96,20 +96,20 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
   if (error === 'no_subscription' || (!subscription && !error)) {
     return (
       <PortalPageLayout
-        eyebrow="Your membership"
+        eyebrow="Your Membership"
         title="Subscription"
-        description="Enroll in Take Control to start your coach-led program with simple monthly billing."
+        description="Enroll in Take Control to start your coach-led program. Your subscription and payment method live here once enrolled."
         illustration={<SubscriptionPageIllustration />}
         panelClassName="bg-gradient-to-br from-success via-[#34D399] to-success-press"
         glowClassName="bg-white/40"
         highlights={[
-          { label: 'Status', value: 'Not enrolled' },
+          { label: 'Status', value: 'Not Enrolled' },
           { label: 'Plan', value: 'Take Control' },
         ]}
       >
         <Card>
           <p className="text-sm leading-relaxed text-slate-600">
-            You don&apos;t have an active subscription yet. Complete enrollment to manage billing here.
+            You don&apos;t have an active subscription yet. Complete enrollment to manage your plan and payment here.
           </p>
         </Card>
       </PortalPageLayout>
@@ -119,9 +119,9 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
   if (!subscription) {
     return (
       <PortalPageLayout
-        eyebrow="Your membership"
+        eyebrow="Your Membership"
         title="Subscription"
-        description="Manage your plan and payment method."
+        description="Manage your plan renewal and payment method."
         illustration={<SubscriptionPageIllustration />}
         panelClassName="bg-gradient-to-br from-success via-[#34D399] to-success-press"
         glowClassName="bg-white/40"
@@ -186,19 +186,18 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
 
   return (
     <PortalPageLayout
-      eyebrow="Your membership"
-      title={subscription.plan_label}
-      description="Your monthly membership. Update payment or view past charges on Invoices."
+      eyebrow="Your Membership"
+      title={subscription.program_name}
+      description="Manage your monthly membership and payment method."
       illustration={<SubscriptionPageIllustration />}
       panelClassName="bg-gradient-to-br from-success via-[#34D399] to-success-press"
       glowClassName="bg-white/40"
       highlights={[
         { label: 'Status', value: statusLabel(subscription.subscription_status) },
         {
-          label: isCancelling ? 'Access until' : 'Next renewal',
+          label: isCancelling ? 'Access Until' : 'Next Renewal',
           value: formatDisplayDate(isCancelling ? accessEnd : subscription.next_renewal_at),
         },
-        { label: 'Monthly', value: monthlyTotalDisplay },
       ]}
     >
       {actionError ? (
@@ -215,7 +214,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
-                  {isCancelling ? 'Access ends' : 'Next renewal'}
+                  {isCancelling ? 'Access Ends' : 'Next Renewal'}
                 </p>
                 <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                   {formatRenewalDate(isCancelling ? accessEnd : subscription.next_renewal_at)}
@@ -233,16 +232,16 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
-                <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Amount due</p>
+                <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Amount Due</p>
                 <p className="mt-1 text-xl font-extrabold text-slate-900">{monthlyTotalDisplay}</p>
                 <p className="mt-0.5 text-xs text-slate-500">
                   {monthlyBaseDisplay} + {monthlyGstDisplay} GST
                 </p>
               </div>
               <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
-                <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Payment method</p>
+                <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Payment Method</p>
                 <p className="mt-1 text-sm font-bold text-slate-800">
-                  {subscription.payment_method_summary ?? 'Card on file'}
+                  {subscription.payment_method_summary ?? 'Card on File'}
                 </p>
                 {subscription.can_update_payment ? (
                   <Button
@@ -256,7 +255,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <>
-                        Update payment
+                        Update Payment
                         <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </>
                     )}
@@ -281,7 +280,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-deep"
             >
               <Receipt className="h-4 w-4" />
-              View invoice history
+              View Invoice History
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -291,7 +290,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
       {!pageRefreshing && subscription.can_cancel ? (
         <Card>
           <SectionHead
-            title="Cancel subscription"
+            title="Cancel Subscription"
             subtitle="Stops the next renewal. Access continues until period end."
           />
           <div className="rounded-[14px] border border-slate-100 bg-canvas-cool p-4">
@@ -300,11 +299,10 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
               <div>
                 <p className="text-sm leading-relaxed text-slate-600">
                   If you cancel today, you keep program access until{' '}
-                  <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>. After that,
-                  billing stops. Past invoices stay available under Invoices.
+                  <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>.
                 </p>
                 <Button variant="danger" size="sm" className="mt-4" onClick={handleCancel} disabled={cancelPending}>
-                  {cancelPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cancel subscription'}
+                  {cancelPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cancel Subscription'}
                 </Button>
               </div>
             </div>

@@ -80,7 +80,7 @@ export function ProfileCompletionRing({ percent, className }: ProfileCompletionR
           isComplete ? 'text-success' : 'text-slate-500'
         )}
       >
-        {isComplete ? 'Your profile is complete' : 'Profile completion'}
+        {isComplete ? 'Your Profile Is Complete' : 'Profile Completion'}
       </p>
     </div>
   );

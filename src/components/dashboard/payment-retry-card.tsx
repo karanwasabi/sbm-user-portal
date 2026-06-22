@@ -64,7 +64,7 @@ export function PaymentRetryCard({ legalName = 'Member' }: PaymentRetryCardProps
     <Card className="border-brand/20 bg-brand/5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-bold text-slate-900">Complete your enrollment payment</p>
+          <p className="text-sm font-bold text-slate-900">Complete Your Enrollment Payment</p>
           <p className="mt-1 text-sm leading-relaxed text-slate-600">
             Your account is ready. Finish payment to unlock your member dashboard.
           </p>
@@ -77,7 +77,7 @@ export function PaymentRetryCard({ legalName = 'Member' }: PaymentRetryCardProps
           onClick={() => void handleRetry()}
           rightIcon={pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
         >
-          {confirming ? 'Confirming…' : pending ? 'Opening…' : 'Complete payment'}
+          {confirming ? 'Confirming…' : pending ? 'Opening…' : 'Complete Payment'}
         </Button>
       </div>
       {error ? (

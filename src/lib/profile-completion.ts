@@ -29,12 +29,12 @@ const ALL_PROFILE_COMPLETION_FIELDS: ProfileCompletionField[] = [
 ];
 
 const FIELD_LABELS: Record<ProfileCompletionField, string> = {
-  first_name: 'First name',
-  last_name: 'Last name',
+  first_name: 'First Name',
+  last_name: 'Last Name',
   email: 'Email',
-  date_of_birth: 'Date of birth',
+  date_of_birth: 'Date of Birth',
   sex: 'Sex',
-  meal_preference: 'Meal preference',
+  meal_preference: 'Meal Preference',
   country: 'Country',
   city: 'City',
   whatsapp: 'Mobile (WhatsApp)',

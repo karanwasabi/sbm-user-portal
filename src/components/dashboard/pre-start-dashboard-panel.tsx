@@ -7,10 +7,10 @@ import type { Profile } from '@/types/profile';
 import { Card } from '@/components/ui/card';
 
 const PROGRAM_INCLUDES = [
-  { icon: MessageCircle, text: 'Coach support on WhatsApp', iconWrap: 'bg-success/12 text-success' },
-  { icon: Video, text: 'Live webinars', iconWrap: 'bg-motivation/15 text-amber' },
-  { icon: Sparkles, text: 'Flexible nutrition guidance', iconWrap: 'bg-lilac/30 text-brand-deep' },
-  { icon: Target, text: 'Weekly goal reviews', iconWrap: 'bg-brand/10 text-brand' },
+  { icon: MessageCircle, text: 'Coach Support on WhatsApp', iconWrap: 'bg-success/12 text-success' },
+  { icon: Video, text: 'Live Webinars', iconWrap: 'bg-motivation/15 text-amber' },
+  { icon: Sparkles, text: 'Flexible Nutrition Guidance', iconWrap: 'bg-lilac/30 text-brand-deep' },
+  { icon: Target, text: 'Weekly Goal Reviews', iconWrap: 'bg-brand/10 text-brand' },
 ] as const;
 
 type PreStartDashboardPanelProps = {
@@ -33,26 +33,24 @@ export function PreStartDashboardPanel({ profile, enrollment }: PreStartDashboar
 
   const checklist = [
     {
-      label: 'Profile completed',
+      label: `Enrolled in ${enrollment.program_name}`,
+      detail: 'Your enrollment is confirmed.',
+      done: true,
+    },
+    {
+      label: 'Profile Completed',
       detail: 'Your coach can personalise your plan from day one.',
       done: profileComplete,
     },
     {
-      label: `Enrolled in ${enrollment.program_name}`,
-      detail: startDate ? `Your program starts ${startDate}.` : 'Your enrollment is confirmed.',
-      done: true,
-    },
-    {
-      label: 'WhatsApp number saved',
+      label: 'WhatsApp Number Saved',
       detail: whatsappSaved ? (profile?.whatsapp ?? '') : 'Add your number so your coach can reach you.',
       done: whatsappSaved,
       href: whatsappSaved ? undefined : '/profile',
     },
     {
-      label: 'Coach introduction',
-      detail: startDate
-        ? `We'll message you on WhatsApp before ${startDate}.`
-        : "We'll message you on WhatsApp before your program starts.",
+      label: 'Program Start',
+      detail: startDate ? `Your program begins on ${startDate}.` : 'Your start date will be confirmed soon.',
       done: false,
       pending: true,
     },
@@ -61,7 +59,7 @@ export function PreStartDashboardPanel({ profile, enrollment }: PreStartDashboar
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <p className="text-xs font-semibold tracking-wide text-brand uppercase">Before day one</p>
+        <p className="text-xs font-semibold tracking-wide text-brand uppercase">Before Day One</p>
         <p className="mt-1 text-base font-bold text-slate-900">You&apos;re ready — here&apos;s what happens next</p>
         <ul className="mt-4 space-y-3">
           {checklist.map((item) => (
@@ -94,7 +92,7 @@ export function PreStartDashboardPanel({ profile, enrollment }: PreStartDashboar
       </Card>
 
       <Card>
-        <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">What&apos;s included</p>
+        <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">What&apos;s Included</p>
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {PROGRAM_INCLUDES.map(({ icon: Icon, text, iconWrap }) => (
             <li
