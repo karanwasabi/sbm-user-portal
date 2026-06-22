@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Calendar, CreditCard, Loader2 } from 'lucide-react';
+import { ArrowRight, Calendar, CreditCard, Loader2, Receipt } from 'lucide-react';
 import { useState } from 'react';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
 import { SubscriptionPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
@@ -28,6 +29,33 @@ function formatDisplayDate(iso?: string | null): string {
   });
 }
 
+function formatRenewalDate(iso?: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function daysUntil(iso?: string | null): number | null {
+  if (!iso) return null;
+  const target = new Date(iso);
+  const today = new Date();
+  target.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function renewalCountdownLabel(days: number | null): string {
+  if (days == null) return 'Renewal date pending';
+  if (days < 0) return 'Renewal overdue';
+  if (days === 0) return 'Renews today';
+  if (days === 1) return 'Renews tomorrow';
+  return `Renews in ${days} days`;
+}
+
 function statusLabel(status: string): string {
   switch (status) {
     case 'active':
@@ -51,10 +79,6 @@ function statusTone(status: string): 'success' | 'brand' | 'danger' | 'neutral' 
   if (status === 'cancelling' || status === 'pending') return 'brand';
   if (status === 'halted') return 'danger';
   return 'neutral';
-}
-
-function scheduleStatusTone(status: string): 'success' | 'brand' {
-  return status === 'paid' ? 'success' : 'brand';
 }
 
 export function SubscriptionView({ subscription, error }: SubscriptionViewProps) {
@@ -91,7 +115,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
       <PortalPageLayout
         eyebrow="Your membership"
         title="Subscription"
-        description="Manage your plan, payment method, and billing schedule."
+        description="Manage your plan and payment method."
         illustration={<SubscriptionPageIllustration />}
         panelClassName="bg-gradient-to-br from-success via-[#34D399] to-success-press"
         glowClassName="bg-white/40"
@@ -105,8 +129,11 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
   }
 
   const accessEnd = subscription.access_until ?? subscription.next_renewal_at;
-  const monthlyDisplay = `${formatInrFromPaise(subscription.monthly_base_paise)} + GST`;
+  const isCancelling = subscription.cancel_at_period_end || subscription.subscription_status === 'cancelling';
+  const renewalDays = daysUntil(subscription.next_renewal_at);
   const monthlyTotalDisplay = formatInrFromPaise(subscription.monthly_total_paise);
+  const monthlyBaseDisplay = formatInrFromPaise(subscription.monthly_base_paise);
+  const monthlyGstDisplay = formatInrFromPaise(subscription.monthly_gst_paise);
 
   const handleCancel = async () => {
     const confirmed = window.confirm(
@@ -151,14 +178,17 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
     <PortalPageLayout
       eyebrow="Your membership"
       title={subscription.plan_label}
-      description="Coach-led program with simple monthly billing. Update your payment method or review past charges anytime."
+      description="Your monthly membership. Update payment or view past charges on Invoices."
       illustration={<SubscriptionPageIllustration />}
       panelClassName="bg-gradient-to-br from-success via-[#34D399] to-success-press"
       glowClassName="bg-white/40"
       highlights={[
         { label: 'Status', value: statusLabel(subscription.subscription_status) },
-        { label: 'Next renewal', value: formatDisplayDate(subscription.next_renewal_at).replace(/, \d{4}$/, '') },
-        { label: 'Amount', value: monthlyTotalDisplay },
+        {
+          label: isCancelling ? 'Access until' : 'Next renewal',
+          value: formatDisplayDate(isCancelling ? accessEnd : subscription.next_renewal_at),
+        },
+        { label: 'Monthly', value: monthlyTotalDisplay },
       ]}
     >
       {actionError ? (
@@ -167,73 +197,81 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
         </p>
       ) : null}
 
-      <Card>
-        <SectionHead
-          title="Current plan"
-          subtitle="Coach-led program · active membership"
-          right={
+      <Card className="overflow-hidden border-slate-200 p-0">
+        <div className="border-b border-slate-100 bg-gradient-to-br from-canvas-cool to-white px-5 py-6 sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
+                {isCancelling ? 'Access ends' : 'Next renewal'}
+              </p>
+              <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                {formatRenewalDate(isCancelling ? accessEnd : subscription.next_renewal_at)}
+              </p>
+              {!isCancelling ? (
+                <p className="mt-2 text-sm font-semibold text-brand">{renewalCountdownLabel(renewalDays)}</p>
+              ) : (
+                <p className="mt-2 text-sm font-medium text-slate-600">Billing stops after this date.</p>
+              )}
+            </div>
             <Pill tone={statusTone(subscription.subscription_status)}>
               {statusLabel(subscription.subscription_status)}
             </Pill>
-          }
-        />
-        <div className="flex flex-col gap-4 rounded-[18px] border border-slate-100 bg-canvas-cool p-4 sm:flex-row sm:items-center">
-          <div className="flex min-w-0 flex-1 items-center gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-success/10 text-success">
-              <CreditCard size={22} />
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-bold text-slate-800">{monthlyDisplay} / month</div>
-              <div className="mt-0.5 text-xs text-slate-500">
-                Next renewal · {formatDisplayDate(subscription.next_renewal_at)}
-                {subscription.payment_method_summary ? ` · ${subscription.payment_method_summary}` : ''}
-              </div>
-            </div>
           </div>
-          {subscription.can_update_payment ? (
-            <Button
-              variant="light"
-              size="sm"
-              className="shrink-0 self-start sm:self-center"
-              onClick={handleUpdatePayment}
-              disabled={updatePending}
-            >
-              {updatePending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update payment'}
-            </Button>
-          ) : null}
-        </div>
-      </Card>
 
-      <Card>
-        <SectionHead title="Billing schedule" subtitle="Upcoming and past charges" />
-        {subscription.billing_schedule.length === 0 ? (
-          <p className="text-sm text-slate-600">No charges recorded yet.</p>
-        ) : (
-          <div className="overflow-hidden rounded-[14px] border border-slate-100">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-canvas-cool text-[11px] font-bold tracking-wide text-slate-500 uppercase">
-                <tr>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {subscription.billing_schedule.map((row) => (
-                  <tr key={`${row.kind}-${row.date}-${row.status}`} className="border-t border-slate-100">
-                    <td className="px-4 py-3 font-medium text-slate-800">{formatDisplayDate(row.date)}</td>
-                    <td className="px-4 py-3 text-slate-700">{formatInrFromPaise(row.amount_paise)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Pill tone={scheduleStatusTone(row.status)}>
-                        {row.status === 'paid' ? 'Paid' : row.status === 'upcoming' ? 'Upcoming' : row.status}
-                      </Pill>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
+              <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Amount due</p>
+              <p className="mt-1 text-xl font-extrabold text-slate-900">{monthlyTotalDisplay}</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {monthlyBaseDisplay} + {monthlyGstDisplay} GST
+              </p>
+            </div>
+            <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
+              <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Payment method</p>
+              <p className="mt-1 text-sm font-bold text-slate-800">
+                {subscription.payment_method_summary ?? 'Card on file'}
+              </p>
+              {subscription.can_update_payment ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 h-8 px-0 text-brand hover:bg-transparent hover:text-brand-deep"
+                  onClick={handleUpdatePayment}
+                  disabled={updatePending}
+                >
+                  {updatePending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      Update payment
+                      <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                    </>
+                  )}
+                </Button>
+              ) : null}
+            </div>
           </div>
-        )}
+        </div>
+
+        <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-success/10 text-success">
+              <CreditCard size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-800">{subscription.program_name}</p>
+              <p className="text-xs text-slate-500">Monthly membership · auto-renews</p>
+            </div>
+          </div>
+          <Link
+            href="/invoices"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-deep"
+          >
+            <Receipt className="h-4 w-4" />
+            View invoice history
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </Card>
 
       {subscription.can_cancel ? (
@@ -249,7 +287,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
                 <p className="text-sm leading-relaxed text-slate-600">
                   If you cancel today, you keep program access until{' '}
                   <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>. After that,
-                  billing stops. You can still use the member portal to view invoices and re-enrol.
+                  billing stops. Past invoices stay available under Invoices.
                 </p>
                 <Button variant="danger" size="sm" className="mt-4" onClick={handleCancel} disabled={cancelPending}>
                   {cancelPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cancel subscription'}
