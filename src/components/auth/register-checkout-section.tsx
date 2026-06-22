@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
 import { BillingDetailsFields } from '@/components/billing/billing-details-fields';
@@ -24,8 +24,9 @@ import {
 } from '@/utils/client-api';
 
 type RegisterCheckoutSectionProps = {
-  defaultLegalName: string;
-  defaultBillingCountryCode?: string;
+  suggestedLegalName: string;
+  suggestedCountryIso?: string;
+  confirmedBillingCountryIso?: string;
   countries: Country[];
   enabled: boolean;
 };
@@ -42,8 +43,9 @@ function resolveDefaultBillingCountry(countryRows: Country[], preferredIso?: str
 }
 
 export function RegisterCheckoutSection({
-  defaultLegalName,
-  defaultBillingCountryCode,
+  suggestedLegalName,
+  suggestedCountryIso,
+  confirmedBillingCountryIso,
   countries: initialCountries,
   enabled,
 }: RegisterCheckoutSectionProps) {
@@ -62,17 +64,19 @@ export function RegisterCheckoutSection({
   const [countryStates, setCountryStates] = useState<CountryState[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [loadingStates, setLoadingStates] = useState(false);
-  const [billingCountryCode, setBillingCountryCode] = useState(
-    () => defaultBillingCountryCode?.trim().toUpperCase() || 'IN'
-  );
+  const [billingCountryCode, setBillingCountryCode] = useState(() => suggestedCountryIso?.trim().toUpperCase() || 'IN');
   const [billingCountryTouched, setBillingCountryTouched] = useState(false);
+  const billingCountryInitialized = useRef(false);
+  const legalPrefilledOnVerify = useRef(false);
+  const billingPrefilledOnVerify = useRef(false);
+  const wasBillingOpen = useRef(false);
   const pricingRegion = useMemo<'domestic' | 'international'>(
     () => (billingCountryCode === 'IN' ? 'domestic' : 'international'),
     [billingCountryCode]
   );
   const [billingType, setBillingType] = useState<'personal' | 'business'>('personal');
   const [gstin, setGstin] = useState('');
-  const [legalName, setLegalName] = useState(defaultLegalName.trim());
+  const [legalName, setLegalName] = useState('');
   const [legalNameTouched, setLegalNameTouched] = useState(false);
   const [billingState, setBillingState] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
@@ -112,13 +116,10 @@ export function RegisterCheckoutSection({
   }, []);
 
   useEffect(() => {
-    if (billingCountryTouched || countries.length === 0) return;
-    const billingCode = resolveDefaultBillingCountry(countries, defaultBillingCountryCode);
-    setBillingCountryCode(billingCode);
-    if (preview) {
-      setQuote(billingCode === 'IN' ? preview.domestic : preview.international);
-    }
-  }, [billingCountryTouched, defaultBillingCountryCode, countries, preview]);
+    if (billingCountryTouched || countries.length === 0 || billingCountryInitialized.current) return;
+    setBillingCountryCode(resolveDefaultBillingCountry(countries, suggestedCountryIso));
+    billingCountryInitialized.current = true;
+  }, [billingCountryTouched, suggestedCountryIso, countries]);
 
   const handleBillingCountryChange = (code: string) => {
     setBillingCountryTouched(true);
@@ -126,9 +127,41 @@ export function RegisterCheckoutSection({
   };
 
   useEffect(() => {
-    if (legalNameTouched) return;
-    setLegalName(defaultLegalName.trim());
-  }, [defaultLegalName, legalNameTouched]);
+    if (enabled) return;
+    legalPrefilledOnVerify.current = false;
+    billingPrefilledOnVerify.current = false;
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled || legalNameTouched || legalPrefilledOnVerify.current) return;
+    setLegalName(suggestedLegalName.trim());
+    legalPrefilledOnVerify.current = true;
+  }, [enabled, suggestedLegalName, legalNameTouched]);
+
+  useEffect(() => {
+    if (!enabled || billingCountryTouched || countries.length === 0 || billingPrefilledOnVerify.current) return;
+    const iso = confirmedBillingCountryIso ?? suggestedCountryIso;
+    setBillingCountryCode(resolveDefaultBillingCountry(countries, iso));
+    billingPrefilledOnVerify.current = true;
+  }, [enabled, billingCountryTouched, countries, confirmedBillingCountryIso, suggestedCountryIso]);
+
+  useEffect(() => {
+    const opened = billingOpen && !wasBillingOpen.current;
+    wasBillingOpen.current = billingOpen;
+    if (!opened || legalNameTouched) return;
+    setLegalName(suggestedLegalName.trim());
+  }, [billingOpen, legalNameTouched, suggestedLegalName]);
+
+  const resolveLegalName = useCallback(() => {
+    const trimmed = legalName.trim();
+    if (legalNameTouched) return trimmed;
+    return trimmed || suggestedLegalName.trim();
+  }, [legalName, legalNameTouched, suggestedLegalName]);
+
+  const previewQuote = useMemo(() => {
+    if (!preview) return null;
+    return pricingRegion === 'domestic' ? preview.domestic : preview.international;
+  }, [preview, pricingRegion]);
 
   useEffect(() => {
     if (!billingCountryCode) {
@@ -179,16 +212,17 @@ export function RegisterCheckoutSection({
     };
   }, [billingCountryCode]);
 
-  const buildQuoteRequest = useCallback((): CheckoutQuoteRequest => {
+  const buildCheckoutRequest = useCallback((): CheckoutQuoteRequest => {
     const trimmedGstin = gstin.trim().toUpperCase();
     const subdivisions = countryStates.length > 0;
+    const trimmedLegalName = resolveLegalName();
     return {
       program_slug: 'take-control',
       pricing_region: pricingRegion,
       billing_type: billingType,
       billing_country_code: billingCountryCode,
       gstin: billingType === 'business' && pricingRegion === 'domestic' && trimmedGstin ? trimmedGstin : undefined,
-      legal_name: legalName.trim() || undefined,
+      legal_name: trimmedLegalName || undefined,
       billing_state: billingState || undefined,
       billing_address: {
         line1: addressLine1,
@@ -211,28 +245,43 @@ export function RegisterCheckoutSection({
     billingType,
     countryStates.length,
     gstin,
-    legalName,
     postalCode,
     pricingRegion,
+    resolveLegalName,
   ]);
 
-  const refreshQuote = useCallback(async () => {
+  useEffect(() => {
+    if (loading || !previewQuote) return;
+    if (!appliedPromo) {
+      setQuote(previewQuote);
+    }
+  }, [loading, previewQuote, appliedPromo]);
+
+  const fetchPromoQuote = useCallback(async () => {
+    if (!appliedPromo) return;
     setQuotePending(true);
     setError(null);
     try {
-      const next = await postPublicCheckoutQuote('take-control', buildQuoteRequest());
+      const next = await postPublicCheckoutQuote('take-control', {
+        program_slug: 'take-control',
+        pricing_region: pricingRegion,
+        billing_type: billingType,
+        billing_country_code: billingCountryCode,
+        promo_code: appliedPromo,
+      });
       setQuote(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to calculate price.');
+      if (previewQuote) setQuote(previewQuote);
     } finally {
       setQuotePending(false);
     }
-  }, [buildQuoteRequest]);
+  }, [appliedPromo, billingCountryCode, billingType, previewQuote, pricingRegion]);
 
   useEffect(() => {
-    if (loading) return;
-    void refreshQuote();
-  }, [loading, pricingRegion, billingType, appliedPromo, refreshQuote]);
+    if (loading || !appliedPromo) return;
+    void fetchPromoQuote();
+  }, [loading, appliedPromo, pricingRegion, fetchPromoQuote]);
 
   const handleCitySuggestion = (city: CountryCity) => {
     if (!city.state_code) return;
@@ -250,7 +299,7 @@ export function RegisterCheckoutSection({
   const openPayment = async () => {
     if (!enabled) return;
 
-    const trimmedLegalName = legalName.trim();
+    const trimmedLegalName = resolveLegalName();
     if (!trimmedLegalName) {
       setError('Legal name is required for billing.');
       return;
@@ -263,7 +312,7 @@ export function RegisterCheckoutSection({
       try {
         start = await getCheckoutResume('take-control');
       } catch {
-        start = await startCheckout({ ...buildQuoteRequest(), legal_name: trimmedLegalName });
+        start = await startCheckout({ ...buildCheckoutRequest(), legal_name: trimmedLegalName });
       }
 
       if (start.mock) {
@@ -293,7 +342,9 @@ export function RegisterCheckoutSection({
     return <CheckoutPanelSkeleton />;
   }
 
-  if (!preview || !quote) {
+  const displayQuote = quote ?? previewQuote;
+
+  if (!preview || !displayQuote) {
     return (
       <p className="text-sm font-semibold text-danger-press" role="alert">
         {error ?? 'Checkout is unavailable right now.'}
@@ -318,20 +369,20 @@ export function RegisterCheckoutSection({
           </div>
           <div className="shrink-0 text-right">
             <p className="text-lg font-extrabold tracking-tight text-slate-900">
-              {formatInrFromPaise(quote.upfront_base_paise)}
+              {formatInrFromPaise(displayQuote.upfront_base_paise)}
               {showGst ? <span className="text-sm font-bold text-slate-600"> + GST</span> : null}
             </p>
             <p className="mt-0.5 text-[11px] font-medium text-slate-500">first 3 months</p>
           </div>
         </div>
-        {quote.discount_paise > 0 ? (
+        {displayQuote.discount_paise > 0 ? (
           <p className="mt-2 text-xs font-semibold text-success">
-            {quote.promo_code ? `${quote.promo_code}: ` : ''}−{formatInrFromPaise(quote.discount_paise)} · pay{' '}
-            {formatInrFromPaise(quote.total_paise)}
+            {displayQuote.promo_code ? `${displayQuote.promo_code}: ` : ''}−
+            {formatInrFromPaise(displayQuote.discount_paise)} · pay {formatInrFromPaise(displayQuote.total_paise)}
           </p>
         ) : null}
         <p className="mt-2 border-t border-slate-100 pt-2 text-xs leading-relaxed text-slate-500">
-          Then {formatInrFromPaise(quote.monthly_base_paise)}
+          Then {formatInrFromPaise(displayQuote.monthly_base_paise)}
           {showGst ? ' + GST' : ''} / month · cancel anytime.
         </p>
       </div>
@@ -407,7 +458,7 @@ export function RegisterCheckoutSection({
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-600">Due today</span>
           <span className="text-lg font-extrabold text-slate-900">
-            {formatInrFromPaise(quote.total_paise)}
+            {formatInrFromPaise(displayQuote.total_paise)}
             {quotePending ? ' …' : ''}
           </span>
         </div>

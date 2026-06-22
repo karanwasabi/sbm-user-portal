@@ -32,8 +32,8 @@ import {
   type RegisterField,
   type RegisterFieldErrors,
 } from '@/lib/register-form-validation';
-import { toTitleCase } from '@/lib/title-case';
 import { parseWhatsapp } from '@/lib/phone-number';
+import { toTitleCase } from '@/lib/title-case';
 import { SEX_OPTIONS } from '@/types/profile';
 import type { Country } from '@/types/reference';
 import type { RegisterFormValues } from '@/lib/merge-profile-patch';
@@ -92,14 +92,15 @@ export function RegisterView({
   const startWasPending = useRef(false);
   const dateOfBirthBounds = useMemo(() => getDateOfBirthInputBounds(), []);
   const showParentalConsent = useMemo(() => shouldShowParentalConsent(dateOfBirth), [dateOfBirth]);
-  const defaultLegalName = useMemo(
+  const suggestedLegalName = useMemo(
     () => [firstName.trim(), lastName.trim()].filter(Boolean).join(' '),
     [firstName, lastName]
   );
-  const defaultBillingCountryCode = useMemo(() => {
+  const confirmedBillingCountryIso = useMemo(() => {
+    if (!verified) return undefined;
     const parsed = parseWhatsapp(whatsapp, suggestedCountryIso);
-    return parsed.dialIso || suggestedCountryIso || 'IN';
-  }, [whatsapp, suggestedCountryIso]);
+    return parsed.dialIso || suggestedCountryIso || undefined;
+  }, [verified, whatsapp, suggestedCountryIso]);
 
   const formValues = useMemo(
     () => ({
@@ -482,8 +483,9 @@ export function RegisterView({
 
         <div className="min-w-0 lg:border-l lg:border-slate-100 lg:pl-8">
           <RegisterCheckoutSection
-            defaultLegalName={defaultLegalName}
-            defaultBillingCountryCode={defaultBillingCountryCode}
+            suggestedLegalName={suggestedLegalName}
+            suggestedCountryIso={suggestedCountryIso}
+            confirmedBillingCountryIso={confirmedBillingCountryIso}
             countries={countries}
             enabled={verified}
           />

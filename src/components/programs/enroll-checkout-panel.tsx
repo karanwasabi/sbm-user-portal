@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
 import { BillingDetailsFields } from '@/components/billing/billing-details-fields';
@@ -71,8 +71,9 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
   );
   const [billingType, setBillingType] = useState<'personal' | 'business'>('personal');
   const [gstin, setGstin] = useState('');
-  const [legalName, setLegalName] = useState(defaultLegalName.trim());
+  const [legalName, setLegalName] = useState('');
   const [legalNameTouched, setLegalNameTouched] = useState(false);
+  const wasBillingOpen = useRef(false);
   const [billingState, setBillingState] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -93,7 +94,6 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
         const [data, countryRows] = await Promise.all([getCheckoutPreview('take-control'), getCountries()]);
         if (cancelled) return;
         setPreview(data);
-        setQuote(data.domestic);
         setCountries(countryRows);
         if (countryRows.some((entry) => entry.iso_code === 'IN')) {
           setBillingCountryCode('IN');
@@ -114,9 +114,22 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
   }, []);
 
   useEffect(() => {
-    if (legalNameTouched) return;
+    const opened = billingOpen && !wasBillingOpen.current;
+    wasBillingOpen.current = billingOpen;
+    if (!opened || legalNameTouched) return;
     setLegalName(defaultLegalName.trim());
-  }, [defaultLegalName, legalNameTouched]);
+  }, [billingOpen, defaultLegalName, legalNameTouched]);
+
+  const resolveLegalName = useCallback(() => {
+    const trimmed = legalName.trim();
+    if (legalNameTouched) return trimmed;
+    return trimmed || defaultLegalName.trim();
+  }, [defaultLegalName, legalName, legalNameTouched]);
+
+  const previewQuote = useMemo(() => {
+    if (!preview) return null;
+    return pricingRegion === 'domestic' ? preview.domestic : preview.international;
+  }, [preview, pricingRegion]);
 
   useEffect(() => {
     if (!billingCountryCode) {
@@ -173,55 +186,38 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
 
   const hasSubdivisions = countryStates.length > 0;
 
-  const refreshQuote = useCallback(async () => {
+  useEffect(() => {
+    if (loading || !previewQuote) return;
+    if (!appliedPromo) {
+      setQuote(previewQuote);
+    }
+  }, [loading, previewQuote, appliedPromo]);
+
+  const fetchPromoQuote = useCallback(async () => {
+    if (!appliedPromo) return;
     setQuotePending(true);
     setError(null);
     try {
-      const trimmedGstin = gstin.trim().toUpperCase();
       const next = await postCheckoutQuote({
         program_slug: 'take-control',
         pricing_region: pricingRegion,
         billing_type: billingType,
         billing_country_code: billingCountryCode,
-        gstin: billingType === 'business' && pricingRegion === 'domestic' && trimmedGstin ? trimmedGstin : undefined,
-        legal_name: legalName || undefined,
-        billing_state: billingState || undefined,
-        billing_address: {
-          line1: addressLine1,
-          line2: addressLine2 || undefined,
-          city: billingCity,
-          state: hasSubdivisions ? billingState : '',
-          postal_code: postalCode,
-          country: billingCountry,
-        },
-        promo_code: appliedPromo || undefined,
+        promo_code: appliedPromo,
       });
       setQuote(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to calculate price.');
+      if (previewQuote) setQuote(previewQuote);
     } finally {
       setQuotePending(false);
     }
-  }, [
-    addressLine1,
-    addressLine2,
-    appliedPromo,
-    billingCity,
-    billingCountry,
-    billingCountryCode,
-    billingState,
-    billingType,
-    gstin,
-    legalName,
-    postalCode,
-    pricingRegion,
-    countryStates.length,
-  ]);
+  }, [appliedPromo, billingCountryCode, billingType, previewQuote, pricingRegion]);
 
   useEffect(() => {
-    if (loading) return;
-    void refreshQuote();
-  }, [loading, pricingRegion, billingType, appliedPromo, refreshQuote]);
+    if (loading || !appliedPromo) return;
+    void fetchPromoQuote();
+  }, [loading, appliedPromo, pricingRegion, fetchPromoQuote]);
 
   const handleApplyPromo = () => {
     setAppliedPromo(promoCode.trim().toUpperCase());
@@ -242,7 +238,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
 
   const handlePay = async () => {
     const trimmedGstin = gstin.trim().toUpperCase();
-    const trimmedLegalName = legalName.trim();
+    const trimmedLegalName = resolveLegalName();
     if (!trimmedLegalName) {
       setError('Legal name is required for billing.');
       return;
@@ -323,7 +319,9 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
     return <CheckoutPanelSkeleton />;
   }
 
-  if (!preview || !quote) {
+  const displayQuote = quote ?? previewQuote;
+
+  if (!preview || !displayQuote) {
     return (
       <p className="text-sm font-semibold text-danger-press" role="alert">
         {error ?? 'Checkout is unavailable right now.'}
@@ -352,13 +350,13 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
       <TakeControlEnrollPanel
         compact
         hideFooter
-        upfrontPaise={quote.upfront_base_paise}
-        gstPaise={quote.gst_paise}
-        totalPaise={quote.total_paise}
-        monthlyBasePaise={quote.monthly_base_paise}
+        upfrontPaise={displayQuote.upfront_base_paise}
+        gstPaise={displayQuote.gst_paise}
+        totalPaise={displayQuote.total_paise}
+        monthlyBasePaise={displayQuote.monthly_base_paise}
         showGst={pricingRegion === 'domestic'}
-        discountPaise={quote.discount_paise}
-        promoCode={quote.promo_code}
+        discountPaise={displayQuote.discount_paise}
+        promoCode={displayQuote.promo_code}
       />
 
       <div className="rounded-xl border border-slate-200">
@@ -416,13 +414,13 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-600">Due today</span>
           <span className="text-lg font-extrabold text-slate-900">
-            {formatInrFromPaise(quote.total_paise)}
+            {formatInrFromPaise(displayQuote.total_paise)}
             {quotePending ? ' …' : ''}
           </span>
         </div>
-        {quote.discount_paise > 0 ? (
+        {displayQuote.discount_paise > 0 ? (
           <p className="mt-1 text-xs text-success">
-            Promo {quote.promo_code}: −{formatInrFromPaise(quote.discount_paise)}
+            Promo {displayQuote.promo_code}: −{formatInrFromPaise(displayQuote.discount_paise)}
           </p>
         ) : null}
       </div>
@@ -457,7 +455,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
             onClick={() => void handlePay()}
             rightIcon={payPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
           >
-            {payPending ? 'Opening payment…' : `Pay ${formatInrFromPaise(quote.total_paise)}`}
+            {payPending ? 'Opening payment…' : `Pay ${formatInrFromPaise(displayQuote.total_paise)}`}
           </Button>
         </div>
       </div>
