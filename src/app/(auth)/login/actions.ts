@@ -7,6 +7,7 @@ import { emailOtpInvalidMessage, isValidEmailOtp } from '@/lib/email-otp';
 import { formatUserFacingError } from '@/lib/format-user-error';
 import { LOGIN_PRODUCT_MEMBER_PORTAL, MEMBER_PORTAL_LOGIN_DENIED_MESSAGE } from '@/lib/login-access';
 import { getPostAuthRedirectPath } from '@/lib/onboarding';
+import { syncPasswordSetMetadata } from '@/lib/sync-password-set-metadata';
 import { getMyAccess } from '@/utils/access-api';
 import { getLatestProfile, getMyEnrollments, ProfileFetchError, sendLoginOTP } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
@@ -116,6 +117,8 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
 
   const denied = await ensureMemberPortalLoginAccess(supabase, 'password');
   if (denied) return denied;
+
+  await syncPasswordSetMetadata();
 
   return await redirectAfterAuthenticatedLogin();
 }

@@ -1,6 +1,7 @@
 'use server';
 
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-requirements';
+import { syncPasswordSetMetadata } from '@/lib/sync-password-set-metadata';
 import type { ChangePasswordField, ChangePasswordState } from '@/types/change-password';
 import { createClient } from '@/utils/supabase/server';
 
@@ -87,6 +88,8 @@ export async function changePassword(
       errorFields: ['newPassword'],
     };
   }
+
+  await syncPasswordSetMetadata();
 
   return { error: null, success: true };
 }

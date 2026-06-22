@@ -11,13 +11,8 @@ import {
   validateRegisterForm,
   type RegisterFieldErrors,
 } from '@/lib/register-form-validation';
-import {
-  markPasswordSetComplete,
-  patchProfile,
-  ProfileFetchError,
-  recordDpdpConsent,
-  registerMember,
-} from '@/utils/api';
+import { syncPasswordSetMetadata } from '@/lib/sync-password-set-metadata';
+import { patchProfile, ProfileFetchError, recordDpdpConsent, registerMember } from '@/utils/api';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
 import { REGISTER_DRAFT_COOKIE, REGISTER_EMAIL_COOKIE } from '@/types/register';
 import { createClient } from '@/utils/supabase/server';
@@ -250,11 +245,7 @@ export async function setInitialPassword(
     return { error: formatUserFacingError(error.message), success: false };
   }
 
-  try {
-    await markPasswordSetComplete();
-  } catch {
-    // Non-fatal; password was updated in Supabase.
-  }
+  await syncPasswordSetMetadata();
 
   return { error: null, success: true };
 }

@@ -82,7 +82,13 @@ export function LoginForm() {
 
   useEffect(() => {
     if (!otpSent) return;
-    otpRef.current?.focus();
+    const focusOtp = () => otpRef.current?.focus();
+    const frame = requestAnimationFrame(focusOtp);
+    const timer = window.setTimeout(focusOtp, 50);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
   }, [otpSent]);
 
   useEffect(() => {
@@ -275,6 +281,7 @@ export function LoginForm() {
                 }}
                 inputMode="numeric"
                 autoComplete="one-time-code"
+                autoFocus
                 disabled={verifyOtpPending}
                 error={otpHasError}
                 placeholder="Enter code from email"

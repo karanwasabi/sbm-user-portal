@@ -169,12 +169,15 @@ export function RegisterView({
   useEffect(() => {
     if (startWasPending.current && !startPending) {
       if (startState.fieldErrors && Object.keys(startState.fieldErrors).length > 0) {
+        setOtpSent(false);
         setFieldErrors(startState.fieldErrors);
         focusRegisterField(startState.focusField);
+      } else if (startState.error) {
+        setOtpSent(false);
       }
     }
     startWasPending.current = startPending;
-  }, [startPending, startState.fieldErrors, startState.focusField]);
+  }, [startPending, startState.fieldErrors, startState.focusField, startState.error]);
 
   useEffect(() => {
     if (!startState.status || !startState.email) return;
@@ -186,7 +189,13 @@ export function RegisterView({
 
   useEffect(() => {
     if (!otpSent || verified) return;
-    otpRef.current?.focus();
+    const focusOtp = () => otpRef.current?.focus();
+    const frame = requestAnimationFrame(focusOtp);
+    const timer = window.setTimeout(focusOtp, 50);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
   }, [otpSent, verified]);
 
   useEffect(() => {
@@ -229,7 +238,10 @@ export function RegisterView({
     if (verified) return;
     if (!runRegisterValidation()) {
       event.preventDefault();
+      return;
     }
+    setFormError(null);
+    setOtpSent(true);
   };
 
   const handleEditForm = () => {
@@ -291,7 +303,7 @@ export function RegisterView({
                   }}
                   placeholder="First name"
                   disabled={verified || formLocked}
-                  autoFocus={!verified}
+                  autoFocus={!verified && !otpSent}
                   error={Boolean(fieldErrors.firstName)}
                 />
               </Field>
@@ -431,6 +443,7 @@ export function RegisterView({
           {otpSent && !verified ? (
             <form action={verifyAction} className="mt-3 flex flex-col gap-2.5 border-t border-slate-100 pt-3">
               {hiddenFields}
+              {startPending ? <p className="text-xs font-medium text-slate-500">Sending code to your email…</p> : null}
               <Field
                 label={
                   <span className="flex w-full items-center justify-between gap-3">
@@ -447,8 +460,10 @@ export function RegisterView({
                   onChange={setOtp}
                   inputMode="numeric"
                   autoComplete="one-time-code"
+                  autoFocus
                   maxLength={EMAIL_OTP_MAX_LENGTH}
                   placeholder="Enter code from email"
+                  disabled={startPending}
                   error={Boolean(verifyState.error)}
                 />
               </Field>
@@ -456,7 +471,7 @@ export function RegisterView({
                 type="submit"
                 variant="primary"
                 size="md"
-                disabled={verifyPending || !isValidEmailOtp(otp)}
+                disabled={verifyPending || startPending || !isValidEmailOtp(otp)}
                 leftIcon={verifyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
               >
                 {verifyPending ? 'Verifying…' : 'Confirm code'}

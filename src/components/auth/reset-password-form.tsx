@@ -11,6 +11,7 @@ import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-requirements';
 import { resetPasswordMessages } from '@/lib/forgot-password-messages';
+import { syncPasswordSetMetadata } from '@/lib/sync-password-set-metadata';
 import { createClient } from '@/utils/supabase/client';
 
 type ResetPasswordField = 'password' | 'confirmPassword';
@@ -152,6 +153,7 @@ export function ResetPasswordForm() {
       return;
     }
 
+    await syncPasswordSetMetadata();
     await supabase.auth.signOut();
     setSuccess(true);
 
