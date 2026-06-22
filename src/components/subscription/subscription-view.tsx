@@ -12,10 +12,13 @@ import { SectionHead } from '@/components/ui/section-head';
 import { openRazorpaySubscriptionCheckout } from '@/lib/razorpay-checkout';
 import { formatInrFromPaise } from '@/lib/money';
 import type { Subscription } from '@/types/subscription';
+import type { BillingProfile } from '@/types/billing';
 import { cancelSubscription, startPaymentMethodUpdate } from '@/utils/client-api';
+import { SubscriptionBillingSection } from '@/components/subscription/subscription-billing-section';
 
 type SubscriptionViewProps = {
   subscription: Subscription | null;
+  billingProfile?: BillingProfile | null;
   error?: string | null;
 };
 
@@ -57,7 +60,7 @@ function scheduleStatusTone(status: string): 'success' | 'brand' {
   return status === 'paid' ? 'success' : 'brand';
 }
 
-export function SubscriptionView({ subscription, error }: SubscriptionViewProps) {
+export function SubscriptionView({ subscription, billingProfile, error }: SubscriptionViewProps) {
   const router = useRouter();
   const [cancelPending, setCancelPending] = useState(false);
   const [updatePending, setUpdatePending] = useState(false);
@@ -203,6 +206,8 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
           ) : null}
         </div>
       </Card>
+
+      {billingProfile ? <SubscriptionBillingSection initialProfile={billingProfile} /> : null}
 
       <Card>
         <SectionHead title="Billing schedule" subtitle="Upcoming and past charges" />

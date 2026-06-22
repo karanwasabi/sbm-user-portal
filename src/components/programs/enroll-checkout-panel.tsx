@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
-import { CityCombobox } from '@/components/profile/city-combobox';
-import { CountryCombobox } from '@/components/profile/country-combobox';
+import { BillingDetailsFields } from '@/components/billing/billing-details-fields';
 import { TakeControlEnrollPanel } from '@/components/programs/take-control-enroll-panel';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { SearchableSelect } from '@/components/ui/searchable-select';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
@@ -34,31 +32,6 @@ type EnrollCheckoutPanelProps = {
   onBack?: () => void;
   onPaid?: () => void;
   defaultLegalName?: string;
-};
-
-const SUBDIVISION_LABEL_BY_COUNTRY: Record<string, string> = {
-  US: 'State',
-  IN: 'State',
-  AU: 'State / Territory',
-  BR: 'State',
-  MX: 'State',
-  MY: 'State',
-  NG: 'State',
-  DE: 'State',
-  AT: 'State',
-  CH: 'Canton',
-  CA: 'Province / Territory',
-  PK: 'Province',
-  CN: 'Province',
-  JP: 'Prefecture',
-  IT: 'Region',
-  ES: 'Autonomous community',
-  FR: 'Region',
-  PH: 'Province',
-  ID: 'Province',
-  TH: 'Province',
-  AE: 'Emirate',
-  ZA: 'Province',
 };
 
 function loadRazorpayScript(): Promise<void> {
@@ -197,6 +170,8 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
     };
   }, [billingCountryCode]);
 
+  const hasSubdivisions = countryStates.length > 0;
+
   const refreshQuote = useCallback(async () => {
     setQuotePending(true);
     setError(null);
@@ -206,6 +181,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
         program_slug: 'take-control',
         pricing_region: pricingRegion,
         billing_type: billingType,
+        billing_country_code: billingCountryCode,
         gstin: billingType === 'business' && pricingRegion === 'domestic' && trimmedGstin ? trimmedGstin : undefined,
         legal_name: legalName || undefined,
         billing_state: billingState || undefined,
@@ -231,12 +207,14 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
     appliedPromo,
     billingCity,
     billingCountry,
+    billingCountryCode,
     billingState,
     billingType,
     gstin,
     legalName,
     postalCode,
     pricingRegion,
+    countryStates.length,
   ]);
 
   useEffect(() => {
@@ -252,18 +230,6 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
     setLegalNameTouched(true);
     setLegalName(value);
   };
-
-  const stateOptions = useMemo(
-    () =>
-      countryStates.map((state) => ({
-        value: state.name,
-        label: state.name,
-        searchText: [state.name, state.state_code ?? ''].join(' ').trim(),
-      })),
-    [countryStates]
-  );
-  const hasSubdivisions = stateOptions.length > 0;
-  const subdivisionLabel = SUBDIVISION_LABEL_BY_COUNTRY[billingCountryCode] ?? 'Region';
 
   const handleCitySuggestion = (city: CountryCity) => {
     if (!city.state_code) return;
@@ -298,6 +264,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
         program_slug: 'take-control',
         pricing_region: pricingRegion,
         billing_type: billingType,
+        billing_country_code: billingCountryCode,
         gstin: billingType === 'business' && pricingRegion === 'domestic' ? trimmedGstin : undefined,
         legal_name: trimmedLegalName,
         billing_state: billingState || undefined,
@@ -408,87 +375,33 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
         </button>
         {billingOpen ? (
           <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3">
-            <Field label="Billing country">
-              <CountryCombobox value={billingCountryCode} onChange={setBillingCountryCode} countries={countries} />
-            </Field>
-
-            <Field label="Billing type">
-              <div className="grid grid-cols-2 gap-2">
-                {(['personal', 'business'] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={cn(
-                      'rounded-lg border px-3 py-2 text-sm font-medium capitalize',
-                      billingType === type
-                        ? 'border-brand bg-brand/10 text-brand-deep'
-                        : 'border-slate-200 text-slate-600'
-                    )}
-                    onClick={() => setBillingType(type)}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </Field>
-
-            {billingType === 'business' && pricingRegion === 'domestic' ? (
-              <Field label="GSTIN">
-                <TextInput value={gstin} onChange={setGstin} placeholder="15-character GSTIN" />
-              </Field>
-            ) : null}
-
-            <Field label="Legal name">
-              <TextInput value={legalName} onChange={handleLegalNameChange} placeholder="Name on invoice" />
-            </Field>
-
-            <Field label="Address line 1">
-              <TextInput value={addressLine1} onChange={setAddressLine1} placeholder="House / street / area" />
-            </Field>
-
-            <Field label="Address line 2 (optional)">
-              <TextInput value={addressLine2} onChange={setAddressLine2} placeholder="Apartment, landmark" />
-            </Field>
-
-            <div className={cn('grid grid-cols-1 gap-3', hasSubdivisions ? 'sm:grid-cols-2' : '')}>
-              <Field label="City">
-                <CityCombobox
-                  value={billingCity}
-                  onChange={setBillingCity}
-                  suggestions={countryCities}
-                  onSuggestionSelect={handleCitySuggestion}
-                  loading={loadingCities}
-                  showIcon={false}
-                />
-              </Field>
-              {hasSubdivisions ? (
-                <Field label={subdivisionLabel}>
-                  <SearchableSelect
-                    value={billingState}
-                    onChange={setBillingState}
-                    options={stateOptions}
-                    placeholder={
-                      loadingStates
-                        ? `Loading ${subdivisionLabel.toLowerCase()}s…`
-                        : `Select ${subdivisionLabel.toLowerCase()}`
-                    }
-                    searchPlaceholder={`Search ${subdivisionLabel.toLowerCase()}`}
-                    emptyMessage={`No ${subdivisionLabel.toLowerCase()}s found.`}
-                    disabled={loadingStates}
-                    scrollToSelectedOnOpen
-                  />
-                </Field>
-              ) : null}
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Postal code">
-                <TextInput value={postalCode} onChange={setPostalCode} placeholder="PIN / ZIP code" />
-              </Field>
-              <Field label="Country">
-                <TextInput value={billingCountry} onChange={() => {}} disabled />
-              </Field>
-            </div>
+            <BillingDetailsFields
+              countries={countries}
+              billingCountryCode={billingCountryCode}
+              onBillingCountryChange={setBillingCountryCode}
+              billingType={billingType}
+              onBillingTypeChange={setBillingType}
+              pricingRegion={pricingRegion}
+              gstin={gstin}
+              onGstinChange={setGstin}
+              legalName={legalName}
+              onLegalNameChange={handleLegalNameChange}
+              addressLine1={addressLine1}
+              onAddressLine1Change={setAddressLine1}
+              addressLine2={addressLine2}
+              onAddressLine2Change={setAddressLine2}
+              billingCity={billingCity}
+              onBillingCityChange={setBillingCity}
+              billingState={billingState}
+              onBillingStateChange={setBillingState}
+              postalCode={postalCode}
+              onPostalCodeChange={setPostalCode}
+              countryCities={countryCities}
+              countryStates={countryStates}
+              loadingCities={loadingCities}
+              loadingStates={loadingStates}
+              onCitySuggestion={handleCitySuggestion}
+            />
 
             <Field label="Promo code">
               <div className="flex gap-2">

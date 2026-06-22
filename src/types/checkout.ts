@@ -28,6 +28,7 @@ export type CheckoutQuoteRequest = {
   program_slug?: string;
   pricing_region: 'domestic' | 'international';
   billing_type: 'personal' | 'business';
+  billing_country_code?: string;
   gstin?: string;
   legal_name?: string;
   billing_state?: string;

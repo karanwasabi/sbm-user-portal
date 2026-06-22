@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Download } from 'lucide-react';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
 import { InvoicesPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
@@ -44,6 +45,16 @@ export function InvoicesView({ invoices, error }: InvoicesViewProps) {
           {error}
         </p>
       ) : null}
+
+      <Card className="border-slate-100 bg-canvas-cool">
+        <p className="text-sm leading-relaxed text-slate-600">
+          Billing address for future invoices is managed on{' '}
+          <Link href="/subscription" className="font-semibold text-brand hover:text-brand-deep">
+            Subscription
+          </Link>
+          .
+        </p>
+      </Card>
 
       <Card>
         <SectionHead title="Invoice history" subtitle="Issued after each successful payment" />

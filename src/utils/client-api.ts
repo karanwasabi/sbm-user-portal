@@ -151,3 +151,18 @@ export async function startPaymentMethodUpdate(): Promise<PaymentMethodUpdateRes
   });
   return response.json() as Promise<PaymentMethodUpdateResponse>;
 }
+
+export async function getBillingProfile(): Promise<import('@/types/billing').BillingProfile> {
+  const response = await clientApiFetch('/me/billing-profile');
+  return response.json() as Promise<import('@/types/billing').BillingProfile>;
+}
+
+export async function patchBillingProfile(
+  body: import('@/types/billing').BillingProfilePatch
+): Promise<import('@/types/billing').BillingProfile> {
+  const response = await clientApiFetch('/me/billing-profile', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  return response.json() as Promise<import('@/types/billing').BillingProfile>;
+}
