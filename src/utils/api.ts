@@ -314,3 +314,28 @@ export async function resendRegisterOTP(
     );
   }
 }
+
+export async function sendLoginOTP(email: string, extraHeaders: HeadersInit = {}): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${getBackendUrl()}/auth/login/otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...extraHeaders,
+      },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ProfileFetchError('Could not reach the backend. Is it running?', 503);
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ProfileFetchError(
+      formatUserFacingError(payload?.error ?? `Failed to send OTP (${response.status})`),
+      response.status
+    );
+  }
+}
