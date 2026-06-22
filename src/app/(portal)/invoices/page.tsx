@@ -1,8 +1,9 @@
 import { InvoicesView } from '@/components/invoices/invoices-view';
-import { getMyInvoices, ProfileFetchError } from '@/utils/api';
+import { getBillingProfile, getMyInvoices, ProfileFetchError } from '@/utils/api';
 
 export default async function InvoicesPage() {
   let invoices: Awaited<ReturnType<typeof getMyInvoices>> = [];
+  let billingProfile: Awaited<ReturnType<typeof getBillingProfile>> = null;
   let error: string | null = null;
 
   try {
@@ -11,5 +12,11 @@ export default async function InvoicesPage() {
     error = err instanceof ProfileFetchError ? err.message : 'Failed to load invoices.';
   }
 
-  return <InvoicesView invoices={invoices} error={error} />;
+  try {
+    billingProfile = await getBillingProfile();
+  } catch {
+    billingProfile = null;
+  }
+
+  return <InvoicesView invoices={invoices} billingProfile={billingProfile} error={error} />;
 }

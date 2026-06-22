@@ -1,28 +1,30 @@
 'use client';
 
-import Link from 'next/link';
 import { Download } from 'lucide-react';
+import { BillingDetailsSection } from '@/components/billing/billing-details-section';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
 import { InvoicesPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { Card } from '@/components/ui/card';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
 import { formatInrFromPaise } from '@/lib/money';
+import type { BillingProfile } from '@/types/billing';
 import type { Invoice } from '@/types/checkout';
 
 type InvoicesViewProps = {
   invoices: Invoice[];
+  billingProfile?: BillingProfile | null;
   error?: string | null;
 };
 
-export function InvoicesView({ invoices, error }: InvoicesViewProps) {
+export function InvoicesView({ invoices, billingProfile, error }: InvoicesViewProps) {
   const latest = invoices[0];
 
   return (
     <PortalPageLayout
       eyebrow="Billing records"
       title="Tax invoices"
-      description="GST-compliant invoices for every charge. Download PDFs for your records or reimbursement."
+      description="Manage billing details for your invoices and download GST-compliant PDFs for your records."
       illustration={<InvoicesPageIllustration />}
       panelClassName="bg-gradient-to-br from-motivation via-amber to-[#E88A0C]"
       glowClassName="bg-white/35"
@@ -45,6 +47,8 @@ export function InvoicesView({ invoices, error }: InvoicesViewProps) {
           {error}
         </p>
       ) : null}
+
+      <BillingDetailsSection initialProfile={billingProfile} />
 
       <Card>
         <SectionHead title="Invoice history" subtitle="Issued after each successful payment" />
@@ -100,13 +104,6 @@ export function InvoicesView({ invoices, error }: InvoicesViewProps) {
             </table>
           </div>
         )}
-        <p className="mt-4 text-xs leading-relaxed text-slate-500">
-          To update billing details for future invoices, go to{' '}
-          <Link href="/subscription" className="font-medium text-brand hover:text-brand-deep">
-            Subscription
-          </Link>
-          .
-        </p>
       </Card>
     </PortalPageLayout>
   );

@@ -13,7 +13,7 @@ import { getFullName } from '@/types/profile';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
 import { getCountries, getCountryCities, getCountryStates, patchBillingProfile } from '@/utils/client-api';
 
-type SubscriptionBillingSectionProps = {
+type BillingDetailsSectionProps = {
   initialProfile?: BillingProfile | null;
 };
 
@@ -41,7 +41,7 @@ function profileToFormState(profile: BillingProfile) {
   };
 }
 
-export function SubscriptionBillingSection({ initialProfile }: SubscriptionBillingSectionProps) {
+export function BillingDetailsSection({ initialProfile }: BillingDetailsSectionProps) {
   const router = useRouter();
   const { profile } = usePortalProfile();
   const memberName = profile ? getFullName(profile) : '';
@@ -213,7 +213,7 @@ export function SubscriptionBillingSection({ initialProfile }: SubscriptionBilli
     <Card>
       <SectionHead
         title="Billing details"
-        subtitle="Used on tax invoices and future charges. Personal profile fields are managed separately."
+        subtitle="Name and address printed on tax invoices. Your coaching profile is managed separately."
       />
       <BillingDetailsFields
         countries={countries}
