@@ -11,7 +11,7 @@ import { Card } from '@/components/ui/card';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
 import { SubscriptionRenewalCardSkeleton } from '@/components/loading/subscription-page-skeleton';
-import { openRazorpaySubscriptionCheckout } from '@/lib/razorpay-checkout';
+import { openRazorpayPaymentMethodUpdate } from '@/lib/razorpay-checkout';
 import { formatInrFromPaise } from '@/lib/money';
 import type { Subscription } from '@/types/subscription';
 import { cancelSubscription, startPaymentMethodUpdate } from '@/utils/client-api';
@@ -167,11 +167,12 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
     setActionError(null);
     try {
       const payload = await startPaymentMethodUpdate();
-      await openRazorpaySubscriptionCheckout({
+      await openRazorpayPaymentMethodUpdate({
         key: payload.razorpay_key_id,
         subscriptionId: payload.subscription_id,
         description: subscription.plan_label,
         onSuccess: () => {
+          setUpdatePending(false);
           setPageRefreshing(true);
           router.refresh();
         },
@@ -179,7 +180,6 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
       });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to open payment update.');
-    } finally {
       setUpdatePending(false);
     }
   };
@@ -240,7 +240,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
               </div>
               <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
                 <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Payment Method</p>
-                <div className="mt-1 flex items-center justify-between gap-3">
+                <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                   <p className="min-w-0 text-sm font-bold text-slate-800">
                     {subscription.payment_method_summary ?? 'Card on File'}
                   </p>
@@ -248,18 +248,19 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 shrink-0 px-0 text-brand hover:bg-transparent hover:text-brand-deep"
+                      className="min-h-8 min-w-[9.75rem] shrink-0 self-start px-1 whitespace-nowrap text-brand hover:bg-transparent hover:text-brand-deep sm:self-auto"
                       onClick={handleUpdatePayment}
                       disabled={updatePending}
+                      aria-busy={updatePending}
+                      rightIcon={
+                        updatePending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        )
+                      }
                     >
-                      {updatePending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          Update Payment
-                          <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                        </>
-                      )}
+                      Update Payment
                     </Button>
                   ) : null}
                 </div>

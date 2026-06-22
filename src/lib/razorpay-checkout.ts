@@ -27,6 +27,7 @@ type OpenRazorpaySubscriptionOptions = {
   subscriptionId: string;
   orderId?: string;
   description: string;
+  subscriptionCardChange?: boolean;
   onSuccess: () => void;
   onDismiss?: () => void;
 };
@@ -36,6 +37,7 @@ export async function openRazorpaySubscriptionCheckout({
   subscriptionId,
   orderId,
   description,
+  subscriptionCardChange = false,
   onSuccess,
   onDismiss,
 }: OpenRazorpaySubscriptionOptions): Promise<void> {
@@ -59,8 +61,30 @@ export async function openRazorpaySubscriptionCheckout({
     options.order_id = orderId;
   }
 
+  if (subscriptionCardChange) {
+    options.subscription_card_change = 1;
+    options.recurring = '1';
+  }
+
   const rzp = new window.Razorpay(options);
   rzp.open();
+}
+
+export async function openRazorpayPaymentMethodUpdate({
+  key,
+  subscriptionId,
+  description,
+  onSuccess,
+  onDismiss,
+}: Omit<OpenRazorpaySubscriptionOptions, 'orderId' | 'subscriptionCardChange'>): Promise<void> {
+  await openRazorpaySubscriptionCheckout({
+    key,
+    subscriptionId,
+    description,
+    subscriptionCardChange: true,
+    onSuccess,
+    onDismiss,
+  });
 }
 
 type OpenEnrollmentCheckoutOptions = {
