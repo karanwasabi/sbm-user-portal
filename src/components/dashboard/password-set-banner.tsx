@@ -13,7 +13,7 @@ export function PasswordSetBanner() {
           </p>
         </div>
         <Link
-          href="/profile/set-password"
+          href="/settings/set-password"
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-press focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none"
         >
           Set Password

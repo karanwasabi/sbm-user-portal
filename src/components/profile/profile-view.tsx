@@ -1,6 +1,6 @@
 'use client';
 
-import { Cake, Loader2, Lock, Mail } from 'lucide-react';
+import { Cake, Loader2, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { loadCountryCities, updateProfile } from '@/app/(portal)/profile/actions';
@@ -10,7 +10,6 @@ import { ProfilePageIllustration } from '@/components/layout/portal/portal-page-
 import { CityCombobox } from '@/components/profile/city-combobox';
 import { CountryCombobox } from '@/components/profile/country-combobox';
 import { MealPreferenceSelect } from '@/components/profile/meal-preference-select';
-import { NotificationPreferencesCard } from '@/components/profile/notification-preferences-card';
 import { ParentalConsentBlock } from '@/components/profile/parental-consent-block';
 import { ProfileCompletionRing } from '@/components/profile/profile-completion-ring';
 import { PhoneInput } from '@/components/profile/phone-input';
@@ -410,29 +409,6 @@ export function ProfileView({ countries }: ProfileViewProps) {
             </Button>
           </div>
         </form>
-      </Card>
-
-      <NotificationPreferencesCard />
-
-      <Card>
-        <SectionHead title="Security" />
-        <div className="flex flex-col gap-3 rounded-[14px] border border-slate-100 bg-canvas-cool p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <Lock size={16} className="shrink-0 text-brand" />
-            <div className="min-w-0">
-              <div className="text-sm font-bold text-slate-800">Password</div>
-              <div className="text-xs text-slate-500">Used to sign in to your account</div>
-            </div>
-          </div>
-          <Button
-            variant="light"
-            size="sm"
-            className="shrink-0 self-start sm:self-center"
-            onClick={() => router.push('/profile/change-password')}
-          >
-            Change Password
-          </Button>
-        </div>
       </Card>
     </PortalPageLayout>
   );

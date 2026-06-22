@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useActionState, useEffect, useRef, useState } from 'react';
-import { changePassword } from '@/app/(portal)/profile/change-password/actions';
+import { changePassword } from '@/app/(portal)/settings/change-password/actions';
 import { PasswordField } from '@/components/auth/password-field';
 import { PASSWORD_REQUIREMENTS_COPY } from '@/lib/password-requirements';
 import type { ChangePasswordField, ChangePasswordState } from '@/types/change-password';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
-import { SecurityPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
+import { SettingsPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SectionHead } from '@/components/ui/section-head';
@@ -17,23 +17,23 @@ import { SectionHead } from '@/components/ui/section-head';
 const initialState: ChangePasswordState = { error: null, success: false };
 
 const layoutProps = {
-  eyebrow: 'Security',
-  title: 'Protect Your Account',
+  eyebrow: 'Settings',
+  title: 'Change Password',
   description: 'Choose a strong, unique password. You will stay signed in after updating.',
-  illustration: <SecurityPageIllustration />,
-  panelClassName: 'bg-gradient-to-br from-brand-deep via-brand to-brand-deep-press',
-  glowClassName: 'bg-brand-glow/40',
+  illustration: <SettingsPageIllustration />,
+  panelClassName: 'bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800',
+  glowClassName: 'bg-white/20',
   footer: PASSWORD_REQUIREMENTS_COPY,
 };
 
 function BackLink() {
   return (
     <Link
-      href="/profile"
+      href="/settings"
       className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 no-underline hover:text-slate-700"
     >
       <ArrowLeft size={16} />
-      Back to Profile
+      Back to Settings
     </Link>
   );
 }
@@ -86,8 +86,8 @@ export function ChangePasswordForm() {
           <p className="text-sm leading-relaxed text-slate-600">
             Use your new password the next time you sign in on another device. This session stays active.
           </p>
-          <Button variant="primary" size="md" className="mt-5" onClick={() => router.push('/profile')}>
-            Return to Profile
+          <Button variant="primary" size="md" className="mt-5" onClick={() => router.push('/settings')}>
+            Return to Settings
           </Button>
         </Card>
       </PortalPageLayout>
@@ -156,16 +156,18 @@ export function ChangePasswordForm() {
             )}
           </div>
 
-          <Button type="submit" variant="primary" size="md" disabled={isPending} className="self-start">
-            {isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Updating…
-              </>
-            ) : (
-              'Update Password'
-            )}
-          </Button>
+          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <Button type="submit" variant="primary" size="md" disabled={isPending} aria-busy={isPending}>
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Updating…
+                </>
+              ) : (
+                'Update Password'
+              )}
+            </Button>
+          </div>
         </form>
       </Card>
     </PortalPageLayout>

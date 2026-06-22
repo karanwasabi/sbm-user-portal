@@ -135,13 +135,31 @@ export function SupportPageIllustration() {
     <svg viewBox="0 0 280 180" fill="none" className="h-auto w-full max-w-[260px]" aria-hidden>
       <circle cx="140" cy="90" r="56" fill="white" fillOpacity="0.18" />
       <rect x="72" y="52" width="136" height="88" rx="16" fill="white" fillOpacity="0.95" />
-      <path d="M72 68l68 48 68-48" stroke="#5C65CF" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M72 68l68 48 68-48" stroke="#0EA5E9" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
       <rect x="96" y="96" width="88" height="8" rx="4" fill="#E2E8F0" />
       <rect x="96" y="112" width="64" height="8" rx="4" fill="#E2E8F0" />
       <circle cx="208" cy="56" r="18" fill="#FFB703" fillOpacity="0.95" />
       <path d="M208 50v12M202 56h12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
       <circle cx="56" cy="64" r="5" fill="white" fillOpacity="0.5" />
       <circle cx="228" cy="128" r="4" fill="white" fillOpacity="0.4" />
+    </svg>
+  );
+}
+
+export function SettingsPageIllustration() {
+  return (
+    <svg viewBox="0 0 280 180" fill="none" className="h-auto w-full max-w-[260px]" aria-hidden>
+      <circle cx="140" cy="90" r="56" fill="white" fillOpacity="0.15" />
+      <circle cx="140" cy="88" r="36" fill="white" fillOpacity="0.95" />
+      <path
+        fill="#475569"
+        d="M140 66 L148 74.14 L159.05 77 L156 88 L159.05 99 L148 101.86 L140 110 L132 101.86 L120.95 99 L124 88 L120.95 77 L132 74.14 Z"
+      />
+      <circle cx="140" cy="88" r="9" fill="white" />
+      <circle cx="208" cy="56" r="14" fill="#FFB703" fillOpacity="0.95" />
+      <path d="M202 56l4 4 8-8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="64" cy="60" r="5" fill="white" fillOpacity="0.45" />
+      <circle cx="220" cy="128" r="4" fill="white" fillOpacity="0.35" />
     </svg>
   );
 }

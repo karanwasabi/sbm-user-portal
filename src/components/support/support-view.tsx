@@ -40,7 +40,7 @@ export function SupportView() {
       title="Contact Our Team"
       description="For billing, enrollment, account or any other questions, email us and we will get back to you within one to two business days."
       illustration={<SupportPageIllustration />}
-      panelClassName="bg-gradient-to-br from-brand via-brand-deep to-brand-deep-press"
+      panelClassName="bg-gradient-to-br from-support via-[#38BDF8] to-support-press"
       glowClassName="bg-white/30"
       highlights={[
         { label: 'Channel', value: 'Email' },
@@ -55,14 +55,14 @@ export function SupportView() {
         <div className="rounded-[14px] border border-slate-100 bg-canvas-cool p-4 sm:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-brand/10 text-brand">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-support/10 text-support">
                 <Mail size={18} />
               </div>
               <a
                 href={mailtoHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="min-w-0 font-mono text-base font-semibold break-all text-brand underline-offset-2 hover:underline"
+                className="min-w-0 font-mono text-base font-semibold break-all text-support underline-offset-2 hover:underline"
               >
                 {SUPPORT_EMAIL}
               </a>

@@ -1,13 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { Bell, Loader2, Mail, MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import { updateNotificationPreferences } from '@/app/(portal)/profile/actions';
 import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
-import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { SectionHead } from '@/components/ui/section-head';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 import type { NotificationPreferences } from '@/types/profile';
@@ -48,7 +47,7 @@ function preferencesFromProfile(profile: ReturnType<typeof usePortalProfile>['pr
   };
 }
 
-export function NotificationPreferencesCard() {
+export function NotificationSettingsSection() {
   const router = useRouter();
   const { profile } = usePortalProfile();
   const { toast } = useToast();
@@ -82,45 +81,45 @@ export function NotificationPreferencesCard() {
   const whatsappMissing = !profile?.whatsapp?.trim();
 
   return (
-    <Card>
-      <SectionHead title="Notification Preferences" subtitle="Choose how we reach you." />
-      <div className="flex flex-col gap-1">
-        {CHANNELS.map((item) => {
-          const checked = preferences[item.key];
-          const isSaving = savingChannel === item.key;
+    <div className="flex flex-col gap-1">
+      {CHANNELS.map((item) => {
+        const checked = preferences[item.key];
+        const isSaving = savingChannel === item.key;
 
-          return (
-            <div key={item.key} className="border-t border-slate-100 py-3 first:border-t-0 first:pt-0">
-              <div className="flex items-center gap-3">
-                <item.icon size={16} className="shrink-0 text-slate-400" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-slate-800">{item.title}</div>
-                  <div className="text-xs text-slate-500">{item.subtitle}</div>
-                </div>
-                <div className={cn('flex shrink-0 items-center', isSaving && 'opacity-60')}>
-                  {isSaving ? (
-                    <Loader2 size={18} className="animate-spin text-slate-400" aria-hidden />
-                  ) : (
-                    <Checkbox
-                      checked={checked}
-                      onChange={(next) => {
-                        void handleToggle(item.key, next);
-                      }}
-                      disabled={isSaving}
-                      label=""
-                    />
-                  )}
-                </div>
+        return (
+          <div key={item.key} className="border-t border-slate-100 py-3 first:border-t-0 first:pt-0">
+            <div className="flex items-center gap-3">
+              <item.icon size={16} className="shrink-0 text-slate-400" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold text-slate-800">{item.title}</div>
+                <div className="text-xs text-slate-500">{item.subtitle}</div>
               </div>
-              {item.key === 'notify_whatsapp' && checked && whatsappMissing ? (
-                <p className="mt-1.5 pl-7 text-[11.5px] font-medium text-muted-foreground">
-                  Add a mobile number above to receive WhatsApp messages.
-                </p>
-              ) : null}
+              <div className={cn('flex shrink-0 items-center', isSaving && 'opacity-60')}>
+                {isSaving ? (
+                  <Loader2 size={18} className="animate-spin text-slate-400" aria-hidden />
+                ) : (
+                  <Checkbox
+                    checked={checked}
+                    onChange={(next) => {
+                      void handleToggle(item.key, next);
+                    }}
+                    disabled={isSaving}
+                    label=""
+                  />
+                )}
+              </div>
             </div>
-          );
-        })}
-      </div>
-    </Card>
+            {item.key === 'notify_whatsapp' && checked && whatsappMissing ? (
+              <p className="mt-1.5 pl-7 text-[11.5px] font-medium text-muted-foreground">
+                <Link href="/profile" className="font-semibold text-brand hover:text-brand-press">
+                  Add your mobile number on Profile
+                </Link>{' '}
+                to receive WhatsApp messages.
+              </p>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
   );
 }

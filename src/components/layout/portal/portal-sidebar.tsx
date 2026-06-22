@@ -1,13 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import { CreditCard, FileText, HelpCircle, Home, User } from 'lucide-react';
+import { CreditCard, FileText, HelpCircle, Home, Settings, User } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { PortalNavLink } from '@/components/layout/portal/portal-nav-link';
-import { cn } from '@/lib/cn';
 
-const navItems = [
+const mainNavItems = [
   {
     href: '/',
     label: 'Home',
@@ -38,7 +36,26 @@ const navItems = [
       'border-b-brand-deep-press bg-brand-deep font-bold text-white shadow-[0_8px_14px_-6px_rgba(43,24,101,0.35)]',
     iconActiveClass: 'text-white',
   },
-];
+  {
+    href: '/settings',
+    label: 'Settings',
+    icon: Settings,
+    activeClass: 'border-b-slate-600 bg-slate-700 font-bold text-white shadow-[0_8px_14px_-6px_rgba(51,65,85,0.35)]',
+    iconActiveClass: 'text-white',
+  },
+] as const;
+
+const supportNavItem = {
+  href: '/support',
+  label: 'Help & Support',
+  icon: HelpCircle,
+  activeClass: 'border-b-support-press bg-support font-bold text-white shadow-[0_8px_14px_-6px_rgba(14,165,233,0.35)]',
+  iconActiveClass: 'text-white',
+} as const;
+
+function isNavActive(pathname: string, href: string): boolean {
+  return href === '/' ? pathname === '/' : pathname.startsWith(href);
+}
 
 export function PortalSidebar() {
   const pathname = usePathname();
@@ -50,34 +67,28 @@ export function PortalSidebar() {
       </div>
 
       <nav className="mt-3 flex flex-col gap-1">
-        {navItems.map(({ href, label, icon: Icon, activeClass, iconActiveClass }) => {
-          const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
-
-          return (
-            <PortalNavLink
-              key={href}
-              href={href}
-              label={label}
-              icon={Icon}
-              isActive={isActive}
-              activeClass={activeClass}
-              iconActiveClass={iconActiveClass}
-            />
-          );
-        })}
+        {mainNavItems.map(({ href, label, icon, activeClass, iconActiveClass }) => (
+          <PortalNavLink
+            key={href}
+            href={href}
+            label={label}
+            icon={icon}
+            isActive={isNavActive(pathname, href)}
+            activeClass={activeClass}
+            iconActiveClass={iconActiveClass}
+          />
+        ))}
       </nav>
 
-      <div className="mt-auto">
-        <Link
-          href="/support"
-          className={cn(
-            'flex items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-xs font-semibold transition-colors',
-            pathname === '/support' ? 'bg-white font-bold text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-white/60'
-          )}
-        >
-          <HelpCircle size={16} className={pathname === '/support' ? 'text-brand' : 'text-slate-500'} />
-          Help &amp; Support
-        </Link>
+      <div className="mt-auto border-t border-slate-100 pt-3">
+        <PortalNavLink
+          href={supportNavItem.href}
+          label={supportNavItem.label}
+          icon={supportNavItem.icon}
+          isActive={isNavActive(pathname, supportNavItem.href)}
+          activeClass={supportNavItem.activeClass}
+          iconActiveClass={supportNavItem.iconActiveClass}
+        />
       </div>
     </aside>
   );

@@ -16,14 +16,16 @@ function AsideSkeleton({ highlightCount = 3 }: { highlightCount?: number }) {
         <Skeleton className="h-6 w-48 bg-slate-300/80" />
         <Skeleton className="h-4 w-full max-w-xs bg-slate-300/70" />
         <Skeleton className="mx-auto mt-6 h-28 w-28 rounded-2xl bg-slate-300/70" />
-        <div className="mt-4 space-y-2.5 rounded-2xl border border-slate-200/80 bg-white/40 p-4">
-          {Array.from({ length: highlightCount }).map((_, index) => (
-            <div key={index} className="flex items-center justify-between gap-3">
-              <Skeleton className="h-3 w-20 bg-slate-300/70" />
-              <Skeleton className="h-3 w-16 bg-slate-300/70" />
-            </div>
-          ))}
-        </div>
+        {highlightCount > 0 ? (
+          <div className="mt-4 space-y-2.5 rounded-2xl border border-slate-200/80 bg-white/40 p-4">
+            {Array.from({ length: highlightCount }).map((_, index) => (
+              <div key={index} className="flex items-center justify-between gap-3">
+                <Skeleton className="h-3 w-20 bg-slate-300/70" />
+                <Skeleton className="h-3 w-16 bg-slate-300/70" />
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );

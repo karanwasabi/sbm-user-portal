@@ -21,6 +21,8 @@
   --sbm-success-press: #059669;
   --sbm-danger: #f43f5e;
   --sbm-danger-press: #be123c;
+  --sbm-support: #0ea5e9;
+  --sbm-support-press: #0284c7;
   --sbm-slate-50: #f8fafc;
   --sbm-slate-100: #f1f5f9;
   --sbm-slate-200: #e2e8f0;
@@ -82,6 +84,8 @@
   --color-success-press: var(--sbm-success-press);
   --color-danger: var(--sbm-danger);
   --color-danger-press: var(--sbm-danger-press);
+  --color-support: var(--sbm-support);
+  --color-support-press: var(--sbm-support-press);
   --color-slate-50: var(--sbm-slate-50);
   --color-slate-100: var(--sbm-slate-100);
   --color-slate-200: var(--sbm-slate-200);

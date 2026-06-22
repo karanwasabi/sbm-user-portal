@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { setInitialPassword } from '@/app/(auth)/register/actions';
 import { PasswordField } from '@/components/auth/password-field';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
-import { SecurityPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
+import { SettingsPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SectionHead } from '@/components/ui/section-head';
@@ -15,12 +15,12 @@ import { PASSWORD_REQUIREMENTS_COPY } from '@/lib/password-requirements';
 const initialState = { error: null as string | null, success: false };
 
 const layoutProps = {
-  eyebrow: 'Security',
-  title: 'Protect Your Account',
+  eyebrow: 'Settings',
+  title: 'Set Password',
   description: 'Choose a strong password for email sign-in. You will stay signed in after saving.',
-  illustration: <SecurityPageIllustration />,
-  panelClassName: 'bg-gradient-to-br from-brand-deep via-brand to-brand-deep-press',
-  glowClassName: 'bg-brand-glow/40',
+  illustration: <SettingsPageIllustration />,
+  panelClassName: 'bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800',
+  glowClassName: 'bg-white/20',
   footer: PASSWORD_REQUIREMENTS_COPY,
 };
 
@@ -40,11 +40,11 @@ export function SetPasswordForm() {
     return (
       <PortalPageLayout {...layoutProps}>
         <Link
-          href="/profile"
+          href="/settings"
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 no-underline hover:text-slate-700"
         >
           <ArrowLeft size={16} />
-          Back to Profile
+          Back to Settings
         </Link>
         <Card>
           <SectionHead title="Password Saved" subtitle="You can now sign in with your email and password." />
@@ -59,11 +59,11 @@ export function SetPasswordForm() {
   return (
     <PortalPageLayout {...layoutProps}>
       <Link
-        href="/profile"
+        href="/settings"
         className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 no-underline hover:text-slate-700"
       >
         <ArrowLeft size={16} />
-        Back to Profile
+        Back to Settings
       </Link>
       <Card>
         <SectionHead title="Set Password" subtitle="No current password is required for your account." />
@@ -96,16 +96,18 @@ export function SetPasswordForm() {
               {state.error}
             </p>
           ) : null}
-          <Button type="submit" variant="primary" size="md" disabled={isPending} className="self-start">
-            {isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Saving…
-              </>
-            ) : (
-              'Save Password'
-            )}
-          </Button>
+          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <Button type="submit" variant="primary" size="md" disabled={isPending} aria-busy={isPending}>
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                'Save Password'
+              )}
+            </Button>
+          </div>
         </form>
       </Card>
     </PortalPageLayout>

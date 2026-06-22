@@ -7,6 +7,7 @@ import { PortalUserMenu } from '@/components/layout/portal/portal-user-menu';
 const pageMeta: Record<string, string> = {
   '/subscription': 'Subscription',
   '/invoices': 'Invoices',
+  '/settings': 'Settings',
   '/profile': 'Profile',
   '/support': 'Help & Support',
 };

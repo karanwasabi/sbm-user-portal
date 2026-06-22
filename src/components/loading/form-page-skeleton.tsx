@@ -2,9 +2,28 @@ import { CardSkeleton, SectionHeadSkeleton } from '@/components/loading/card-ske
 import { PortalPageLayoutSkeleton } from '@/components/loading/portal-page-layout-skeleton';
 import { Skeleton } from '@/components/loading/skeleton';
 
+export function SettingsPageSkeleton() {
+  return (
+    <PortalPageLayoutSkeleton highlightCount={0}>
+      <CardSkeleton>
+        <SectionHeadSkeleton />
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-12 w-full rounded-xl" />
+          ))}
+        </div>
+      </CardSkeleton>
+      <CardSkeleton>
+        <SectionHeadSkeleton />
+        <Skeleton className="h-14 w-full rounded-2xl" />
+      </CardSkeleton>
+    </PortalPageLayoutSkeleton>
+  );
+}
+
 export function FormPageSkeleton() {
   return (
-    <PortalPageLayoutSkeleton highlightCount={2}>
+    <PortalPageLayoutSkeleton highlightCount={0}>
       <CardSkeleton>
         <SectionHeadSkeleton />
         <div className="space-y-3.5">

@@ -240,27 +240,29 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
               </div>
               <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
                 <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Payment Method</p>
-                <p className="mt-1 text-sm font-bold text-slate-800">
-                  {subscription.payment_method_summary ?? 'Card on File'}
-                </p>
-                {subscription.can_update_payment ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 h-8 px-0 text-brand hover:bg-transparent hover:text-brand-deep"
-                    onClick={handleUpdatePayment}
-                    disabled={updatePending}
-                  >
-                    {updatePending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        Update Payment
-                        <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                      </>
-                    )}
-                  </Button>
-                ) : null}
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <p className="min-w-0 text-sm font-bold text-slate-800">
+                    {subscription.payment_method_summary ?? 'Card on File'}
+                  </p>
+                  {subscription.can_update_payment ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 shrink-0 px-0 text-brand hover:bg-transparent hover:text-brand-deep"
+                      onClick={handleUpdatePayment}
+                      disabled={updatePending}
+                    >
+                      {updatePending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          Update Payment
+                          <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                        </>
+                      )}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
@@ -293,19 +295,17 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
             title="Cancel Subscription"
             subtitle="Stops the next renewal. Access continues until period end."
           />
-          <div className="rounded-[14px] border border-slate-100 bg-canvas-cool p-4">
-            <div className="flex gap-3">
+          <div className="flex items-center justify-between gap-4 rounded-[14px] border border-slate-100 bg-canvas-cool p-4">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
               <Calendar size={18} className="mt-0.5 shrink-0 text-slate-500" />
-              <div>
-                <p className="text-sm leading-relaxed text-slate-600">
-                  If you cancel today, you keep program access until{' '}
-                  <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>.
-                </p>
-                <Button variant="danger" size="sm" className="mt-4" onClick={handleCancel} disabled={cancelPending}>
-                  {cancelPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cancel Subscription'}
-                </Button>
-              </div>
+              <p className="text-sm leading-relaxed text-slate-600">
+                If you cancel today, you keep program access until{' '}
+                <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>.
+              </p>
             </div>
+            <Button variant="danger" size="sm" className="shrink-0" onClick={handleCancel} disabled={cancelPending}>
+              {cancelPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cancel Subscription'}
+            </Button>
           </div>
         </Card>
       ) : !pageRefreshing && subscription.cancel_at_period_end ? (
