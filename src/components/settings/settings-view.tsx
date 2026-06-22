@@ -7,7 +7,11 @@ import { SecuritySettingsSection } from '@/components/settings/security-settings
 import { Card } from '@/components/ui/card';
 import { SectionHead } from '@/components/ui/section-head';
 
-export function SettingsView() {
+type SettingsViewProps = {
+  needsPassword?: boolean;
+};
+
+export function SettingsView({ needsPassword = false }: SettingsViewProps) {
   return (
     <PortalPageLayout
       eyebrow="Account"
@@ -27,7 +31,7 @@ export function SettingsView() {
 
       <Card>
         <SectionHead title="Security" subtitle="Keep your account sign-in secure." />
-        <SecuritySettingsSection />
+        <SecuritySettingsSection needsPassword={needsPassword} />
       </Card>
     </PortalPageLayout>
   );

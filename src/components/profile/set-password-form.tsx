@@ -66,7 +66,7 @@ export function SetPasswordForm() {
         Back to Settings
       </Link>
       <Card>
-        <SectionHead title="Set Password" subtitle="No current password is required for your account." />
+        <SectionHead title="Set Password" subtitle="No password is set for your account yet." />
         <form action={formAction} className="mt-4 flex flex-col gap-3.5">
           <PasswordField
             name="newPassword"
