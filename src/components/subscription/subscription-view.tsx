@@ -8,6 +8,7 @@ import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout'
 import { SubscriptionPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
 import { SubscriptionRenewalCardSkeleton } from '@/components/loading/subscription-page-skeleton';
@@ -84,6 +85,7 @@ function statusTone(status: string): 'success' | 'brand' | 'danger' | 'neutral' 
 
 export function SubscriptionView({ subscription, error }: SubscriptionViewProps) {
   const router = useRouter();
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelPending, setCancelPending] = useState(false);
   const [updatePending, setUpdatePending] = useState(false);
   const [pageRefreshing, setPageRefreshing] = useState(false);
@@ -141,22 +143,17 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
   const monthlyBaseDisplay = formatInrFromPaise(subscription.monthly_base_paise);
   const monthlyGstDisplay = formatInrFromPaise(subscription.monthly_gst_paise);
 
-  const handleCancel = async () => {
-    const confirmed = window.confirm(
-      accessEnd
-        ? `Cancel your subscription? You'll keep program access until ${formatDisplayDate(accessEnd)}. After that, billing stops but you can still use the member portal to re-enrol.`
-        : 'Cancel your subscription? Billing will stop at the end of the current period.'
-    );
-    if (!confirmed) return;
-
+  const confirmCancelSubscription = async () => {
     setCancelPending(true);
     setActionError(null);
     try {
+      setCancelDialogOpen(false);
       setPageRefreshing(true);
       await cancelSubscription(true);
       router.refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to cancel subscription.');
+      setPageRefreshing(false);
     } finally {
       setCancelPending(false);
     }
@@ -304,7 +301,13 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
                 <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>.
               </p>
             </div>
-            <Button variant="danger" size="sm" className="shrink-0" onClick={handleCancel} disabled={cancelPending}>
+            <Button
+              variant="danger"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setCancelDialogOpen(true)}
+              disabled={cancelPending}
+            >
               {cancelPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cancel Subscription'}
             </Button>
           </div>
@@ -317,6 +320,28 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
           </p>
         </Card>
       ) : null}
+
+      <ConfirmDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        title="Cancel Subscription?"
+        description={
+          accessEnd ? (
+            <>
+              You&apos;ll keep program access until{' '}
+              <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>. After that, billing
+              stops but you can still use the member portal to re-enrol.
+            </>
+          ) : (
+            'Billing will stop at the end of the current period.'
+          )
+        }
+        confirmLabel="Cancel Subscription"
+        cancelLabel="Keep Subscription"
+        confirmVariant="danger"
+        confirmPending={cancelPending}
+        onConfirm={() => void confirmCancelSubscription()}
+      />
     </PortalPageLayout>
   );
 }
