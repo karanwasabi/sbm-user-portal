@@ -3,17 +3,29 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
 import { BillingDetailsFields } from '@/components/billing/billing-details-fields';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SectionHead } from '@/components/ui/section-head';
 import type { BillingProfile, BillingProfilePatch } from '@/types/billing';
+import { getFullName } from '@/types/profile';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
 import { getCountries, getCountryCities, getCountryStates, patchBillingProfile } from '@/utils/client-api';
 
 type SubscriptionBillingSectionProps = {
-  initialProfile: BillingProfile;
+  initialProfile?: BillingProfile | null;
 };
+
+function defaultBillingProfile(memberName: string, countryCode?: string | null): BillingProfile {
+  const code = countryCode?.trim().toUpperCase() || 'IN';
+  return {
+    pricing_region: code === 'IN' ? 'domestic' : 'international',
+    billing_type: 'personal',
+    billing_country_code: code,
+    legal_name: memberName,
+  };
+}
 
 function profileToFormState(profile: BillingProfile) {
   return {
@@ -31,6 +43,12 @@ function profileToFormState(profile: BillingProfile) {
 
 export function SubscriptionBillingSection({ initialProfile }: SubscriptionBillingSectionProps) {
   const router = useRouter();
+  const { profile } = usePortalProfile();
+  const memberName = profile ? getFullName(profile) : '';
+  const resolvedProfile = useMemo(
+    () => initialProfile ?? defaultBillingProfile(memberName, profile?.country_code),
+    [initialProfile, memberName, profile?.country_code]
+  );
   const [countries, setCountries] = useState<Country[]>([]);
   const [countryCities, setCountryCities] = useState<CountryCity[]>([]);
   const [countryStates, setCountryStates] = useState<CountryState[]>([]);
@@ -40,7 +58,7 @@ export function SubscriptionBillingSection({ initialProfile }: SubscriptionBilli
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const initialForm = useMemo(() => profileToFormState(initialProfile), [initialProfile]);
+  const initialForm = useMemo(() => profileToFormState(resolvedProfile), [resolvedProfile]);
   const [billingCountryCode, setBillingCountryCode] = useState(initialForm.billingCountryCode);
   const [billingType, setBillingType] = useState(initialForm.billingType);
   const [gstin, setGstin] = useState(initialForm.gstin);
@@ -61,6 +79,19 @@ export function SubscriptionBillingSection({ initialProfile }: SubscriptionBilli
   );
   const billingCountry = selectedCountry?.name ?? billingCountryCode;
   const hasSubdivisions = countryStates.length > 0;
+
+  useEffect(() => {
+    const next = profileToFormState(resolvedProfile);
+    setBillingCountryCode(next.billingCountryCode);
+    setBillingType(next.billingType);
+    setGstin(next.gstin);
+    setLegalName(next.legalName);
+    setBillingState(next.billingState);
+    setAddressLine1(next.addressLine1);
+    setAddressLine2(next.addressLine2);
+    setBillingCity(next.billingCity);
+    setPostalCode(next.postalCode);
+  }, [resolvedProfile]);
 
   useEffect(() => {
     void getCountries()

@@ -207,7 +207,7 @@ export function SubscriptionView({ subscription, billingProfile, error }: Subscr
         </div>
       </Card>
 
-      {billingProfile ? <SubscriptionBillingSection initialProfile={billingProfile} /> : null}
+      <SubscriptionBillingSection initialProfile={billingProfile} />
 
       <Card>
         <SectionHead title="Billing schedule" subtitle="Upcoming and past charges" />

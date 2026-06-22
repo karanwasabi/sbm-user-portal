@@ -46,16 +46,6 @@ export function InvoicesView({ invoices, error }: InvoicesViewProps) {
         </p>
       ) : null}
 
-      <Card className="border-slate-100 bg-canvas-cool">
-        <p className="text-sm leading-relaxed text-slate-600">
-          Billing address for future invoices is managed on{' '}
-          <Link href="/subscription" className="font-semibold text-brand hover:text-brand-deep">
-            Subscription
-          </Link>
-          .
-        </p>
-      </Card>
-
       <Card>
         <SectionHead title="Invoice history" subtitle="Issued after each successful payment" />
         {invoices.length === 0 ? (
@@ -110,6 +100,13 @@ export function InvoicesView({ invoices, error }: InvoicesViewProps) {
             </table>
           </div>
         )}
+        <p className="mt-4 text-xs leading-relaxed text-slate-500">
+          To update billing details for future invoices, go to{' '}
+          <Link href="/subscription" className="font-medium text-brand hover:text-brand-deep">
+            Subscription
+          </Link>
+          .
+        </p>
       </Card>
     </PortalPageLayout>
   );
