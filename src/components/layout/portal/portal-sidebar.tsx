@@ -1,10 +1,9 @@
 'use client';
 
 import { CreditCard, FileText, HelpCircle, Home, User } from 'lucide-react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
-import { cn } from '@/lib/cn';
+import { PortalNavLink } from '@/components/layout/portal/portal-nav-link';
 
 const navItems = [
   {
@@ -53,17 +52,15 @@ export function PortalSidebar() {
           const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
 
           return (
-            <Link
+            <PortalNavLink
               key={href}
               href={href}
-              className={cn(
-                'flex items-center gap-3 rounded-[14px] px-3.5 py-[11px] text-[13.5px] font-semibold transition-colors',
-                isActive ? activeClass : 'border-b-[3px] border-transparent text-slate-700 hover:bg-white/60'
-              )}
-            >
-              <Icon size={17} className={isActive ? iconActiveClass : 'text-slate-500'} />
-              <span className="flex-1">{label}</span>
-            </Link>
+              label={label}
+              icon={Icon}
+              isActive={isActive}
+              activeClass={activeClass}
+              iconActiveClass={iconActiveClass}
+            />
           );
         })}
       </nav>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
 import { BillingDetailsFields } from '@/components/billing/billing-details-fields';
+import { CheckoutPanelSkeleton } from '@/components/loading/checkout-panel-skeleton';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
@@ -289,11 +290,7 @@ export function RegisterCheckoutSection({
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-brand" />
-      </div>
-    );
+    return <CheckoutPanelSkeleton />;
   }
 
   if (!preview || !quote) {

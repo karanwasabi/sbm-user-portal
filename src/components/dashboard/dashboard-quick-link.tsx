@@ -1,7 +1,8 @@
 'use client';
 
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useLinkStatus } from 'next/link';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
@@ -16,6 +17,12 @@ type DashboardQuickLinkProps = {
   hoverAccentClass: string;
   focusRingClass?: string;
 };
+
+function QuickLinkPendingIndicator() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return <Loader2 size={16} className="absolute top-3 right-3 z-10 animate-spin text-white/90" aria-hidden />;
+}
 
 export function DashboardQuickLink({
   href,
@@ -42,6 +49,7 @@ export function DashboardQuickLink({
       )}
     >
       <div className={cn('relative h-[88px] overflow-hidden', accentClass)}>
+        <QuickLinkPendingIndicator />
         <div
           className={cn(
             'pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full opacity-60 blur-2xl',

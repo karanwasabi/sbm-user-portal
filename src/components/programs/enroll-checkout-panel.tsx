@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
 import { BillingDetailsFields } from '@/components/billing/billing-details-fields';
+import { CheckoutPanelSkeleton } from '@/components/loading/checkout-panel-skeleton';
 import { TakeControlEnrollPanel } from '@/components/programs/take-control-enroll-panel';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -319,11 +320,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-brand" />
-      </div>
-    );
+    return <CheckoutPanelSkeleton />;
   }
 
   if (!preview || !quote) {

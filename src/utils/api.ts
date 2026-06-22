@@ -2,6 +2,7 @@ import type { Invoice } from '@/types/checkout';
 import type { BillingProfile } from '@/types/billing';
 import type { Enrollment } from '@/types/enrollment';
 import type { Subscription } from '@/types/subscription';
+import { cache } from 'react';
 import { getBackendUrl, type Profile, type ProfilePatch } from '@/types/profile';
 import type { Country, CountryCity } from '@/types/reference';
 import { formatUserFacingError } from '@/lib/format-user-error';
@@ -163,7 +164,7 @@ export async function enrollInProgram(programSlug = 'take-control'): Promise<Enr
   return response.json() as Promise<Enrollment>;
 }
 
-export async function fetchCountries(): Promise<Country[]> {
+export const fetchCountries = cache(async (): Promise<Country[]> => {
   let response: Response;
   try {
     response = await apiFetch('/reference/countries');
@@ -176,7 +177,7 @@ export async function fetchCountries(): Promise<Country[]> {
   }
 
   return response.json() as Promise<Country[]>;
-}
+});
 
 export async function fetchCountryCities(countryCode: string): Promise<CountryCity[]> {
   const response = await requireApiFetch(`/reference/countries/${encodeURIComponent(countryCode)}/cities`);

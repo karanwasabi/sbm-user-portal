@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
+import { BillingAddressSkeleton } from '@/components/loading/billing-address-skeleton';
 import {
   billingSnapshotsEqual,
   billingTypeLabel,
@@ -29,6 +30,7 @@ import {
 
 type BillingDetailsSectionProps = {
   initialProfile?: BillingProfile | null;
+  initialCountries?: Country[];
 };
 
 function defaultBillingProfile(memberName: string, countryCode?: string | null): BillingProfile {
@@ -69,24 +71,6 @@ function applySnapshot(snapshot: BillingFormSnapshot) {
   };
 }
 
-function BillingAddressSkeleton() {
-  return (
-    <div className="flex items-start gap-2" aria-busy="true" aria-label="Loading billing details">
-      <div className="min-w-0 flex-1 overflow-hidden rounded-[14px] border border-slate-100">
-        <div className="flex items-start justify-between gap-3 px-4 py-3">
-          <div className="min-w-0 flex-1 space-y-2.5">
-            <div className="h-4 w-36 animate-pulse rounded bg-slate-100" />
-            <div className="h-4 w-full max-w-md animate-pulse rounded bg-slate-100" />
-            <div className="h-4 w-4/5 max-w-sm animate-pulse rounded bg-slate-100" />
-          </div>
-          <div className="h-6 w-[72px] shrink-0 animate-pulse rounded-full bg-slate-100" />
-        </div>
-      </div>
-      <div className="h-8 w-12 shrink-0 animate-pulse rounded-lg bg-slate-100" />
-    </div>
-  );
-}
-
 type BillingAddressViewProps = {
   displayLegalName: string;
   displayAddressLine: string;
@@ -123,14 +107,15 @@ function BillingAddressView({
   );
 }
 
-export function BillingDetailsSection({ initialProfile }: BillingDetailsSectionProps) {
+export function BillingDetailsSection({ initialProfile, initialCountries }: BillingDetailsSectionProps) {
   const router = useRouter();
   const { profile } = usePortalProfile();
   const memberName = profile ? getFullName(profile) : '';
 
   const [savedProfile, setSavedProfile] = useState<BillingProfile | null>(initialProfile ?? null);
   const [viewSyncing, setViewSyncing] = useState(false);
-  const [countries, setCountries] = useState<Country[]>([]);
+  const [countries, setCountries] = useState<Country[]>(initialCountries ?? []);
+  const [countriesLoading, setCountriesLoading] = useState(!initialCountries?.length);
   const [countryCities, setCountryCities] = useState<CountryCity[]>([]);
   const [countryStates, setCountryStates] = useState<CountryState[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
@@ -230,10 +215,19 @@ export function BillingDetailsSection({ initialProfile }: BillingDetailsSectionP
   }, [resetForm, viewSyncing]);
 
   useEffect(() => {
+    if (initialCountries?.length) {
+      setCountries(initialCountries);
+      setCountriesLoading(false);
+      return;
+    }
+    setCountriesLoading(true);
     void getCountries()
-      .then(setCountries)
-      .catch(() => setCountries([]));
-  }, []);
+      .then((rows) => {
+        setCountries(rows);
+      })
+      .catch(() => setCountries([]))
+      .finally(() => setCountriesLoading(false));
+  }, [initialCountries]);
 
   useEffect(() => {
     if (!billingCountryCode) {
@@ -445,7 +439,7 @@ export function BillingDetailsSection({ initialProfile }: BillingDetailsSectionP
             </Button>
           </div>
         </div>
-      ) : viewSyncing ? (
+      ) : viewSyncing || countriesLoading ? (
         <BillingAddressSkeleton />
       ) : (
         <BillingAddressView

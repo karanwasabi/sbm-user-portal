@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Calendar, CreditCard, Loader2, Receipt } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
 import { SubscriptionPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
+import { SubscriptionRenewalCardSkeleton } from '@/components/loading/subscription-page-skeleton';
 import { openRazorpaySubscriptionCheckout } from '@/lib/razorpay-checkout';
 import { formatInrFromPaise } from '@/lib/money';
 import type { Subscription } from '@/types/subscription';
@@ -85,7 +86,12 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
   const router = useRouter();
   const [cancelPending, setCancelPending] = useState(false);
   const [updatePending, setUpdatePending] = useState(false);
+  const [pageRefreshing, setPageRefreshing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPageRefreshing(false);
+  }, [subscription]);
 
   if (error === 'no_subscription' || (!subscription && !error)) {
     return (
@@ -146,6 +152,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
     setCancelPending(true);
     setActionError(null);
     try {
+      setPageRefreshing(true);
       await cancelSubscription(true);
       router.refresh();
     } catch (err) {
@@ -164,7 +171,10 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
         key: payload.razorpay_key_id,
         subscriptionId: payload.subscription_id,
         description: subscription.plan_label,
-        onSuccess: () => router.refresh(),
+        onSuccess: () => {
+          setPageRefreshing(true);
+          router.refresh();
+        },
         onDismiss: () => setUpdatePending(false),
       });
     } catch (err) {
@@ -197,84 +207,88 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
         </p>
       ) : null}
 
-      <Card className="overflow-hidden border-slate-200 p-0">
-        <div className="border-b border-slate-100 bg-gradient-to-br from-canvas-cool to-white px-5 py-6 sm:px-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
-                {isCancelling ? 'Access ends' : 'Next renewal'}
-              </p>
-              <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                {formatRenewalDate(isCancelling ? accessEnd : subscription.next_renewal_at)}
-              </p>
-              {!isCancelling ? (
-                <p className="mt-2 text-sm font-semibold text-brand">{renewalCountdownLabel(renewalDays)}</p>
-              ) : (
-                <p className="mt-2 text-sm font-medium text-slate-600">Billing stops after this date.</p>
-              )}
+      {pageRefreshing ? (
+        <SubscriptionRenewalCardSkeleton />
+      ) : (
+        <Card className="overflow-hidden border-slate-200 p-0">
+          <div className="border-b border-slate-100 bg-gradient-to-br from-canvas-cool to-white px-5 py-6 sm:px-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
+                  {isCancelling ? 'Access ends' : 'Next renewal'}
+                </p>
+                <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+                  {formatRenewalDate(isCancelling ? accessEnd : subscription.next_renewal_at)}
+                </p>
+                {!isCancelling ? (
+                  <p className="mt-2 text-sm font-semibold text-brand">{renewalCountdownLabel(renewalDays)}</p>
+                ) : (
+                  <p className="mt-2 text-sm font-medium text-slate-600">Billing stops after this date.</p>
+                )}
+              </div>
+              <Pill tone={statusTone(subscription.subscription_status)}>
+                {statusLabel(subscription.subscription_status)}
+              </Pill>
             </div>
-            <Pill tone={statusTone(subscription.subscription_status)}>
-              {statusLabel(subscription.subscription_status)}
-            </Pill>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
+                <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Amount due</p>
+                <p className="mt-1 text-xl font-extrabold text-slate-900">{monthlyTotalDisplay}</p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {monthlyBaseDisplay} + {monthlyGstDisplay} GST
+                </p>
+              </div>
+              <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
+                <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Payment method</p>
+                <p className="mt-1 text-sm font-bold text-slate-800">
+                  {subscription.payment_method_summary ?? 'Card on file'}
+                </p>
+                {subscription.can_update_payment ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 h-8 px-0 text-brand hover:bg-transparent hover:text-brand-deep"
+                    onClick={handleUpdatePayment}
+                    disabled={updatePending}
+                  >
+                    {updatePending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        Update payment
+                        <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                      </>
+                    )}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
-              <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Amount due</p>
-              <p className="mt-1 text-xl font-extrabold text-slate-900">{monthlyTotalDisplay}</p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                {monthlyBaseDisplay} + {monthlyGstDisplay} GST
-              </p>
+          <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-success/10 text-success">
+                <CreditCard size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-800">{subscription.program_name}</p>
+                <p className="text-xs text-slate-500">Monthly membership · auto-renews</p>
+              </div>
             </div>
-            <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
-              <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Payment method</p>
-              <p className="mt-1 text-sm font-bold text-slate-800">
-                {subscription.payment_method_summary ?? 'Card on file'}
-              </p>
-              {subscription.can_update_payment ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 h-8 px-0 text-brand hover:bg-transparent hover:text-brand-deep"
-                  onClick={handleUpdatePayment}
-                  disabled={updatePending}
-                >
-                  {updatePending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      Update payment
-                      <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                    </>
-                  )}
-                </Button>
-              ) : null}
-            </div>
+            <Link
+              href="/invoices"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-deep"
+            >
+              <Receipt className="h-4 w-4" />
+              View invoice history
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
-        </div>
+        </Card>
+      )}
 
-        <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-success/10 text-success">
-              <CreditCard size={20} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-slate-800">{subscription.program_name}</p>
-              <p className="text-xs text-slate-500">Monthly membership · auto-renews</p>
-            </div>
-          </div>
-          <Link
-            href="/invoices"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-deep"
-          >
-            <Receipt className="h-4 w-4" />
-            View invoice history
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      </Card>
-
-      {subscription.can_cancel ? (
+      {!pageRefreshing && subscription.can_cancel ? (
         <Card>
           <SectionHead
             title="Cancel subscription"
@@ -296,7 +310,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
             </div>
           </div>
         </Card>
-      ) : subscription.cancel_at_period_end ? (
+      ) : !pageRefreshing && subscription.cancel_at_period_end ? (
         <Card>
           <p className="text-sm leading-relaxed text-slate-600">
             Your subscription is set to cancel. Program access continues until{' '}
