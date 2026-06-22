@@ -8,6 +8,7 @@ const pageMeta: Record<string, string> = {
   '/subscription': 'Subscription',
   '/invoices': 'Invoices',
   '/profile': 'Profile',
+  '/support': 'Help & support',
 };
 
 type PortalTopbarProps = {

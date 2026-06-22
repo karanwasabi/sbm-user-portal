@@ -1,9 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { CreditCard, FileText, HelpCircle, Home, User } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { PortalNavLink } from '@/components/layout/portal/portal-nav-link';
+import { cn } from '@/lib/cn';
 
 const navItems = [
   {
@@ -66,13 +68,16 @@ export function PortalSidebar() {
       </nav>
 
       <div className="mt-auto">
-        <a
-          href="#"
-          className="flex items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-white/60"
+        <Link
+          href="/support"
+          className={cn(
+            'flex items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-xs font-semibold transition-colors',
+            pathname === '/support' ? 'bg-white font-bold text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-white/60'
+          )}
         >
-          <HelpCircle size={16} className="text-slate-500" />
+          <HelpCircle size={16} className={pathname === '/support' ? 'text-brand' : 'text-slate-500'} />
           Help &amp; support
-        </a>
+        </Link>
       </div>
     </aside>
   );

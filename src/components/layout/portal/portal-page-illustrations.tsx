@@ -129,3 +129,19 @@ export function SecurityPageIllustration() {
     </svg>
   );
 }
+
+export function SupportPageIllustration() {
+  return (
+    <svg viewBox="0 0 280 180" fill="none" className="h-auto w-full max-w-[260px]" aria-hidden>
+      <circle cx="140" cy="90" r="56" fill="white" fillOpacity="0.18" />
+      <rect x="72" y="52" width="136" height="88" rx="16" fill="white" fillOpacity="0.95" />
+      <path d="M72 68l68 48 68-48" stroke="#5C65CF" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="96" y="96" width="88" height="8" rx="4" fill="#E2E8F0" />
+      <rect x="96" y="112" width="64" height="8" rx="4" fill="#E2E8F0" />
+      <circle cx="208" cy="56" r="18" fill="#FFB703" fillOpacity="0.95" />
+      <path d="M208 50v12M202 56h12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="56" cy="64" r="5" fill="white" fillOpacity="0.5" />
+      <circle cx="228" cy="128" r="4" fill="white" fillOpacity="0.4" />
+    </svg>
+  );
+}
