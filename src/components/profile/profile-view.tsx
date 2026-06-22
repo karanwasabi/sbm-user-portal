@@ -12,6 +12,7 @@ import { CountryCombobox } from '@/components/profile/country-combobox';
 import { MealPreferenceSelect } from '@/components/profile/meal-preference-select';
 import { NotificationPreferencesCard } from '@/components/profile/notification-preferences-card';
 import { ParentalConsentBlock } from '@/components/profile/parental-consent-block';
+import { ProfileCompletionRing } from '@/components/profile/profile-completion-ring';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { SexSelect } from '@/components/profile/sex-select';
 import { TimezonePicker } from '@/components/profile/timezone-picker';
@@ -30,6 +31,7 @@ import {
   shouldShowParentalConsent,
   validateDateOfBirth,
 } from '@/lib/date-of-birth';
+import { getProfileCompletionPercentFromValues } from '@/lib/profile-completion';
 import { formatTimezoneLabel } from '@/lib/profile-timezone';
 import { toTitleCase } from '@/lib/title-case';
 import {
@@ -222,6 +224,36 @@ export function ProfileView({ countries }: ProfileViewProps) {
 
   const canSave = isDirty && !dateOfBirthError;
 
+  const completionPercent = useMemo(
+    () =>
+      getProfileCompletionPercentFromValues({
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        date_of_birth: dateOfBirth,
+        sex,
+        timezone_id: timezoneId,
+        country_code: countryCode,
+        city,
+        meal_preference: mealPreference,
+        whatsapp,
+        parental_consent: parentalConsent,
+      }),
+    [
+      firstName,
+      lastName,
+      email,
+      dateOfBirth,
+      sex,
+      timezoneId,
+      countryCode,
+      city,
+      mealPreference,
+      whatsapp,
+      parentalConsent,
+    ]
+  );
+
   return (
     <PortalPageLayout
       eyebrow="Account"
@@ -254,9 +286,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
               <Pill tone="success">Active member</Pill>
             </div>
           </div>
-          <Button variant="light" size="sm" className="shrink-0 self-start sm:self-center">
-            Change photo
-          </Button>
+          <ProfileCompletionRing percent={completionPercent} className="self-start sm:self-center" />
         </div>
       </Card>
 
@@ -303,6 +333,20 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 leftIcon={<Mail size={16} className="text-slate-400" />}
               />
             </Field>
+            <Field label="Sex">
+              <SexSelect value={sex} onChange={setSex} disabled={pending} />
+            </Field>
+            <Field label="Mobile (WhatsApp)">
+              <PhoneInput
+                name="whatsapp"
+                value={whatsapp}
+                onChange={setWhatsapp}
+                countries={countries}
+                suggestedCountryIso={countryCode}
+                syncToken={phoneSyncToken}
+                disabled={pending}
+              />
+            </Field>
             <div className="flex flex-col gap-2">
               <Field label="Date of birth" error={dateOfBirthError ?? undefined}>
                 <TextInput
@@ -326,12 +370,6 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 />
               ) : null}
             </div>
-            <Field label="Sex">
-              <SexSelect value={sex} onChange={setSex} disabled={pending} />
-            </Field>
-            <Field label="Meal preference">
-              <MealPreferenceSelect value={mealPreference} onChange={setMealPreference} disabled={pending} />
-            </Field>
             <Field label="Country">
               <CountryCombobox
                 value={countryCode}
@@ -350,19 +388,11 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 loading={loadingCities}
               />
             </Field>
-            <Field label="Mobile (WhatsApp)">
-              <PhoneInput
-                name="whatsapp"
-                value={whatsapp}
-                onChange={setWhatsapp}
-                countries={countries}
-                suggestedCountryIso={countryCode}
-                syncToken={phoneSyncToken}
-                disabled={pending}
-              />
-            </Field>
             <Field label="Timezone">
               <TimezonePicker value={timezoneId} onChange={setTimezoneId} disabled={pending} />
+            </Field>
+            <Field label="Meal preference">
+              <MealPreferenceSelect value={mealPreference} onChange={setMealPreference} disabled={pending} />
             </Field>
           </div>
 
