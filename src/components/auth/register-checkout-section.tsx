@@ -289,6 +289,13 @@ export function RegisterCheckoutSection({
     if (matchedState) setBillingState(matchedState.name);
   };
 
+  const handleClearPromo = () => {
+    setAppliedPromo('');
+    setPromoCode('');
+    if (previewQuote) setQuote(previewQuote);
+    setError(null);
+  };
+
   const finishPayment = async () => {
     setConfirmingPayment(true);
     await pollUntilEnrolled();
@@ -309,10 +316,14 @@ export function RegisterCheckoutSection({
     setError(null);
     try {
       let start;
-      try {
-        start = await getCheckoutResume('take-control');
-      } catch {
+      if (appliedPromo) {
         start = await startCheckout({ ...buildCheckoutRequest(), legal_name: trimmedLegalName });
+      } else {
+        try {
+          start = await getCheckoutResume('take-control');
+        } catch {
+          start = await startCheckout({ ...buildCheckoutRequest(), legal_name: trimmedLegalName });
+        }
       }
 
       if (start.mock) {
@@ -451,6 +462,11 @@ export function RegisterCheckoutSection({
           >
             Apply
           </Button>
+          {appliedPromo ? (
+            <Button type="button" variant="light" size="md" onClick={handleClearPromo} disabled={quotePending}>
+              Clear
+            </Button>
+          ) : null}
         </div>
       </Field>
 

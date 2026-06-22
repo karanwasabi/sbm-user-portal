@@ -223,6 +223,13 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
     setAppliedPromo(promoCode.trim().toUpperCase());
   };
 
+  const handleClearPromo = () => {
+    setAppliedPromo('');
+    setPromoCode('');
+    if (previewQuote) setQuote(previewQuote);
+    setError(null);
+  };
+
   const handleLegalNameChange = (value: string) => {
     setLegalNameTouched(true);
     setLegalName(value);
@@ -404,6 +411,11 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
                 <Button type="button" variant="light" size="md" onClick={handleApplyPromo} disabled={quotePending}>
                   Apply
                 </Button>
+                {appliedPromo ? (
+                  <Button type="button" variant="light" size="md" onClick={handleClearPromo} disabled={quotePending}>
+                    Clear
+                  </Button>
+                ) : null}
               </div>
             </Field>
           </div>
