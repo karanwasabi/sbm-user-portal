@@ -7,11 +7,25 @@ import { usePortalProfile } from '@/components/layout/portal/portal-profile-cont
 import { BillingDetailsFields } from '@/components/billing/billing-details-fields';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
+import {
+  billingSnapshotsEqual,
+  billingTypeLabel,
+  currentBillingSnapshot,
+  formatBillingAddressLine,
+  type BillingFormSnapshot,
+} from '@/lib/billing-display';
 import type { BillingProfile, BillingProfilePatch } from '@/types/billing';
 import { getFullName } from '@/types/profile';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
-import { getCountries, getCountryCities, getCountryStates, patchBillingProfile } from '@/utils/client-api';
+import {
+  getBillingProfile,
+  getCountries,
+  getCountryCities,
+  getCountryStates,
+  patchBillingProfile,
+} from '@/utils/client-api';
 
 type BillingDetailsSectionProps = {
   initialProfile?: BillingProfile | null;
@@ -27,7 +41,7 @@ function defaultBillingProfile(memberName: string, countryCode?: string | null):
   };
 }
 
-function profileToFormState(profile: BillingProfile) {
+function profileToFormState(profile: BillingProfile): BillingFormSnapshot {
   return {
     billingCountryCode: profile.billing_country_code || 'IN',
     billingType: profile.billing_type,
@@ -41,14 +55,81 @@ function profileToFormState(profile: BillingProfile) {
   };
 }
 
+function applySnapshot(snapshot: BillingFormSnapshot) {
+  return {
+    billingCountryCode: snapshot.billingCountryCode,
+    billingType: snapshot.billingType,
+    gstin: snapshot.gstin,
+    legalName: snapshot.legalName,
+    billingState: snapshot.billingState,
+    addressLine1: snapshot.addressLine1,
+    addressLine2: snapshot.addressLine2,
+    billingCity: snapshot.billingCity,
+    postalCode: snapshot.postalCode,
+  };
+}
+
+function BillingAddressSkeleton() {
+  return (
+    <div className="flex items-start gap-2" aria-busy="true" aria-label="Loading billing details">
+      <div className="min-w-0 flex-1 overflow-hidden rounded-[14px] border border-slate-100">
+        <div className="flex items-start justify-between gap-3 px-4 py-3">
+          <div className="min-w-0 flex-1 space-y-2.5">
+            <div className="h-4 w-36 animate-pulse rounded bg-slate-100" />
+            <div className="h-4 w-full max-w-md animate-pulse rounded bg-slate-100" />
+            <div className="h-4 w-4/5 max-w-sm animate-pulse rounded bg-slate-100" />
+          </div>
+          <div className="h-6 w-[72px] shrink-0 animate-pulse rounded-full bg-slate-100" />
+        </div>
+      </div>
+      <div className="h-8 w-12 shrink-0 animate-pulse rounded-lg bg-slate-100" />
+    </div>
+  );
+}
+
+type BillingAddressViewProps = {
+  displayLegalName: string;
+  displayAddressLine: string;
+  displayGstin: string;
+  billingType: 'personal' | 'business';
+  onEdit: () => void;
+};
+
+function BillingAddressView({
+  displayLegalName,
+  displayAddressLine,
+  displayGstin,
+  billingType,
+  onEdit,
+}: BillingAddressViewProps) {
+  return (
+    <div className="flex items-start gap-2">
+      <div className="min-w-0 flex-1 overflow-hidden rounded-[14px] border border-slate-100">
+        <div className="flex items-start justify-between gap-3 px-4 py-3">
+          <div className="min-w-0 text-sm leading-relaxed text-slate-700">
+            <p className="font-semibold text-slate-900">{displayLegalName}</p>
+            <p className="mt-1">{displayAddressLine}</p>
+            {displayGstin ? <p className="mt-1 text-slate-600">GSTIN: {displayGstin}</p> : null}
+          </div>
+          <Pill tone="neutral" className="shrink-0">
+            {billingTypeLabel(billingType)}
+          </Pill>
+        </div>
+      </div>
+      <Button type="button" variant="light" size="sm" className="shrink-0" onClick={onEdit}>
+        Edit
+      </Button>
+    </div>
+  );
+}
+
 export function BillingDetailsSection({ initialProfile }: BillingDetailsSectionProps) {
   const router = useRouter();
   const { profile } = usePortalProfile();
   const memberName = profile ? getFullName(profile) : '';
-  const resolvedProfile = useMemo(
-    () => initialProfile ?? defaultBillingProfile(memberName, profile?.country_code),
-    [initialProfile, memberName, profile?.country_code]
-  );
+
+  const [savedProfile, setSavedProfile] = useState<BillingProfile | null>(initialProfile ?? null);
+  const [viewSyncing, setViewSyncing] = useState(false);
   const [countries, setCountries] = useState<Country[]>([]);
   const [countryCities, setCountryCities] = useState<CountryCity[]>([]);
   const [countryStates, setCountryStates] = useState<CountryState[]>([]);
@@ -57,17 +138,23 @@ export function BillingDetailsSection({ initialProfile }: BillingDetailsSectionP
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [editing, setEditing] = useState(false);
 
-  const initialForm = useMemo(() => profileToFormState(resolvedProfile), [resolvedProfile]);
-  const [billingCountryCode, setBillingCountryCode] = useState(initialForm.billingCountryCode);
-  const [billingType, setBillingType] = useState(initialForm.billingType);
-  const [gstin, setGstin] = useState(initialForm.gstin);
-  const [legalName, setLegalName] = useState(initialForm.legalName);
-  const [billingState, setBillingState] = useState(initialForm.billingState);
-  const [addressLine1, setAddressLine1] = useState(initialForm.addressLine1);
-  const [addressLine2, setAddressLine2] = useState(initialForm.addressLine2);
-  const [billingCity, setBillingCity] = useState(initialForm.billingCity);
-  const [postalCode, setPostalCode] = useState(initialForm.postalCode);
+  const resolvedProfile = useMemo(
+    () => savedProfile ?? defaultBillingProfile(memberName, profile?.country_code),
+    [savedProfile, memberName, profile?.country_code]
+  );
+  const savedSnapshot = useMemo(() => profileToFormState(resolvedProfile), [resolvedProfile]);
+
+  const [billingCountryCode, setBillingCountryCode] = useState(savedSnapshot.billingCountryCode);
+  const [billingType, setBillingType] = useState(savedSnapshot.billingType);
+  const [gstin, setGstin] = useState(savedSnapshot.gstin);
+  const [legalName, setLegalName] = useState(savedSnapshot.legalName);
+  const [billingState, setBillingState] = useState(savedSnapshot.billingState);
+  const [addressLine1, setAddressLine1] = useState(savedSnapshot.addressLine1);
+  const [addressLine2, setAddressLine2] = useState(savedSnapshot.addressLine2);
+  const [billingCity, setBillingCity] = useState(savedSnapshot.billingCity);
+  const [postalCode, setPostalCode] = useState(savedSnapshot.postalCode);
 
   const pricingRegion = useMemo<'domestic' | 'international'>(
     () => (billingCountryCode === 'IN' ? 'domestic' : 'international'),
@@ -80,8 +167,44 @@ export function BillingDetailsSection({ initialProfile }: BillingDetailsSectionP
   const billingCountry = selectedCountry?.name ?? billingCountryCode;
   const hasSubdivisions = countryStates.length > 0;
 
-  useEffect(() => {
-    const next = profileToFormState(resolvedProfile);
+  const savedCountryName = useMemo(() => {
+    const country = countries.find((entry) => entry.iso_code === savedSnapshot.billingCountryCode);
+    return country?.name ?? savedSnapshot.billingCountryCode;
+  }, [countries, savedSnapshot.billingCountryCode]);
+
+  const currentSnapshot = useMemo(
+    () =>
+      currentBillingSnapshot({
+        billingCountryCode,
+        billingType,
+        gstin,
+        legalName,
+        billingState,
+        addressLine1,
+        addressLine2,
+        billingCity,
+        postalCode,
+      }),
+    [
+      addressLine1,
+      addressLine2,
+      billingCity,
+      billingCountryCode,
+      billingState,
+      billingType,
+      gstin,
+      legalName,
+      postalCode,
+    ]
+  );
+
+  const isDirty = useMemo(
+    () => !billingSnapshotsEqual(currentSnapshot, savedSnapshot),
+    [currentSnapshot, savedSnapshot]
+  );
+
+  const resetForm = useCallback(() => {
+    const next = applySnapshot(savedSnapshot);
     setBillingCountryCode(next.billingCountryCode);
     setBillingType(next.billingType);
     setGstin(next.gstin);
@@ -91,7 +214,20 @@ export function BillingDetailsSection({ initialProfile }: BillingDetailsSectionP
     setAddressLine2(next.addressLine2);
     setBillingCity(next.billingCity);
     setPostalCode(next.postalCode);
-  }, [resolvedProfile]);
+    setError(null);
+    setSaved(false);
+  }, [savedSnapshot]);
+
+  useEffect(() => {
+    setSavedProfile(initialProfile ?? null);
+    setViewSyncing(false);
+  }, [initialProfile]);
+
+  useEffect(() => {
+    if (viewSyncing) return;
+    resetForm();
+    setEditing(false);
+  }, [resetForm, viewSyncing]);
 
   useEffect(() => {
     void getCountries()
@@ -156,6 +292,11 @@ export function BillingDetailsSection({ initialProfile }: BillingDetailsSectionP
     if (matchedState) setBillingState(matchedState.name);
   };
 
+  const handleDiscard = () => {
+    resetForm();
+    setEditing(false);
+  };
+
   const buildPatch = useCallback((): BillingProfilePatch => {
     const trimmedGstin = gstin.trim().toUpperCase();
     return {
@@ -199,85 +340,122 @@ export function BillingDetailsSection({ initialProfile }: BillingDetailsSectionP
     setError(null);
     setSaved(false);
     try {
-      await patchBillingProfile(buildPatch());
-      setSaved(true);
+      const updated = await patchBillingProfile(buildPatch());
+      setViewSyncing(true);
+      setEditing(false);
       router.refresh();
+      try {
+        const refreshed = await getBillingProfile();
+        setSavedProfile(refreshed);
+      } catch {
+        setSavedProfile(updated);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save billing details.');
     } finally {
       setPending(false);
+      setViewSyncing(false);
     }
   };
 
+  const displayLegalName = savedSnapshot.legalName.trim() || memberName.trim() || '—';
+  const displayAddressLine = formatBillingAddressLine(savedSnapshot, savedCountryName);
+  const displayGstin = savedSnapshot.gstin.trim();
+
   return (
     <Card>
-      <SectionHead
-        title="Billing details"
-        subtitle="Name and address printed on tax invoices. Your coaching profile is managed separately."
-      />
-      <BillingDetailsFields
-        countries={countries}
-        billingCountryCode={billingCountryCode}
-        onBillingCountryChange={handleBillingCountryChange}
-        billingType={billingType}
-        onBillingTypeChange={(type) => {
-          setBillingType(type);
-          setSaved(false);
-        }}
-        pricingRegion={pricingRegion}
-        gstin={gstin}
-        onGstinChange={(value) => {
-          setGstin(value);
-          setSaved(false);
-        }}
-        legalName={legalName}
-        onLegalNameChange={(value) => {
-          setLegalName(value);
-          setSaved(false);
-        }}
-        addressLine1={addressLine1}
-        onAddressLine1Change={(value) => {
-          setAddressLine1(value);
-          setSaved(false);
-        }}
-        addressLine2={addressLine2}
-        onAddressLine2Change={(value) => {
-          setAddressLine2(value);
-          setSaved(false);
-        }}
-        billingCity={billingCity}
-        onBillingCityChange={(value) => {
-          setBillingCity(value);
-          setSaved(false);
-        }}
-        billingState={billingState}
-        onBillingStateChange={(value) => {
-          setBillingState(value);
-          setSaved(false);
-        }}
-        postalCode={postalCode}
-        onPostalCodeChange={(value) => {
-          setPostalCode(value);
-          setSaved(false);
-        }}
-        countryCities={countryCities}
-        countryStates={countryStates}
-        loadingCities={loadingCities}
-        loadingStates={loadingStates}
-        onCitySuggestion={handleCitySuggestion}
-        disabled={pending}
-      />
-      {error ? (
-        <p className="mt-3 text-sm font-semibold text-danger-press" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {saved ? <p className="mt-3 text-sm font-medium text-success">Billing details saved.</p> : null}
-      <div className="mt-4 flex justify-end">
-        <Button type="button" variant="primary" size="md" onClick={() => void handleSave()} disabled={pending}>
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save billing details'}
-        </Button>
-      </div>
+      <SectionHead title="Billing details" subtitle="Name and address printed on tax invoices." />
+
+      {editing ? (
+        <div className="flex flex-col gap-3">
+          <BillingDetailsFields
+            countries={countries}
+            billingCountryCode={billingCountryCode}
+            onBillingCountryChange={handleBillingCountryChange}
+            billingType={billingType}
+            onBillingTypeChange={(type) => {
+              setBillingType(type);
+              setSaved(false);
+            }}
+            pricingRegion={pricingRegion}
+            gstin={gstin}
+            onGstinChange={(value) => {
+              setGstin(value);
+              setSaved(false);
+            }}
+            legalName={legalName}
+            onLegalNameChange={(value) => {
+              setLegalName(value);
+              setSaved(false);
+            }}
+            addressLine1={addressLine1}
+            onAddressLine1Change={(value) => {
+              setAddressLine1(value);
+              setSaved(false);
+            }}
+            addressLine2={addressLine2}
+            onAddressLine2Change={(value) => {
+              setAddressLine2(value);
+              setSaved(false);
+            }}
+            billingCity={billingCity}
+            onBillingCityChange={(value) => {
+              setBillingCity(value);
+              setSaved(false);
+            }}
+            billingState={billingState}
+            onBillingStateChange={(value) => {
+              setBillingState(value);
+              setSaved(false);
+            }}
+            postalCode={postalCode}
+            onPostalCodeChange={(value) => {
+              setPostalCode(value);
+              setSaved(false);
+            }}
+            countryCities={countryCities}
+            countryStates={countryStates}
+            loadingCities={loadingCities}
+            loadingStates={loadingStates}
+            onCitySuggestion={handleCitySuggestion}
+            disabled={pending}
+          />
+          {error ? (
+            <p className="text-sm font-semibold text-danger-press" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {saved ? <p className="text-sm font-medium text-success">Billing details saved.</p> : null}
+          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <Button type="button" variant="ghost" size="md" onClick={handleDiscard} disabled={pending}>
+              {isDirty ? 'Discard' : 'Cancel'}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={() => void handleSave()}
+              disabled={pending || !isDirty}
+              aria-busy={pending}
+            >
+              <span className="relative inline-flex items-center justify-center">
+                <span className={pending ? 'opacity-0' : undefined}>Save changes</span>
+                {pending ? <Loader2 size={16} className="absolute animate-spin" aria-hidden /> : null}
+              </span>
+            </Button>
+          </div>
+        </div>
+      ) : viewSyncing ? (
+        <BillingAddressSkeleton />
+      ) : (
+        <BillingAddressView
+          displayLegalName={displayLegalName}
+          displayAddressLine={displayAddressLine}
+          displayGstin={displayGstin}
+          billingType={savedSnapshot.billingType}
+          onEdit={() => setEditing(true)}
+        />
+      )}
     </Card>
   );
 }

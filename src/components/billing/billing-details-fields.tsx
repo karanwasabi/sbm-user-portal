@@ -158,6 +158,8 @@ export function BillingDetailsFields({
               emptyMessage={`No ${subdivisionLabel.toLowerCase()}s found.`}
               disabled={disabled || loadingStates}
               scrollToSelectedOnOpen
+              clearable
+              clearLabel={`Clear ${subdivisionLabel.toLowerCase()}`}
             />
           </Field>
         ) : null}

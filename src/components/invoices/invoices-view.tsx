@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
 import { formatInrFromPaise } from '@/lib/money';
+import { formatBillingTypeDisplay } from '@/lib/billing-display';
 import type { BillingProfile } from '@/types/billing';
 import type { Invoice } from '@/types/checkout';
 
@@ -38,7 +39,9 @@ export function InvoicesView({ invoices, billingProfile, error }: InvoicesViewPr
         },
         {
           label: 'Billing type',
-          value: String(latest?.billing_snapshot?.billing_type ?? 'Individual'),
+          value: formatBillingTypeDisplay(
+            billingProfile?.billing_type ?? (latest?.billing_snapshot?.billing_type as string | undefined)
+          ),
         },
       ]}
     >
