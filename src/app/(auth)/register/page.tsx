@@ -4,7 +4,7 @@ import { RegisterView } from '@/components/auth/register-view';
 import { parseRegisterDraft, profileToRegisterDefaults, registerDraftToFormValues } from '@/lib/merge-profile-patch';
 import { hasPortalAccess, isEnrolled } from '@/lib/onboarding';
 import { getRequestCountryIso } from '@/lib/request-country-code';
-import { PENDING_DPDP_COOKIE } from '@/types/signup';
+import { PENDING_DPDP_COOKIE } from '@/types/onboarding';
 import { REGISTER_DRAFT_COOKIE } from '@/types/register';
 import { fetchCountries, getLatestProfile, getMyEnrollments } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
@@ -31,21 +31,30 @@ export default async function RegisterPage() {
     getRequestCountryIso(),
   ]);
 
-  if (!draft && user?.email_confirmed_at) {
-    emailVerified = true;
-    try {
-      const [profile, enrollments] = await Promise.all([
-        getLatestProfile().catch(() => null),
-        getMyEnrollments().catch(() => []),
-      ]);
-      if (profile && (hasPortalAccess(profile, enrollments) || isEnrolled(enrollments))) {
-        redirect('/');
-      }
-      if (profile && user.email) {
+  if (!draft && user) {
+    if (!user.email_confirmed_at && user.email) {
+      try {
+        const profile = await getLatestProfile().catch(() => null);
         initialValues = profileToRegisterDefaults(profile, user.email);
+      } catch {
+        initialValues = profileToRegisterDefaults(null, user.email);
       }
-    } catch {
-      // Allow register page for authenticated users without enrollment.
+    } else if (user.email_confirmed_at) {
+      emailVerified = true;
+      try {
+        const [profile, enrollments] = await Promise.all([
+          getLatestProfile().catch(() => null),
+          getMyEnrollments().catch(() => []),
+        ]);
+        if (profile && (hasPortalAccess(profile, enrollments) || isEnrolled(enrollments))) {
+          redirect('/');
+        }
+        if (profile && user.email) {
+          initialValues = profileToRegisterDefaults(profile, user.email);
+        }
+      } catch {
+        // Allow register page for authenticated users without enrollment.
+      }
     }
   }
 

@@ -19,7 +19,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
   }
 
   if (!user.email_confirmed_at) {
-    redirect('/signup/verify');
+    redirect('/register');
   }
 
   let profile = null;

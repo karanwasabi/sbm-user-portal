@@ -1,15 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_ROUTES = [
-  '/login',
-  '/signup',
-  '/register',
-  '/forgot-password',
-  '/reset-password',
-  '/auth/confirm',
-  '/unauthorized',
-];
+const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/confirm', '/unauthorized'];
 const ONBOARDING_ROUTE = '/onboarding';
 
 function isPublicRoute(pathname: string) {
@@ -58,8 +50,15 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const publicRoute = isPublicRoute(pathname);
   const requiresAuth = isProtectedRoute(pathname);
-  const isVerifyRoute = pathname.startsWith('/signup/verify') || pathname === '/auth/confirm';
+  const isConfirmRoute = pathname === '/auth/confirm';
   const isOnboardingRoute = pathname === ONBOARDING_ROUTE || pathname.startsWith(`${ONBOARDING_ROUTE}/`);
+
+  if (pathname === '/signup' || pathname.startsWith('/signup/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/register';
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
 
   if (!user && requiresAuth) {
     const url = request.nextUrl.clone();
@@ -70,7 +69,7 @@ export async function updateSession(request: NextRequest) {
   if (user && pathname === '/login') {
     const url = request.nextUrl.clone();
     if (!isEmailVerified(user)) {
-      url.pathname = '/signup/verify';
+      url.pathname = '/register';
     } else {
       url.pathname = ONBOARDING_ROUTE;
     }
@@ -78,24 +77,10 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && !isEmailVerified(user)) {
-    const allowed =
-      isVerifyRoute ||
-      pathname === '/signup' ||
-      pathname.startsWith('/signup/') ||
-      pathname === '/register' ||
-      pathname.startsWith('/register/');
+    const allowed = isConfirmRoute || pathname === '/register' || pathname.startsWith('/register/');
     if (!allowed) {
       const url = request.nextUrl.clone();
-      url.pathname = '/signup/verify';
-      return NextResponse.redirect(url);
-    }
-  }
-
-  if (user && isEmailVerified(user)) {
-    if (pathname.startsWith('/signup')) {
-      const url = request.nextUrl.clone();
-      url.pathname = ONBOARDING_ROUTE;
-      url.search = '';
+      url.pathname = '/register';
       return NextResponse.redirect(url);
     }
   }

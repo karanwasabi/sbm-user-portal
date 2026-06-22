@@ -1,19 +1,16 @@
 'use server';
 
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { hasProduct, PRODUCT_MEMBER_PORTAL } from '@/lib/access';
 import { emailOtpInvalidMessage, isValidEmailOtp } from '@/lib/email-otp';
 import { formatUserFacingError } from '@/lib/format-user-error';
 import { LOGIN_PRODUCT_MEMBER_PORTAL, MEMBER_PORTAL_LOGIN_DENIED_MESSAGE } from '@/lib/login-access';
 import { getPostAuthRedirectPath } from '@/lib/onboarding';
-import { SIGNUP_EMAIL_COOKIE } from '@/types/signup';
 import { getMyAccess } from '@/utils/access-api';
 import { getLatestProfile, getMyEnrollments, ProfileFetchError, sendLoginOTP } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
-
-const SIGNUP_COOKIE_MAX_AGE = 60 * 60;
 
 export type LoginFocusField = 'email' | 'password' | 'otp';
 
@@ -114,14 +111,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   }
 
   if (!data.user?.email_confirmed_at) {
-    const cookieStore = await cookies();
-    cookieStore.set(SIGNUP_EMAIL_COOKIE, email.toLowerCase(), {
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: SIGNUP_COOKIE_MAX_AGE,
-      path: '/',
-    });
-    redirect('/signup/verify');
+    redirect('/register');
   }
 
   const denied = await ensureMemberPortalLoginAccess(supabase, 'password');

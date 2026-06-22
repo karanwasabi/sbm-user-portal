@@ -128,7 +128,7 @@ export function ForgotPasswordForm() {
 
       <p className={cn('mt-5.5 text-center text-[13px] font-medium text-slate-500', success && 'invisible')}>
         New to Slow Burn Method?{' '}
-        <Link href="/signup" className="font-bold text-brand no-underline">
+        <Link href="/register" className="font-bold text-brand no-underline">
           Create an account
         </Link>
       </p>

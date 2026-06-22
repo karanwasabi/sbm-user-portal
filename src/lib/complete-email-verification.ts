@@ -3,16 +3,16 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { DPDP_PRIVACY_URL, DPDP_TERMS_URL } from '@/lib/dpdp-consent';
-import { PENDING_DPDP_COOKIE, SIGNUP_EMAIL_COOKIE } from '@/types/signup';
+import { PENDING_DPDP_COOKIE } from '@/types/onboarding';
 import { ProfileFetchError, recordDpdpConsent } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
-export type CompleteSignupVerificationResult = {
+export type CompleteEmailVerificationResult = {
   error: string | null;
 };
 
-/** Shared post-verify step for OTP submit and email confirmation links. */
-export async function completeSignupVerification(): Promise<CompleteSignupVerificationResult> {
+/** Shared post-verify step for email confirmation links. */
+export async function completeEmailVerification(): Promise<CompleteEmailVerificationResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -30,7 +30,6 @@ export async function completeSignupVerification(): Promise<CompleteSignupVerifi
 
   const cookieStore = await cookies();
   const pendingDpdp = cookieStore.get(PENDING_DPDP_COOKIE)?.value === '1';
-  cookieStore.delete(SIGNUP_EMAIL_COOKIE);
   cookieStore.delete(PENDING_DPDP_COOKIE);
 
   if (pendingDpdp) {
@@ -45,5 +44,5 @@ export async function completeSignupVerification(): Promise<CompleteSignupVerifi
     }
   }
 
-  redirect('/onboarding?verified=1');
+  redirect('/register');
 }

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { completeSignupVerification } from '@/lib/complete-signup-verification';
+import { completeEmailVerification } from '@/lib/complete-email-verification';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { Button } from '@/components/ui/button';
@@ -68,7 +68,7 @@ export function ConfirmEmailLinkForm() {
 
       window.history.replaceState(null, '', window.location.pathname);
 
-      const result = await completeSignupVerification();
+      const result = await completeEmailVerification();
       if (result.error) {
         setError(result.error);
         setIsChecking(false);
@@ -101,11 +101,11 @@ export function ConfirmEmailLinkForm() {
         {error}
       </p>
       <div className="mt-6 flex flex-col gap-3">
-        <Button href="/signup/verify" variant="primary" size="lg" fullWidth>
-          Enter verification code
+        <Button href="/register" variant="primary" size="lg" fullWidth>
+          Continue registration
         </Button>
-        <Link href="/signup" className="text-center text-xs font-semibold text-brand no-underline">
-          Start over
+        <Link href="/login" className="text-center text-xs font-semibold text-brand no-underline">
+          Back to sign in
         </Link>
       </div>
     </AuthLayout>

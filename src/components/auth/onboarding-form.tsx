@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Cake, Loader2 } from 'lucide-react';
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
-import { completeOnboarding } from '@/app/(auth)/signup/actions';
+import { completeOnboarding } from '@/app/(onboarding)/onboarding/actions';
 import { AuthStepIndicator } from '@/components/auth/auth-step-indicator';
 import { OnboardingSessionHeader } from '@/components/auth/onboarding-session-header';
 import { AuthCardBody, AuthLayout } from '@/components/layout/auth-layout';
@@ -26,7 +26,7 @@ import { toTitleCase } from '@/lib/title-case';
 import type { Enrollment } from '@/types/enrollment';
 import type { Profile } from '@/types/profile';
 import type { Country } from '@/types/reference';
-import type { CompleteOnboardingState } from '@/types/signup';
+import type { CompleteOnboardingState } from '@/types/onboarding';
 
 const initialCompleteState: CompleteOnboardingState = { error: null, success: false };
 

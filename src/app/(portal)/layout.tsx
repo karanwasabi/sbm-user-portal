@@ -18,7 +18,7 @@ export default async function PortalLayout({ children }: { children: React.React
   }
 
   if (!user.email_confirmed_at) {
-    redirect('/signup/verify');
+    redirect('/register');
   }
 
   try {
