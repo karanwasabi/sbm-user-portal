@@ -4,6 +4,7 @@ import type { Subscription } from '@/types/subscription';
 import { getBackendUrl, type Profile, type ProfilePatch } from '@/types/profile';
 import type { Country, CountryCity } from '@/types/reference';
 import { formatUserFacingError } from '@/lib/format-user-error';
+import { LOGIN_PRODUCT_MEMBER_PORTAL } from '@/lib/login-access';
 import { createClient } from '@/utils/supabase/server';
 
 export class ProfileFetchError extends Error {
@@ -315,7 +316,11 @@ export async function resendRegisterOTP(
   }
 }
 
-export async function sendLoginOTP(email: string, extraHeaders: HeadersInit = {}): Promise<void> {
+export async function sendLoginOTP(
+  email: string,
+  product: typeof LOGIN_PRODUCT_MEMBER_PORTAL,
+  extraHeaders: HeadersInit = {}
+): Promise<void> {
   let response: Response;
   try {
     response = await fetch(`${getBackendUrl()}/auth/login/otp`, {
@@ -324,7 +329,7 @@ export async function sendLoginOTP(email: string, extraHeaders: HeadersInit = {}
         'Content-Type': 'application/json',
         ...extraHeaders,
       },
-      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), product }),
       cache: 'no-store',
     });
   } catch {

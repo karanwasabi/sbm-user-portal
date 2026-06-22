@@ -2,12 +2,16 @@
 
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { hasProduct, PRODUCT_MEMBER_PORTAL } from '@/lib/access';
 import { emailOtpInvalidMessage, isValidEmailOtp } from '@/lib/email-otp';
-import { getPostAuthRedirectPath } from '@/lib/onboarding';
 import { formatUserFacingError } from '@/lib/format-user-error';
+import { LOGIN_PRODUCT_MEMBER_PORTAL, MEMBER_PORTAL_LOGIN_DENIED_MESSAGE } from '@/lib/login-access';
+import { getPostAuthRedirectPath } from '@/lib/onboarding';
 import { SIGNUP_EMAIL_COOKIE } from '@/types/signup';
+import { getMyAccess } from '@/utils/access-api';
 import { getLatestProfile, getMyEnrollments, ProfileFetchError, sendLoginOTP } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const SIGNUP_COOKIE_MAX_AGE = 60 * 60;
 
@@ -34,6 +38,34 @@ async function getForwardedHeaders(): Promise<HeadersInit> {
   if (forwarded) out['X-Forwarded-For'] = forwarded;
   if (realIp) out['X-Real-IP'] = realIp;
   return out;
+}
+
+async function rejectLoginWithoutMemberPortalAccess(
+  supabase: SupabaseClient,
+  focusField: LoginFocusField
+): Promise<LoginState> {
+  await supabase.auth.signOut();
+  const errorFields: LoginFocusField[] = focusField === 'otp' ? ['email', 'otp'] : ['email', 'password'];
+  return {
+    error: MEMBER_PORTAL_LOGIN_DENIED_MESSAGE,
+    focusField,
+    errorFields,
+  };
+}
+
+async function ensureMemberPortalLoginAccess(
+  supabase: SupabaseClient,
+  focusField: LoginFocusField
+): Promise<LoginState | null> {
+  try {
+    const access = await getMyAccess();
+    if (!hasProduct(access.products, PRODUCT_MEMBER_PORTAL)) {
+      return rejectLoginWithoutMemberPortalAccess(supabase, focusField);
+    }
+  } catch {
+    return rejectLoginWithoutMemberPortalAccess(supabase, focusField);
+  }
+  return null;
 }
 
 async function redirectAfterAuthenticatedLogin(): Promise<never> {
@@ -92,7 +124,10 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
     redirect('/signup/verify');
   }
 
-  await redirectAfterAuthenticatedLogin();
+  const denied = await ensureMemberPortalLoginAccess(supabase, 'password');
+  if (denied) return denied;
+
+  return await redirectAfterAuthenticatedLogin();
 }
 
 export async function sendLoginOtp(_prevState: SendLoginOtpState, formData: FormData): Promise<SendLoginOtpState> {
@@ -105,7 +140,7 @@ export async function sendLoginOtp(_prevState: SendLoginOtpState, formData: Form
   }
 
   try {
-    await sendLoginOTP(email, await getForwardedHeaders());
+    await sendLoginOTP(email, LOGIN_PRODUCT_MEMBER_PORTAL, await getForwardedHeaders());
     return { error: null, sent: true, email };
   } catch (err) {
     const message = err instanceof ProfileFetchError ? err.message : 'Failed to send OTP.';
@@ -133,7 +168,10 @@ export async function verifyLoginOtp(_prevState: LoginState, formData: FormData)
     return { error: formatUserFacingError(error.message), focusField: 'otp', errorFields: ['otp'] };
   }
 
-  await redirectAfterAuthenticatedLogin();
+  const denied = await ensureMemberPortalLoginAccess(supabase, 'otp');
+  if (denied) return denied;
+
+  return await redirectAfterAuthenticatedLogin();
 }
 
 export async function resendLoginOtp(email: string): Promise<{ error: string | null }> {
@@ -143,7 +181,7 @@ export async function resendLoginOtp(email: string): Promise<{ error: string | n
   }
 
   try {
-    await sendLoginOTP(normalizedEmail, await getForwardedHeaders());
+    await sendLoginOTP(normalizedEmail, LOGIN_PRODUCT_MEMBER_PORTAL, await getForwardedHeaders());
     return { error: null };
   } catch (err) {
     return {
