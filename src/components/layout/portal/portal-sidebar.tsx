@@ -4,6 +4,7 @@ import { CreditCard, FileText, HelpCircle, Home, Settings, User } from 'lucide-r
 import { usePathname } from 'next/navigation';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { PortalNavLink } from '@/components/layout/portal/portal-nav-link';
+import { invoicesNavEnabled } from '@/lib/portal-features';
 
 const mainNavItems = [
   {
@@ -21,13 +22,18 @@ const mainNavItems = [
       'border-b-success-press bg-success font-bold text-white shadow-[0_8px_14px_-6px_rgba(16,185,129,0.35)]',
     iconActiveClass: 'text-white',
   },
-  {
-    href: '/invoices',
-    label: 'Invoices',
-    icon: FileText,
-    activeClass: 'border-b-[#E88A0C] bg-amber font-bold text-white shadow-[0_8px_14px_-6px_rgba(255,159,28,0.35)]',
-    iconActiveClass: 'text-white',
-  },
+  ...(invoicesNavEnabled
+    ? [
+        {
+          href: '/invoices',
+          label: 'Invoices',
+          icon: FileText,
+          activeClass:
+            'border-b-[#E88A0C] bg-amber font-bold text-white shadow-[0_8px_14px_-6px_rgba(255,159,28,0.35)]',
+          iconActiveClass: 'text-white',
+        },
+      ]
+    : []),
   {
     href: '/profile',
     label: 'Profile',

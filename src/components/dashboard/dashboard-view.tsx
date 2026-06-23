@@ -3,10 +3,10 @@
 import { DashboardHero } from '@/components/dashboard/dashboard-hero';
 import {
   DashboardQuickLink,
-  InvoicesIllustration,
   ProfileIllustration,
   SubscriptionIllustration,
 } from '@/components/dashboard/dashboard-quick-link';
+import { SettingsQuickLinkIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
 import { PortalPageShell } from '@/components/layout/portal/portal-page-shell';
 import { SectionHead } from '@/components/ui/section-head';
@@ -24,16 +24,6 @@ const quickLinks = [
     focusRingClass: 'focus-visible:ring-success',
   },
   {
-    href: '/invoices',
-    label: 'Invoices',
-    sub: 'Download Receipts',
-    illustration: <InvoicesIllustration />,
-    accentClass: 'bg-gradient-to-br from-motivation via-amber to-[#E88A0C]',
-    glowClass: 'bg-white',
-    hoverAccentClass: 'group-hover:bg-motivation group-hover:text-slate-900',
-    focusRingClass: 'focus-visible:ring-amber',
-  },
-  {
     href: '/profile',
     label: 'Profile',
     sub: 'Your Details',
@@ -42,6 +32,16 @@ const quickLinks = [
     glowClass: 'bg-white',
     hoverAccentClass: 'group-hover:bg-brand-deep group-hover:text-white',
     focusRingClass: 'focus-visible:ring-brand-deep',
+  },
+  {
+    href: '/settings',
+    label: 'Settings',
+    sub: 'Account & Security',
+    illustration: <SettingsQuickLinkIllustration />,
+    accentClass: 'bg-gradient-to-br from-slate-500 via-slate-600 to-slate-700',
+    glowClass: 'bg-white',
+    hoverAccentClass: 'group-hover:bg-slate-700 group-hover:text-white',
+    focusRingClass: 'focus-visible:ring-slate-600',
   },
 ] as const;
 
@@ -63,7 +63,7 @@ export function DashboardView() {
         />
 
         <div>
-          <SectionHead title="Quick Links" subtitle="Billing, invoices, and account settings" />
+          <SectionHead title="Quick Links" subtitle="Billing and account settings" />
           <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {quickLinks.map((link) => (
               <DashboardQuickLink key={link.href} {...link} />

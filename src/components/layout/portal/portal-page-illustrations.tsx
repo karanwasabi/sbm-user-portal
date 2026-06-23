@@ -163,3 +163,22 @@ export function SettingsPageIllustration() {
     </svg>
   );
 }
+
+/** Compact settings gear used on dashboard quick links — matches SettingsPageIllustration. */
+export function SettingsQuickLinkIllustration() {
+  return (
+    <svg viewBox="0 0 120 72" fill="none" className="h-[72px] w-[120px]" aria-hidden>
+      <circle cx="60" cy="36" r="28" fill="white" fillOpacity="0.15" />
+      <circle cx="60" cy="36" r="18" fill="white" fillOpacity="0.95" />
+      <path
+        fill="#475569"
+        d="M60 25 L64 29.07 L69.525 30.5 L68 36 L69.525 41.5 L64 42.93 L60 47 L56 42.93 L50.475 41.5 L52 36 L50.475 30.5 L56 29.07 Z"
+      />
+      <circle cx="60" cy="36" r="4.5" fill="white" />
+      <circle cx="94" cy="20" r="7" fill="#FFB703" fillOpacity="0.95" />
+      <path d="M91 20l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="32" cy="22" r="2.5" fill="white" fillOpacity="0.45" />
+      <circle cx="100" cy="56" r="2" fill="white" fillOpacity="0.35" />
+    </svg>
+  );
+}

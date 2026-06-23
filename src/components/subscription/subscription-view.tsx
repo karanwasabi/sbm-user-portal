@@ -14,6 +14,7 @@ import { SectionHead } from '@/components/ui/section-head';
 import { SubscriptionRenewalCardSkeleton } from '@/components/loading/subscription-page-skeleton';
 import { openRazorpayPaymentMethodUpdate } from '@/lib/razorpay-checkout';
 import { formatInrFromPaise } from '@/lib/money';
+import { invoicesNavEnabled } from '@/lib/portal-features';
 import type { Subscription } from '@/types/subscription';
 import { cancelSubscription, startPaymentMethodUpdate } from '@/utils/client-api';
 
@@ -275,14 +276,16 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
                 <p className="text-xs text-slate-500">Monthly membership · auto-renews</p>
               </div>
             </div>
-            <Link
-              href="/invoices"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-deep"
-            >
-              <Receipt className="h-4 w-4" />
-              View Invoice History
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            {invoicesNavEnabled ? (
+              <Link
+                href="/invoices"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-deep"
+              >
+                <Receipt className="h-4 w-4" />
+                View Invoice History
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            ) : null}
           </div>
         </Card>
       )}
