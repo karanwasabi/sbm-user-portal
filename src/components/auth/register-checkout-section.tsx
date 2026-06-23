@@ -291,6 +291,8 @@ export function RegisterCheckoutSection({
     setError(null);
   };
 
+  const displayQuote = quote ?? previewQuote;
+
   const finishPayment = async () => {
     setConfirmingPayment(true);
     await pollUntilEnrolled();
@@ -310,14 +312,21 @@ export function RegisterCheckoutSection({
     setPayPending(true);
     setError(null);
     try {
+      const checkoutRequest = { ...buildCheckoutRequest(), legal_name: trimmedLegalName };
       let start;
       if (appliedPromo) {
-        start = await startCheckout({ ...buildCheckoutRequest(), legal_name: trimmedLegalName });
+        start = await startCheckout(checkoutRequest);
       } else {
         try {
-          start = await getCheckoutResume('take-control');
+          const resume = await getCheckoutResume('take-control');
+          const expectedTotal = displayQuote?.total_paise;
+          if (expectedTotal != null && resume.amount_paise === expectedTotal) {
+            start = resume;
+          } else {
+            start = await startCheckout(checkoutRequest);
+          }
         } catch {
-          start = await startCheckout({ ...buildCheckoutRequest(), legal_name: trimmedLegalName });
+          start = await startCheckout(checkoutRequest);
         }
       }
 
@@ -347,8 +356,6 @@ export function RegisterCheckoutSection({
   if (loading) {
     return <CheckoutPanelSkeleton />;
   }
-
-  const displayQuote = quote ?? previewQuote;
 
   if (!preview || !displayQuote) {
     return (
