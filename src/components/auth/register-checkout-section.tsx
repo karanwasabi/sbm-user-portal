@@ -10,6 +10,7 @@ import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
+import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalPurchase } from '@/lib/gtag';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { openRazorpayEnrollmentCheckout, pollUntilEnrolled } from '@/lib/razorpay-checkout';
 import type { CheckoutPreview, CheckoutQuote, CheckoutQuoteRequest } from '@/types/checkout';
@@ -70,6 +71,12 @@ export function RegisterCheckoutSection({
   const billingCountryInitialized = useRef(false);
   const billingPrefilledOnVerify = useRef(false);
   const wasBillingOpen = useRef(false);
+  const lastCheckoutRef = useRef<{
+    sessionId: string;
+    valuePaise: number;
+    cohortName: string;
+    promoCode?: string | null;
+  } | null>(null);
   const pricingRegion = useMemo<'domestic' | 'international'>(
     () => (billingCountryCode === 'IN' ? 'domestic' : 'international'),
     [billingCountryCode]
@@ -294,14 +301,35 @@ export function RegisterCheckoutSection({
   const displayQuote = quote ?? previewQuote;
 
   const finishPayment = async () => {
+    const checkout = lastCheckoutRef.current;
+    if (checkout) {
+      trackPortalPurchase({
+        transactionId: checkout.sessionId,
+        valuePaise: checkout.valuePaise,
+        cohortName: checkout.cohortName,
+        pricingRegion,
+        promoCode: checkout.promoCode,
+      });
+    }
+
     setConfirmingPayment(true);
     await pollUntilEnrolled();
     router.push('/');
     router.refresh();
   };
 
+  const trackCheckoutAbandoned = () => {
+    if (!preview || !displayQuote) return;
+    trackPortalCheckoutAbandoned({
+      valuePaise: displayQuote.total_paise,
+      cohortName: preview.cohort_name,
+      pricingRegion,
+      promoCode: displayQuote.promo_code,
+    });
+  };
+
   const openPayment = async () => {
-    if (!enabled) return;
+    if (!enabled || !preview || !displayQuote) return;
 
     const trimmedLegalName = resolveLegalName();
     if (!trimmedLegalName) {
@@ -311,6 +339,14 @@ export function RegisterCheckoutSection({
 
     setPayPending(true);
     setError(null);
+
+    trackPortalBeginCheckout({
+      valuePaise: displayQuote.total_paise,
+      cohortName: preview.cohort_name,
+      pricingRegion,
+      promoCode: displayQuote.promo_code,
+    });
+
     try {
       const checkoutRequest = { ...buildCheckoutRequest(), legal_name: trimmedLegalName };
       let start;
@@ -330,6 +366,13 @@ export function RegisterCheckoutSection({
         }
       }
 
+      lastCheckoutRef.current = {
+        sessionId: start.checkout_session_id,
+        valuePaise: start.amount_paise,
+        cohortName: start.cohort_name || preview.cohort_name,
+        promoCode: displayQuote.promo_code,
+      };
+
       if (start.mock) {
         await mockCompleteCheckout(start.checkout_session_id);
         await finishPayment();
@@ -343,6 +386,7 @@ export function RegisterCheckoutSection({
         },
         onDismiss: () => {
           setPayPending(false);
+          trackCheckoutAbandoned();
           setError('Payment was not completed. Tap Enroll to try again.');
         },
       });

@@ -11,6 +11,7 @@ import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
+import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalPurchase } from '@/lib/gtag';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { openRazorpayEnrollmentCheckout } from '@/lib/razorpay-checkout';
 import type { CheckoutPreview, CheckoutQuote } from '@/types/checkout';
@@ -56,6 +57,12 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
   const [legalName, setLegalName] = useState('');
   const [legalNameTouched, setLegalNameTouched] = useState(false);
   const wasBillingOpen = useRef(false);
+  const lastCheckoutRef = useRef<{
+    sessionId: string;
+    valuePaise: number;
+    cohortName: string;
+    promoCode?: string | null;
+  } | null>(null);
   const [billingState, setBillingState] = useState('');
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
@@ -233,6 +240,9 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
   };
 
   const handlePay = async () => {
+    const activeQuote = quote ?? previewQuote;
+    if (!preview || !activeQuote) return;
+
     const trimmedGstin = gstin.trim().toUpperCase();
     const trimmedLegalName = resolveLegalName();
     if (!trimmedLegalName) {
@@ -252,6 +262,14 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
 
     setPayPending(true);
     setError(null);
+
+    trackPortalBeginCheckout({
+      valuePaise: activeQuote.total_paise,
+      cohortName: preview.cohort_name,
+      pricingRegion,
+      promoCode: activeQuote.promo_code,
+    });
+
     try {
       const start = await startCheckout({
         program_slug: 'take-control',
@@ -272,8 +290,22 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
         promo_code: appliedPromo || undefined,
       });
 
+      lastCheckoutRef.current = {
+        sessionId: start.checkout_session_id,
+        valuePaise: start.amount_paise,
+        cohortName: start.cohort_name || preview.cohort_name,
+        promoCode: activeQuote.promo_code,
+      };
+
       if (start.mock) {
         await mockCompleteCheckout(start.checkout_session_id);
+        trackPortalPurchase({
+          transactionId: start.checkout_session_id,
+          valuePaise: start.amount_paise,
+          cohortName: start.cohort_name || preview.cohort_name,
+          pricingRegion,
+          promoCode: activeQuote.promo_code,
+        });
         onPaid?.();
         router.push('/');
         router.refresh();
@@ -287,11 +319,29 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
       await openRazorpayEnrollmentCheckout({
         start,
         onSuccess: () => {
+          const checkout = lastCheckoutRef.current;
+          if (checkout) {
+            trackPortalPurchase({
+              transactionId: checkout.sessionId,
+              valuePaise: checkout.valuePaise,
+              cohortName: checkout.cohortName,
+              pricingRegion,
+              promoCode: checkout.promoCode,
+            });
+          }
           onPaid?.();
           router.push('/');
           router.refresh();
         },
-        onDismiss: () => setPayPending(false),
+        onDismiss: () => {
+          setPayPending(false);
+          trackPortalCheckoutAbandoned({
+            valuePaise: activeQuote.total_paise,
+            cohortName: preview.cohort_name,
+            pricingRegion,
+            promoCode: activeQuote.promo_code,
+          });
+        },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed to start.');

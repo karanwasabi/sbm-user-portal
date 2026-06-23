@@ -19,6 +19,7 @@ import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { EMAIL_OTP_MAX_LENGTH, isValidEmailOtp } from '@/lib/email-otp';
 import { OTP_RESEND_COOLDOWN_SECONDS } from '@/lib/onboarding-steps';
+import { markPortalLoginPending } from '@/lib/portal-login-pending';
 
 const initialState: LoginState = { error: null };
 const initialSendOtpState: SendLoginOtpState = { error: null, sent: false, email: null };
@@ -180,7 +181,11 @@ export function LoginForm() {
 
         {!otpSent ? (
           <>
-            <form action={formAction} className="flex flex-col gap-3.5">
+            <form
+              action={formAction}
+              className="flex flex-col gap-3.5"
+              onSubmit={() => markPortalLoginPending('password')}
+            >
               <input type="hidden" name="email" value={email} />
 
               <Field
@@ -259,7 +264,11 @@ export function LoginForm() {
             </form>
           </>
         ) : (
-          <form action={verifyOtpAction} className="flex flex-col gap-3.5">
+          <form
+            action={verifyOtpAction}
+            className="flex flex-col gap-3.5"
+            onSubmit={() => markPortalLoginPending('email_otp')}
+          >
             <input type="hidden" name="email" value={email} />
 
             <Field

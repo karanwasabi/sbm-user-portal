@@ -39,6 +39,7 @@ import { SEX_OPTIONS } from '@/types/profile';
 import type { Country } from '@/types/reference';
 import type { RegisterFormValues } from '@/lib/merge-profile-patch';
 import { profileToRegisterDefaults } from '@/lib/merge-profile-patch';
+import { trackPortalSignUp } from '@/lib/gtag';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
 import { getBillingProfileOrNull, getMyProfile } from '@/utils/client-api';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -99,6 +100,7 @@ export function RegisterView({
   const dpdpConsentRef = useRef<HTMLButtonElement>(null);
   const otpRef = useRef<HTMLInputElement>(null);
   const startWasPending = useRef(false);
+  const signUpTracked = useRef(false);
   const dateOfBirthBounds = useMemo(() => getDateOfBirthInputBounds(), []);
   const showParentalConsent = useMemo(() => shouldShowParentalConsent(dateOfBirth), [dateOfBirth]);
   const suggestedLegalName = useMemo(
@@ -282,7 +284,9 @@ export function RegisterView({
   }, [otpSent, verified]);
 
   useEffect(() => {
-    if (!verifyState.verified) return;
+    if (!verifyState.verified || signUpTracked.current) return;
+    signUpTracked.current = true;
+    trackPortalSignUp();
     setVerified(true);
     setFormError(null);
   }, [verifyState.verified]);
