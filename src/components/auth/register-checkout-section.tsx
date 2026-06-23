@@ -68,7 +68,6 @@ export function RegisterCheckoutSection({
   const [billingCountryCode, setBillingCountryCode] = useState(() => suggestedCountryIso?.trim().toUpperCase() || 'IN');
   const [billingCountryTouched, setBillingCountryTouched] = useState(false);
   const billingCountryInitialized = useRef(false);
-  const legalPrefilledOnVerify = useRef(false);
   const billingPrefilledOnVerify = useRef(false);
   const wasBillingOpen = useRef(false);
   const pricingRegion = useMemo<'domestic' | 'international'>(
@@ -128,15 +127,10 @@ export function RegisterCheckoutSection({
   };
 
   useEffect(() => {
-    if (enabled) return;
-    legalPrefilledOnVerify.current = false;
-    billingPrefilledOnVerify.current = false;
-  }, [enabled]);
-
-  useEffect(() => {
-    if (!enabled || legalNameTouched || legalPrefilledOnVerify.current) return;
-    setLegalName(suggestedLegalName.trim());
-    legalPrefilledOnVerify.current = true;
+    if (!enabled || legalNameTouched) return;
+    const next = suggestedLegalName.trim();
+    if (!next) return;
+    setLegalName((current) => (current.trim() ? current : next));
   }, [enabled, suggestedLegalName, legalNameTouched]);
 
   useEffect(() => {

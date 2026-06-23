@@ -1,12 +1,17 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { RegisterView } from '@/components/auth/register-view';
-import { parseRegisterDraft, profileToRegisterDefaults, registerDraftToFormValues } from '@/lib/merge-profile-patch';
+import {
+  mergeRegisterDefaults,
+  parseRegisterDraft,
+  profileToRegisterDefaults,
+  registerDraftToFormValues,
+} from '@/lib/merge-profile-patch';
 import { hasPortalAccess, isEnrolled } from '@/lib/onboarding';
 import { getRequestCountryIso } from '@/lib/request-country-code';
 import { PENDING_DPDP_COOKIE } from '@/types/onboarding';
 import { REGISTER_DRAFT_COOKIE } from '@/types/register';
-import { fetchCountries, getLatestProfile, getMyEnrollments } from '@/utils/api';
+import { fetchCountries, getBillingProfile, getLatestProfile, getMyEnrollments } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
 type RegisterPageProps = {
@@ -22,13 +27,9 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
   let initialValues = null;
   let emailVerified = false;
   let initialDpdpConsent = false;
+  let profileCountryCode: string | undefined;
   const cookieStore = await cookies();
   const draft = parseRegisterDraft(cookieStore.get(REGISTER_DRAFT_COOKIE)?.value);
-
-  if (draft) {
-    initialValues = registerDraftToFormValues(draft);
-    initialDpdpConsent = draft.dpdpConsent;
-  }
 
   const [countries, suggestedCountryIso, params] = await Promise.all([
     fetchCountries().catch(() => []),
@@ -36,34 +37,42 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
     searchParams,
   ]);
 
-  if (!draft && user) {
-    if (!user.email_confirmed_at && user.email) {
-      try {
-        const profile = await getLatestProfile().catch(() => null);
-        initialValues = profileToRegisterDefaults(profile, user.email);
-      } catch {
-        initialValues = profileToRegisterDefaults(null, user.email);
+  if (user?.email_confirmed_at && user.email) {
+    emailVerified = true;
+
+    try {
+      const [loadedProfile, enrollments, billing] = await Promise.all([
+        getLatestProfile().catch(() => null),
+        getMyEnrollments().catch(() => []),
+        getBillingProfile().catch(() => null),
+      ]);
+      profileCountryCode = loadedProfile?.country_code ?? undefined;
+      if (loadedProfile && (hasPortalAccess(loadedProfile, enrollments) || isEnrolled(enrollments))) {
+        redirect('/');
       }
-    } else if (user.email_confirmed_at) {
-      emailVerified = true;
-      try {
-        const [profile, enrollments] = await Promise.all([
-          getLatestProfile().catch(() => null),
-          getMyEnrollments().catch(() => []),
-        ]);
-        if (profile && (hasPortalAccess(profile, enrollments) || isEnrolled(enrollments))) {
-          redirect('/');
-        }
-        if (user.email) {
-          initialValues = profileToRegisterDefaults(profile, user.email);
-        }
-      } catch {
-        // Allow register page for authenticated users without enrollment.
-      }
+      initialValues = profileToRegisterDefaults(loadedProfile, user.email, billing?.legal_name);
+    } catch {
+      initialValues = profileToRegisterDefaults(null, user.email);
     }
+  } else if (user?.email) {
+    const [loadedProfile, billing] = await Promise.all([
+      getLatestProfile().catch(() => null),
+      getBillingProfile().catch(() => null),
+    ]);
+    profileCountryCode = loadedProfile?.country_code ?? undefined;
+    const legalName = billing?.legal_name;
+    if (draft) {
+      initialValues = mergeRegisterDefaults(registerDraftToFormValues(draft), loadedProfile, user.email, legalName);
+      initialDpdpConsent = draft.dpdpConsent;
+    } else {
+      initialValues = profileToRegisterDefaults(loadedProfile, user.email, legalName);
+    }
+  } else if (draft) {
+    initialValues = registerDraftToFormValues(draft);
+    initialDpdpConsent = draft.dpdpConsent;
   }
 
-  if (!draft) {
+  if (!draft || emailVerified) {
     initialDpdpConsent = emailVerified || cookieStore.get(PENDING_DPDP_COOKIE)?.value === '1';
   }
 
@@ -73,9 +82,9 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
       emailVerified={emailVerified}
       showVerifiedToast={params.verified === '1'}
       initialDpdpConsent={initialDpdpConsent}
-      fromDraft={Boolean(draft)}
+      fromDraft={Boolean(draft) && !emailVerified}
       countries={countries}
-      suggestedCountryIso={initialValues?.whatsapp?.trim() ? undefined : suggestedCountryIso}
+      suggestedCountryIso={initialValues?.whatsapp?.trim() ? undefined : (profileCountryCode ?? suggestedCountryIso)}
     />
   );
 }

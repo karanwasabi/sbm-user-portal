@@ -1,6 +1,7 @@
 'use client';
 
-import { getBackendUrl } from '@/types/profile';
+import { getBackendUrl, type Profile } from '@/types/profile';
+import type { BillingProfile } from '@/types/billing';
 import type { CheckoutPreview, CheckoutQuote, CheckoutQuoteRequest, CheckoutStartResponse } from '@/types/checkout';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
 import type { PaymentMethodUpdateResponse, Subscription } from '@/types/subscription';
@@ -79,6 +80,41 @@ async function clientApiFetch(path: string, init?: RequestInit): Promise<Respons
   }
 
   return response;
+}
+
+export async function getMyProfile(): Promise<Profile | null> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) return null;
+
+  const response = await fetch(`${getBackendUrl()}/me`, {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    cache: 'no-store',
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? `Request failed (${response.status})`);
+  }
+  return response.json() as Promise<Profile>;
+}
+
+export async function getBillingProfileOrNull(): Promise<BillingProfile | null> {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) return null;
+
+  const response = await fetch(`${getBackendUrl()}/me/billing-profile`, {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    cache: 'no-store',
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) return null;
+  return response.json() as Promise<BillingProfile>;
 }
 
 export async function getCheckoutPreview(programSlug = 'take-control'): Promise<CheckoutPreview> {

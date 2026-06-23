@@ -109,10 +109,15 @@ export function parseRegisterDraft(raw: string | undefined): RegisterDraft | nul
   }
 }
 
-export function profileToRegisterDefaults(profile: Profile | null, email: string): RegisterFormValues {
+export function profileToRegisterDefaults(
+  profile: Profile | null,
+  email: string,
+  legalName?: string | null
+): RegisterFormValues {
+  const fromLegal = splitLegalName(legalName);
   return {
-    firstName: profile?.first_name ?? '',
-    lastName: profile?.last_name ?? '',
+    firstName: profile?.first_name?.trim() || fromLegal.firstName,
+    lastName: profile?.last_name?.trim() || fromLegal.lastName,
     email,
     whatsapp: profile?.whatsapp ?? '',
     sex: profile?.sex ?? '',
@@ -121,12 +126,25 @@ export function profileToRegisterDefaults(profile: Profile | null, email: string
   };
 }
 
+function splitLegalName(legalName: string | null | undefined): { firstName: string; lastName: string } {
+  const trimmed = legalName?.trim() ?? '';
+  if (!trimmed) {
+    return { firstName: '', lastName: '' };
+  }
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: '' };
+  }
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+}
+
 export function mergeRegisterDefaults(
   current: RegisterFormValues,
   profile: Profile | null,
-  email: string
+  email: string,
+  legalName?: string | null
 ): RegisterFormValues {
-  const fromProfile = profileToRegisterDefaults(profile, email);
+  const fromProfile = profileToRegisterDefaults(profile, email, legalName);
   return {
     firstName: current.firstName || fromProfile.firstName,
     lastName: current.lastName || fromProfile.lastName,

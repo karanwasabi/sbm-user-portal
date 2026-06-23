@@ -38,7 +38,9 @@ import { toTitleCase } from '@/lib/title-case';
 import { SEX_OPTIONS } from '@/types/profile';
 import type { Country } from '@/types/reference';
 import type { RegisterFormValues } from '@/lib/merge-profile-patch';
+import { profileToRegisterDefaults } from '@/lib/merge-profile-patch';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
+import { getBillingProfileOrNull, getMyProfile } from '@/utils/client-api';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 
 const initialStartState: RegisterStartState = { error: null, status: null, email: null };
@@ -82,6 +84,8 @@ export function RegisterView({
   const [resendCooldown, setResendCooldown] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<RegisterFieldErrors>({});
+  const [phoneSyncToken, setPhoneSyncToken] = useState(0);
+  const [phoneSuggestedCountryIso, setPhoneSuggestedCountryIso] = useState(suggestedCountryIso);
 
   const [startState, startAction, startPending] = useActionState(startRegister, initialStartState);
   const [verifyState, verifyAction, verifyPending] = useActionState(verifyRegisterOtp, initialVerifyState);
@@ -103,9 +107,9 @@ export function RegisterView({
   );
   const confirmedBillingCountryIso = useMemo(() => {
     if (!verified) return undefined;
-    const parsed = parseWhatsapp(whatsapp, suggestedCountryIso);
-    return parsed.dialIso || suggestedCountryIso || undefined;
-  }, [verified, whatsapp, suggestedCountryIso]);
+    const parsed = parseWhatsapp(whatsapp, phoneSuggestedCountryIso);
+    return parsed.dialIso || phoneSuggestedCountryIso || undefined;
+  }, [verified, whatsapp, phoneSuggestedCountryIso]);
 
   const formValues = useMemo(
     () => ({
@@ -132,6 +136,72 @@ export function RegisterView({
     fieldErrors.dateOfBirth ??
     (dobLiveError && !isParentalConsentValidationError(dobLiveError) ? dobLiveError : undefined);
   const formLocked = otpSent && !verified;
+  const profileHydrated = useRef(false);
+
+  useEffect(() => {
+    setPhoneSuggestedCountryIso(suggestedCountryIso);
+  }, [suggestedCountryIso]);
+
+  const applyRegisterDefaults = (defaults: RegisterFormValues) => {
+    setFirstName((value) => defaults.firstName || value);
+    setLastName((value) => defaults.lastName || value);
+    setEmail((value) => defaults.email || value);
+    setWhatsapp((value) => {
+      const next = defaults.whatsapp || value;
+      if (defaults.whatsapp?.trim() && defaults.whatsapp !== value) {
+        setPhoneSyncToken((token) => token + 1);
+      }
+      return next;
+    });
+    setSex((value) => defaults.sex || value);
+    setDateOfBirth((value) => defaults.dateOfBirth || value);
+    setParentalConsent((value) => defaults.parentalConsent || value);
+  };
+
+  useEffect(() => {
+    if (!initialValues) return;
+    applyRegisterDefaults(initialValues);
+    if (initialValues.whatsapp?.trim()) {
+      setPhoneSyncToken((token) => token + 1);
+    }
+  }, [initialValues]);
+
+  useEffect(() => {
+    if (!verified || profileHydrated.current) return;
+
+    const hasWhatsapp = Boolean(initialValues?.whatsapp?.trim());
+    const hasCoreDetails =
+      Boolean(initialValues?.firstName?.trim()) &&
+      Boolean(initialValues?.lastName?.trim()) &&
+      Boolean(initialValues?.email?.trim()) &&
+      Boolean(initialValues?.sex) &&
+      Boolean(initialValues?.dateOfBirth?.trim());
+
+    if (hasCoreDetails && hasWhatsapp) {
+      profileHydrated.current = true;
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [profile, billing] = await Promise.all([getMyProfile(), getBillingProfileOrNull()]);
+        if (cancelled || !profile) return;
+
+        if (profile.country_code) {
+          setPhoneSuggestedCountryIso(profile.country_code);
+        }
+        applyRegisterDefaults(profileToRegisterDefaults(profile, profile.email || email, billing?.legal_name));
+        profileHydrated.current = true;
+      } catch {
+        // Leave fields as-is; user can tap Edit details if needed.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [verified, email, initialValues]);
 
   useEffect(() => {
     if (!showVerifiedToast || verifiedToastShown.current) return;
@@ -375,7 +445,8 @@ export function RegisterView({
                   countries={countries}
                   disabled={verified || formLocked}
                   dialCodeClassName="w-38 shrink-0"
-                  suggestedCountryIso={suggestedCountryIso}
+                  suggestedCountryIso={whatsapp.trim() ? undefined : phoneSuggestedCountryIso}
+                  syncToken={phoneSyncToken}
                   error={Boolean(fieldErrors.whatsapp)}
                   inputRef={whatsappRef}
                   useFieldFeedback
@@ -496,7 +567,7 @@ export function RegisterView({
         <div className="min-w-0 lg:border-l lg:border-slate-100 lg:pl-8">
           <RegisterCheckoutSection
             suggestedLegalName={suggestedLegalName}
-            suggestedCountryIso={suggestedCountryIso}
+            suggestedCountryIso={phoneSuggestedCountryIso}
             confirmedBillingCountryIso={confirmedBillingCountryIso}
             countries={countries}
             enabled={verified}
