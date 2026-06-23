@@ -9,7 +9,11 @@ import { REGISTER_DRAFT_COOKIE } from '@/types/register';
 import { fetchCountries, getLatestProfile, getMyEnrollments } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
-export default async function RegisterPage() {
+type RegisterPageProps = {
+  searchParams: Promise<{ verified?: string }>;
+};
+
+export default async function RegisterPage({ searchParams }: RegisterPageProps) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -26,9 +30,10 @@ export default async function RegisterPage() {
     initialDpdpConsent = draft.dpdpConsent;
   }
 
-  const [countries, suggestedCountryIso] = await Promise.all([
+  const [countries, suggestedCountryIso, params] = await Promise.all([
     fetchCountries().catch(() => []),
     getRequestCountryIso(),
+    searchParams,
   ]);
 
   if (!draft && user) {
@@ -49,7 +54,7 @@ export default async function RegisterPage() {
         if (profile && (hasPortalAccess(profile, enrollments) || isEnrolled(enrollments))) {
           redirect('/');
         }
-        if (profile && user.email) {
+        if (user.email) {
           initialValues = profileToRegisterDefaults(profile, user.email);
         }
       } catch {
@@ -66,6 +71,7 @@ export default async function RegisterPage() {
     <RegisterView
       initialValues={initialValues}
       emailVerified={emailVerified}
+      showVerifiedToast={params.verified === '1'}
       initialDpdpConsent={initialDpdpConsent}
       fromDraft={Boolean(draft)}
       countries={countries}

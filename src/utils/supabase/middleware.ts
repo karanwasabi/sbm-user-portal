@@ -2,7 +2,6 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/confirm', '/unauthorized'];
-const ONBOARDING_ROUTE = '/onboarding';
 
 function isPublicRoute(pathname: string) {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -10,7 +9,7 @@ function isPublicRoute(pathname: string) {
 
 function isProtectedRoute(pathname: string) {
   if (pathname === '/') return true;
-  return ['/subscription', '/invoices', '/profile'].some(
+  return ['/subscription', '/invoices', '/profile', '/settings', '/support'].some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 }
@@ -51,12 +50,17 @@ export async function updateSession(request: NextRequest) {
   const publicRoute = isPublicRoute(pathname);
   const requiresAuth = isProtectedRoute(pathname);
   const isConfirmRoute = pathname === '/auth/confirm';
-  const isOnboardingRoute = pathname === ONBOARDING_ROUTE || pathname.startsWith(`${ONBOARDING_ROUTE}/`);
 
   if (pathname === '/signup' || pathname.startsWith('/signup/')) {
     const url = request.nextUrl.clone();
     url.pathname = '/register';
     url.search = '';
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname === '/onboarding' || pathname.startsWith('/onboarding/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/register';
     return NextResponse.redirect(url);
   }
 
@@ -68,11 +72,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && pathname === '/login') {
     const url = request.nextUrl.clone();
-    if (!isEmailVerified(user)) {
-      url.pathname = '/register';
-    } else {
-      url.pathname = ONBOARDING_ROUTE;
-    }
+    url.pathname = isEmailVerified(user) ? '/' : '/register';
     return NextResponse.redirect(url);
   }
 
@@ -85,17 +85,7 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  if (user && isEmailVerified(user) && requiresAuth && !isOnboardingRoute) {
-    // Onboarding completion is enforced in the portal layout (needs profile API).
-  }
-
-  if (!user && !publicRoute && !requiresAuth && !isOnboardingRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
-  }
-
-  if (!user && isOnboardingRoute) {
+  if (!user && !publicRoute && !requiresAuth) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

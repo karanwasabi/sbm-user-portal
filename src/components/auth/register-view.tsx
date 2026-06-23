@@ -18,6 +18,7 @@ import { PhoneInput } from '@/components/profile/phone-input';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
+import { useToast } from '@/components/ui/toast';
 import {
   getDateOfBirthInputBounds,
   isParentalConsentValidationError,
@@ -49,6 +50,7 @@ const linkButtonClass =
 type RegisterViewProps = {
   initialValues?: RegisterFormValues | null;
   emailVerified?: boolean;
+  showVerifiedToast?: boolean;
   initialDpdpConsent?: boolean;
   fromDraft?: boolean;
   countries: Country[];
@@ -58,11 +60,13 @@ type RegisterViewProps = {
 export function RegisterView({
   initialValues = null,
   emailVerified = false,
+  showVerifiedToast = false,
   initialDpdpConsent = false,
   fromDraft = false,
   countries,
   suggestedCountryIso,
 }: RegisterViewProps) {
+  const { toast } = useToast();
   const [firstName, setFirstName] = useState(initialValues?.firstName ?? '');
   const [lastName, setLastName] = useState(initialValues?.lastName ?? '');
   const [email, setEmail] = useState(initialValues?.email ?? '');
@@ -74,6 +78,7 @@ export function RegisterView({
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [verified, setVerified] = useState(emailVerified);
+  const verifiedToastShown = useRef(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<RegisterFieldErrors>({});
@@ -127,6 +132,13 @@ export function RegisterView({
     fieldErrors.dateOfBirth ??
     (dobLiveError && !isParentalConsentValidationError(dobLiveError) ? dobLiveError : undefined);
   const formLocked = otpSent && !verified;
+
+  useEffect(() => {
+    if (!showVerifiedToast || verifiedToastShown.current) return;
+    verifiedToastShown.current = true;
+    window.history.replaceState(null, '', '/register');
+    toast({ message: 'Your account has been verified.', variant: 'success', durationMs: 5000 });
+  }, [showVerifiedToast, toast]);
 
   const focusFieldRef = (field: RegisterField): RefObject<HTMLElement | null> | null => {
     const refs = {

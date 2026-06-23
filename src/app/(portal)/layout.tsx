@@ -38,7 +38,7 @@ export default async function PortalLayout({ children }: { children: React.React
     profile = await getLatestProfile();
   } catch (error) {
     if (error instanceof ProfileFetchError && (error.status === 404 || error.status === 403)) {
-      redirect('/onboarding');
+      redirect('/register');
     }
     profileError = error instanceof ProfileFetchError ? error.message : 'Failed to load profile.';
   }
@@ -50,7 +50,7 @@ export default async function PortalLayout({ children }: { children: React.React
   }
 
   if (profile && !hasPortalAccess(profile, enrollments)) {
-    redirect('/onboarding');
+    redirect('/register');
   }
 
   const showPasswordBanner = userNeedsPassword(user);

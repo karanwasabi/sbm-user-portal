@@ -38,6 +38,6 @@ export function getOnboardingStep(profile: Profile | null, enrollments: Enrollme
   return 2;
 }
 
-export function getPostAuthRedirectPath(profile: Profile | null, enrollments: Enrollment[] = []): '/onboarding' | '/' {
-  return hasPortalAccess(profile, enrollments) || isOnboardingComplete(profile, enrollments) ? '/' : '/onboarding';
+export function getPostAuthRedirectPath(profile: Profile | null, enrollments: Enrollment[] = []): '/register' | '/' {
+  return hasPortalAccess(profile, enrollments) || isOnboardingComplete(profile, enrollments) ? '/' : '/register';
 }

@@ -74,7 +74,7 @@ async function redirectAfterAuthenticatedLogin(): Promise<never> {
     enrollments = await getMyEnrollments();
   } catch (loadError) {
     if (!(loadError instanceof ProfileFetchError && loadError.status === 404)) {
-      redirect('/onboarding');
+      redirect('/register');
     }
   }
 

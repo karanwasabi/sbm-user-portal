@@ -44,5 +44,5 @@ export async function completeEmailVerification(): Promise<CompleteEmailVerifica
     }
   }
 
-  redirect('/register');
+  redirect('/register?verified=1');
 }
