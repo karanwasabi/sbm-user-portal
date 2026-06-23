@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Poppins, Geist } from 'next/font/google';
 import './globals.css';
 import { siteMetadata } from '@/lib/site-metadata';
+import { GoogleAnalytics } from '@/components/analytics/google-analytics';
 import { MetaPixel } from '@/components/analytics/meta-pixel';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn('h-full', 'antialiased', poppins.variable, 'font-sans', geist.variable)}>
       <body className="flex min-h-dvh flex-col font-sans text-slate-900">
+        <GoogleAnalytics />
         <MetaPixel />
         {children}
       </body>

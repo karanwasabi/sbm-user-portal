@@ -40,6 +40,20 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
 
 Both attach `Authorization: Bearer <token>` to requests. The Go backend must be running with a profile row for the authenticated user.
 
+### Analytics (optional)
+
+Set in `.env.local` / Vercel env for staging and production:
+
+```bash
+# GA4 Measurement ID (Admin → Data streams → Web)
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+
+# Meta Pixel (Events Manager)
+NEXT_PUBLIC_META_PIXEL_ID=
+```
+
+Scripts load only when the env var is set. GA4 tracks page views on client-side route changes. Use `trackEvent()` from `src/lib/gtag.ts` for custom events (e.g. signup, purchase).
+
 ## Scripts
 
 - `pnpm dev` — start the development server
