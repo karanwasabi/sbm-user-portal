@@ -10,6 +10,7 @@ import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
+import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { openRazorpayEnrollmentCheckout, pollUntilEnrolled } from '@/lib/razorpay-checkout';
 import type { CheckoutPreview, CheckoutQuote, CheckoutQuoteRequest } from '@/types/checkout';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
@@ -452,12 +453,29 @@ export function RegisterCheckoutSection({
 
       <Field label="Promo code">
         <div className="flex gap-2">
-          <TextInput value={promoCode} onChange={setPromoCode} placeholder="Enter code" />
+          <TextInput
+            value={promoCode}
+            onChange={(value) => setPromoCode(normalizePromoCodeInput(value))}
+            placeholder="Enter code"
+            className={promoCodeInputProps.className}
+            autoCapitalize={promoCodeInputProps.autoCapitalize}
+            autoCorrect={promoCodeInputProps.autoCorrect}
+            spellCheck={promoCodeInputProps.spellCheck}
+          />
           <Button
             type="button"
             variant="light"
             size="md"
-            onClick={() => setAppliedPromo(promoCode.trim().toUpperCase())}
+            onClick={() => {
+              const normalized = normalizePromoCode(promoCode);
+              if (!normalized) {
+                setError('Enter a promo code.');
+                return;
+              }
+              setPromoCode(normalized);
+              setAppliedPromo(normalized);
+              setError(null);
+            }}
             disabled={quotePending}
           >
             Apply
