@@ -1,6 +1,6 @@
 import type { CheckoutStartResponse } from '@/types/checkout';
 import type { Enrollment } from '@/types/enrollment';
-import { getMyEnrollments } from '@/utils/client-api';
+import { abandonCheckout, getMyEnrollments } from '@/utils/client-api';
 
 declare global {
   interface Window {
@@ -108,7 +108,10 @@ export async function openRazorpayEnrollmentCheckout({
     orderId: start.razorpay_order_id,
     description: `Take Control · ${start.cohort_name}`,
     onSuccess,
-    onDismiss,
+    onDismiss: () => {
+      void abandonCheckout(start.checkout_session_id).catch(() => undefined);
+      onDismiss?.();
+    },
   });
 }
 

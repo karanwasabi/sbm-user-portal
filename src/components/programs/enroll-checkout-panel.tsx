@@ -12,6 +12,7 @@ import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
+import { openRazorpayEnrollmentCheckout } from '@/lib/razorpay-checkout';
 import type { CheckoutPreview, CheckoutQuote } from '@/types/checkout';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
 import {
@@ -24,31 +25,11 @@ import {
   getCountryStates,
 } from '@/utils/client-api';
 
-declare global {
-  interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
-  }
-}
-
 type EnrollCheckoutPanelProps = {
   onBack?: () => void;
   onPaid?: () => void;
   defaultLegalName?: string;
 };
-
-function loadRazorpayScript(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.resolve();
-  if (window.Razorpay) return Promise.resolve();
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load Razorpay checkout.'));
-    document.body.appendChild(script);
-  });
-}
 
 export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: EnrollCheckoutPanelProps) {
   const router = useRouter();
@@ -303,26 +284,15 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
         throw new Error('Payment is not configured yet.');
       }
 
-      await loadRazorpayScript();
-      if (!window.Razorpay) {
-        throw new Error('Razorpay checkout failed to load.');
-      }
-
-      const rzp = new window.Razorpay({
-        key: start.razorpay_key_id,
-        subscription_id: start.razorpay_subscription_id,
-        name: 'Strong Body Method',
-        description: `Take Control · ${start.cohort_name}`,
-        handler: () => {
+      await openRazorpayEnrollmentCheckout({
+        start,
+        onSuccess: () => {
           onPaid?.();
           router.push('/');
           router.refresh();
         },
-        modal: {
-          ondismiss: () => setPayPending(false),
-        },
+        onDismiss: () => setPayPending(false),
       });
-      rzp.open();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed to start.');
     } finally {

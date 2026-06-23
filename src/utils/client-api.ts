@@ -122,6 +122,13 @@ export async function mockCompleteCheckout(checkoutSessionId: string): Promise<v
   });
 }
 
+export async function abandonCheckout(checkoutSessionId: string): Promise<void> {
+  await clientApiFetch('/me/checkout/abandon', {
+    method: 'POST',
+    body: JSON.stringify({ checkout_session_id: checkoutSessionId }),
+  });
+}
+
 export async function getCountries(): Promise<Country[]> {
   const response = await clientApiFetch('/reference/countries');
   return response.json() as Promise<Country[]>;
