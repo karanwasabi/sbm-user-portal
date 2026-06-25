@@ -27,8 +27,12 @@ const initialSendOtpState: SendLoginOtpState = { error: null, sent: false, email
 const linkButtonClass =
   'cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-brand no-underline hover:underline disabled:cursor-not-allowed disabled:opacity-60';
 
-export function LoginForm() {
-  const [email, setEmail] = useState('');
+type LoginFormProps = {
+  initialEmail?: string;
+};
+
+export function LoginForm({ initialEmail = '' }: LoginFormProps) {
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -45,6 +49,11 @@ export function LoginForm() {
   const wasPending = useRef(false);
   const sendOtpWasPending = useRef(false);
   const verifyOtpWasPending = useRef(false);
+
+  useEffect(() => {
+    if (!initialEmail) return;
+    setEmail(initialEmail);
+  }, [initialEmail]);
 
   useEffect(() => {
     if (wasPending.current && !isPending) {

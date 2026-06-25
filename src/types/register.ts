@@ -1,4 +1,4 @@
-export type RegisterStartStatus = 'otp_sent' | 'resume' | 'already_enrolled';
+export type RegisterStartStatus = 'otp_sent' | 'resume' | 'already_enrolled' | 'already_registered';
 
 import type { RegisterField, RegisterFieldErrors } from '@/lib/register-form-validation';
 

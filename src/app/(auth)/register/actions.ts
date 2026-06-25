@@ -81,6 +81,10 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
       redirect('/');
     }
 
+    if (result.status === 'already_registered') {
+      return { error: null, status: 'already_registered', email: values.email };
+    }
+
     const cookieStore = await cookies();
     cookieStore.delete(REGISTER_DRAFT_COOKIE);
     cookieStore.set(REGISTER_EMAIL_COOKIE, values.email, {

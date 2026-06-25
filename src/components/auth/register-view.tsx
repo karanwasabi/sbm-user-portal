@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState, useEffect, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react';
 import { Loader2, Mail } from 'lucide-react';
 import {
@@ -41,6 +42,7 @@ import type { Country } from '@/types/reference';
 import type { RegisterFormValues } from '@/lib/merge-profile-patch';
 import { profileToRegisterDefaults } from '@/lib/merge-profile-patch';
 import { trackPortalSignUp } from '@/lib/gtag';
+import { buildLoginUrl } from '@/lib/login-url';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
 import { getBillingProfileOrNull, getMyProfile } from '@/utils/client-api';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -138,6 +140,10 @@ export function RegisterView({
     (dobLiveError && !isParentalConsentValidationError(dobLiveError) ? dobLiveError : undefined);
   const formLocked = otpSent && !verified;
   const profileHydrated = useRef(false);
+  const loginUrl = useMemo(
+    () => buildLoginUrl(startState.status === 'already_registered' ? (startState.email ?? email) : undefined),
+    [startState.status, startState.email, email]
+  );
 
   useEffect(() => {
     setPhoneSuggestedCountryIso(suggestedCountryIso);
@@ -265,6 +271,7 @@ export function RegisterView({
 
   useEffect(() => {
     if (!startState.status || !startState.email) return;
+    if (startState.status === 'already_registered') return;
     setFieldErrors({});
     setOtpSent(true);
     setEmail(startState.email);
@@ -516,7 +523,21 @@ export function RegisterView({
               </Button>
             ) : null}
 
-            {startState.error && !verified ? (
+            {startState.status === 'already_registered' && !verified ? (
+              <div
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm leading-relaxed text-slate-700"
+                role="alert"
+              >
+                <p className="font-semibold text-slate-900">You already have an account</p>
+                <p className="mt-1">
+                  Sign in with <span className="font-semibold text-slate-900">{startState.email ?? email}</span> to
+                  continue.
+                </p>
+                <Link href={loginUrl} className="mt-2.5 inline-flex text-sm font-semibold text-brand hover:underline">
+                  Go to sign in
+                </Link>
+              </div>
+            ) : startState.error && !verified ? (
               <p className="text-[12.5px] font-semibold text-danger-press" role="alert">
                 {startState.error}
               </p>

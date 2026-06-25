@@ -1,3 +1,4 @@
+import type { RegisterStartResponse } from '@/types/register';
 import type { Invoice } from '@/types/checkout';
 import type { BillingProfile } from '@/types/billing';
 import type { Enrollment } from '@/types/enrollment';
@@ -203,11 +204,6 @@ export async function recordDpdpConsent(termsUrl: string, privacyUrl: string, so
   }
 }
 
-export type RegisterStartResponse = {
-  status: 'otp_sent' | 'resume' | 'already_enrolled';
-  email: string;
-};
-
 export async function registerMember(
   body: import('@/types/register').RegisterStartInput,
   extraHeaders: HeadersInit = {}
@@ -229,7 +225,7 @@ export async function registerMember(
 
   const payload = (await response.json().catch(() => null)) as RegisterStartResponse & { error?: string };
 
-  if (response.status === 409 && payload?.status === 'already_enrolled') {
+  if (response.status === 409 && (payload?.status === 'already_enrolled' || payload?.status === 'already_registered')) {
     return payload;
   }
 
