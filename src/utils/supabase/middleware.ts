@@ -9,6 +9,7 @@ const PUBLIC_ROUTES = [
   '/auth/confirm',
   '/unauthorized',
   '/payment/return',
+  '/unsubscribe',
 ];
 
 function isPaymentCallbackRoute(pathname: string) {
@@ -94,6 +95,8 @@ export async function updateSession(request: NextRequest) {
       pathname === '/register' ||
       pathname.startsWith('/register/') ||
       pathname === '/payment/return' ||
+      pathname === '/unsubscribe' ||
+      pathname.startsWith('/unsubscribe/') ||
       isPaymentCallbackRoute(pathname);
     if (!allowed) {
       const url = request.nextUrl.clone();
