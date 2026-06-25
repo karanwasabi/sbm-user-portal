@@ -13,6 +13,8 @@ import type { Country } from '@/types/reference';
 type PhoneInputProps = {
   value: string;
   onChange: (value: string) => void;
+  /** Fires when the dial-code country changes (independent of number validity). */
+  onDialIsoChange?: (iso: string) => void;
   countries: Country[];
   /** When the combined number is blank, auto-fill dial code from this country. */
   suggestedCountryIso?: string;
@@ -70,6 +72,7 @@ function applyValueToParts(
 export function PhoneInput({
   value,
   onChange,
+  onDialIsoChange,
   countries,
   suggestedCountryIso,
   syncToken,
@@ -89,6 +92,11 @@ export function PhoneInput({
   const lastEmitted = useRef(value);
   const lastSuggestedIso = useRef(suggestedCountryIso);
   const lastSyncToken = useRef(syncToken);
+
+  useEffect(() => {
+    if (!dialIso) return;
+    onDialIsoChange?.(dialIso);
+  }, [dialIso, onDialIsoChange]);
 
   useEffect(() => {
     if (syncToken !== undefined && syncToken !== lastSyncToken.current) {

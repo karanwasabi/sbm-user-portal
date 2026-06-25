@@ -88,6 +88,10 @@ export function RegisterView({
   const [fieldErrors, setFieldErrors] = useState<RegisterFieldErrors>({});
   const [phoneSyncToken, setPhoneSyncToken] = useState(0);
   const [phoneSuggestedCountryIso, setPhoneSuggestedCountryIso] = useState(suggestedCountryIso);
+  const [whatsappDialIso, setWhatsappDialIso] = useState(() => {
+    const parsed = parseWhatsapp(initialValues?.whatsapp ?? '', suggestedCountryIso);
+    return parsed.dialIso || suggestedCountryIso?.trim().toUpperCase() || '';
+  });
 
   const [startState, startAction, startPending] = useActionState(startRegister, initialStartState);
   const [verifyState, verifyAction, verifyPending] = useActionState(verifyRegisterOtp, initialVerifyState);
@@ -108,12 +112,6 @@ export function RegisterView({
     () => [firstName.trim(), lastName.trim()].filter(Boolean).join(' '),
     [firstName, lastName]
   );
-  const confirmedBillingCountryIso = useMemo(() => {
-    if (!verified) return undefined;
-    const parsed = parseWhatsapp(whatsapp, phoneSuggestedCountryIso);
-    return parsed.dialIso || phoneSuggestedCountryIso || undefined;
-  }, [verified, whatsapp, phoneSuggestedCountryIso]);
-
   const formValues = useMemo(
     () => ({
       firstName,
@@ -448,6 +446,7 @@ export function RegisterView({
                     setWhatsapp(value);
                     clearFieldError('whatsapp');
                   }}
+                  onDialIsoChange={setWhatsappDialIso}
                   countries={countries}
                   disabled={verified || formLocked}
                   dialCodeClassName="w-38 shrink-0"
@@ -574,7 +573,7 @@ export function RegisterView({
           <RegisterCheckoutSection
             suggestedLegalName={suggestedLegalName}
             suggestedCountryIso={phoneSuggestedCountryIso}
-            confirmedBillingCountryIso={confirmedBillingCountryIso}
+            whatsappCountryIso={whatsappDialIso || undefined}
             countries={countries}
             enabled={verified}
           />

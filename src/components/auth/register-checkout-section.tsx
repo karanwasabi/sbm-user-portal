@@ -28,7 +28,8 @@ import {
 type RegisterCheckoutSectionProps = {
   suggestedLegalName: string;
   suggestedCountryIso?: string;
-  confirmedBillingCountryIso?: string;
+  /** Live ISO from the WhatsApp dial-code picker (does not require a valid full number). */
+  whatsappCountryIso?: string;
   countries: Country[];
   enabled: boolean;
 };
@@ -47,7 +48,7 @@ function resolveDefaultBillingCountry(countryRows: Country[], preferredIso?: str
 export function RegisterCheckoutSection({
   suggestedLegalName,
   suggestedCountryIso,
-  confirmedBillingCountryIso,
+  whatsappCountryIso,
   countries: initialCountries,
   enabled,
 }: RegisterCheckoutSectionProps) {
@@ -68,8 +69,6 @@ export function RegisterCheckoutSection({
   const [loadingStates, setLoadingStates] = useState(false);
   const [billingCountryCode, setBillingCountryCode] = useState(() => suggestedCountryIso?.trim().toUpperCase() || 'IN');
   const [billingCountryTouched, setBillingCountryTouched] = useState(false);
-  const billingCountryInitialized = useRef(false);
-  const billingPrefilledOnVerify = useRef(false);
   const wasBillingOpen = useRef(false);
   const lastCheckoutRef = useRef<{
     sessionId: string;
@@ -122,16 +121,18 @@ export function RegisterCheckoutSection({
     };
   }, []);
 
-  useEffect(() => {
-    if (billingCountryTouched || countries.length === 0 || billingCountryInitialized.current) return;
-    setBillingCountryCode(resolveDefaultBillingCountry(countries, suggestedCountryIso));
-    billingCountryInitialized.current = true;
-  }, [billingCountryTouched, suggestedCountryIso, countries]);
-
   const handleBillingCountryChange = (code: string) => {
     setBillingCountryTouched(true);
     setBillingCountryCode(code);
   };
+
+  useEffect(() => {
+    if (billingCountryTouched || countries.length === 0) return;
+    const iso = whatsappCountryIso ?? suggestedCountryIso;
+    if (!iso) return;
+    const next = resolveDefaultBillingCountry(countries, iso);
+    setBillingCountryCode((current) => (current === next ? current : next));
+  }, [whatsappCountryIso, suggestedCountryIso, billingCountryTouched, countries]);
 
   useEffect(() => {
     if (!enabled || legalNameTouched) return;
@@ -139,13 +140,6 @@ export function RegisterCheckoutSection({
     if (!next) return;
     setLegalName((current) => (current.trim() ? current : next));
   }, [enabled, suggestedLegalName, legalNameTouched]);
-
-  useEffect(() => {
-    if (!enabled || billingCountryTouched || countries.length === 0 || billingPrefilledOnVerify.current) return;
-    const iso = confirmedBillingCountryIso ?? suggestedCountryIso;
-    setBillingCountryCode(resolveDefaultBillingCountry(countries, iso));
-    billingPrefilledOnVerify.current = true;
-  }, [enabled, billingCountryTouched, countries, confirmedBillingCountryIso, suggestedCountryIso]);
 
   useEffect(() => {
     const opened = billingOpen && !wasBillingOpen.current;
