@@ -56,10 +56,7 @@ function runOnce(onSuccess: () => void): () => void {
   };
 }
 
-function startCheckoutCompletionWatcher(
-  onComplete: () => void,
-  options?: { enrollmentFlow?: boolean }
-): CheckoutWatcher {
+function startCheckoutCompletionWatcher(onComplete: () => void): CheckoutWatcher {
   if (typeof window === 'undefined') {
     return { stop: () => undefined };
   }
@@ -69,10 +66,6 @@ function startCheckoutCompletionWatcher(
 
   const poll = async () => {
     if (stopped) return;
-    if (options?.enrollmentFlow === false) {
-      complete();
-      return;
-    }
     const enrolled = await pollUntilEnrolled({ intervalMs: 1000, timeoutMs: 8000 });
     if (!stopped && enrolled) {
       complete();
@@ -141,7 +134,7 @@ export async function openRazorpaySubscriptionCheckout({
 
   const complete = runOnce(onSuccess);
   const enrollmentFlow = returnFlow === 'enrollment';
-  const watcher = startCheckoutCompletionWatcher(complete, { enrollmentFlow });
+  const watcher = enrollmentFlow ? startCheckoutCompletionWatcher(complete) : null;
 
   if (checkoutSessionId) {
     savePendingCheckout({
@@ -165,12 +158,12 @@ export async function openRazorpaySubscriptionCheckout({
     description,
     callback_url: callbackUrl,
     handler: () => {
-      watcher.stop();
+      watcher?.stop();
       complete();
     },
     modal: {
       ondismiss: () => {
-        watcher.stop();
+        watcher?.stop();
         void handleCheckoutDismiss({
           checkoutSessionId,
           abandonOnDismiss,

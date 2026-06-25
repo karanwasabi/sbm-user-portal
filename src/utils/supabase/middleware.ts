@@ -89,7 +89,12 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && !isEmailVerified(user)) {
-    const allowed = isConfirmRoute || pathname === '/register' || pathname.startsWith('/register/');
+    const allowed =
+      isConfirmRoute ||
+      pathname === '/register' ||
+      pathname.startsWith('/register/') ||
+      pathname === '/payment/return' ||
+      isPaymentCallbackRoute(pathname);
     if (!allowed) {
       const url = request.nextUrl.clone();
       url.pathname = '/register';
