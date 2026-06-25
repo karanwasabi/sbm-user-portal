@@ -482,10 +482,9 @@ export function RegisterCheckoutSection({
           </div>
         ) : (
           <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
-            Legal name defaults to your registration name.{' '}
-            {pricingRegion === 'domestic'
-              ? 'Expand to add GSTIN or a billing address.'
-              : 'Expand to add a billing address.'}
+            Legal name defaults to your registration name. Expand to change billing country
+            {pricingRegion === 'domestic' ? ' or add GSTIN and a billing address' : ' or add a billing address'}.
+            Pricing depends on country.
           </p>
         )}
       </div>
