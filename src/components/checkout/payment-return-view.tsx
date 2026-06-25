@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { pollUntilEnrolled } from '@/lib/razorpay-checkout';
-import { clearPendingCheckout, readPendingCheckout } from '@/lib/payment-return';
+import { clearPendingCheckout } from '@/lib/payment-return';
 
 type PaymentReturnViewProps = {
   error?: string | null;
@@ -24,7 +24,6 @@ export function PaymentReturnView({ error: initialError }: PaymentReturnViewProp
 
     const destination = searchParams.get('destination') || '/';
     const flow = searchParams.get('flow') || 'enrollment';
-    const pending = readPendingCheckout();
 
     const finish = () => {
       clearPendingCheckout();
@@ -39,26 +38,24 @@ export function PaymentReturnView({ error: initialError }: PaymentReturnViewProp
 
     let cancelled = false;
     void (async () => {
-      const enrolled = await pollUntilEnrolled({ intervalMs: 1500, timeoutMs: 45000 });
+      const enrolled = await pollUntilEnrolled({ intervalMs: 1500, timeoutMs: 120000 });
       if (cancelled) return;
       if (enrolled) {
         finish();
         return;
       }
 
-      if (pending?.destination) {
-        setMessage('Payment received. Finishing setup…');
-        const retry = await pollUntilEnrolled({ intervalMs: 2000, timeoutMs: 20000 });
-        if (!cancelled && retry) {
-          finish();
-          return;
-        }
+      setMessage('Payment received. This is taking longer than usual — still confirming…');
+      const retry = await pollUntilEnrolled({ intervalMs: 2000, timeoutMs: 60000 });
+      if (cancelled) return;
+      if (retry) {
+        finish();
+        return;
       }
 
-      setMessage('Payment is still processing. Taking you back…');
-      window.setTimeout(() => {
-        if (!cancelled) finish();
-      }, 2500);
+      setMessage(
+        'Your payment went through but enrollment is still syncing. Please wait a moment and refresh, or contact support if this persists.'
+      );
     })();
 
     return () => {

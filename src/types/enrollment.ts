@@ -10,5 +10,9 @@ export type Enrollment = {
 };
 
 export function hasPendingPayment(enrollments: Enrollment[]): boolean {
+  const hasPaidAccess = enrollments.some(
+    (entry) => entry.status === 'upcoming' || entry.status === 'active' || entry.status === 'completed'
+  );
+  if (hasPaidAccess) return false;
   return enrollments.some((entry) => entry.status === 'pending_payment');
 }
