@@ -490,7 +490,7 @@ export function RegisterCheckoutSection({
         )}
       </div>
 
-      <Field label="Promo code">
+      <Field label="Discount code">
         <div className="flex gap-2">
           <TextInput
             value={promoCode}
@@ -508,7 +508,7 @@ export function RegisterCheckoutSection({
             onClick={() => {
               const normalized = normalizePromoCode(promoCode);
               if (!normalized) {
-                setError('Enter a promo code.');
+                setError('Enter a discount code.');
                 return;
               }
               setPromoCode(normalized);

@@ -211,7 +211,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
   const handleApplyPromo = () => {
     const normalized = normalizePromoCode(promoCode);
     if (!normalized) {
-      setError('Enter a promo code.');
+      setError('Enter a discount code.');
       return;
     }
     setPromoCode(normalized);
@@ -400,7 +400,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
           className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800"
           onClick={() => setBillingOpen((open) => !open)}
         >
-          Billing & promo
+          Billing & discount
           <ChevronDown className={cn('h-4 w-4 transition-transform', billingOpen && 'rotate-180')} />
         </button>
         {billingOpen ? (
@@ -433,7 +433,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
               onCitySuggestion={handleCitySuggestion}
             />
 
-            <Field label="Promo code">
+            <Field label="Discount code">
               <div className="flex gap-2">
                 <TextInput
                   value={promoCode}
@@ -468,7 +468,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
         </div>
         {displayQuote.discount_paise > 0 ? (
           <p className="mt-1 text-xs text-success">
-            Promo {displayQuote.promo_code}: −{formatInrFromPaise(displayQuote.discount_paise)}
+            {displayQuote.promo_code}: −{formatInrFromPaise(displayQuote.discount_paise)}
           </p>
         ) : null}
       </div>
