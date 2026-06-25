@@ -1,7 +1,19 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/confirm', '/unauthorized'];
+const PUBLIC_ROUTES = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/auth/confirm',
+  '/unauthorized',
+  '/payment/return',
+];
+
+function isPaymentCallbackRoute(pathname: string) {
+  return pathname === '/api/payment/razorpay-return';
+}
 
 function isPublicRoute(pathname: string) {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -86,9 +98,11 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (!user && !publicRoute && !requiresAuth) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+    if (!isPaymentCallbackRoute(pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { PortalLoginAnalytics } from '@/components/analytics/portal-login-analytics';
+import { PendingCheckoutRecovery } from '@/components/checkout/pending-checkout-recovery';
 import { PortalProfileProvider } from '@/components/layout/portal/portal-profile-context';
 import { PortalSidebar } from '@/components/layout/portal/portal-sidebar';
 import { PortalTopbar } from '@/components/layout/portal/portal-topbar';
@@ -33,6 +34,7 @@ export function PortalShell({
     >
       <ToastProvider>
         <PortalLoginAnalytics />
+        <PendingCheckoutRecovery />
         <div className="flex h-dvh min-w-0 bg-white">
           <PortalSidebar />
           <div className="flex min-w-0 flex-1 flex-col">

@@ -11,6 +11,7 @@ import {
 } from '@/app/(auth)/register/actions';
 import { DpdpConsentCheckbox } from '@/components/auth/dpdp-consent-checkbox';
 import { RegisterCheckoutSection } from '@/components/auth/register-checkout-section';
+import { PendingCheckoutRecovery } from '@/components/checkout/pending-checkout-recovery';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthCardBody, AuthLayout } from '@/components/layout/auth-layout';
 import { ParentalConsentBlock } from '@/components/profile/parental-consent-block';
@@ -350,6 +351,7 @@ export function RegisterView({
 
   return (
     <AuthLayout variant="register">
+      <PendingCheckoutRecovery />
       <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:mb-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <SbmWordmark size="lg" showSubtitle={false} />
         <h1 className="text-lg font-bold tracking-tight text-slate-800 sm:text-right sm:text-[17px] lg:text-lg">

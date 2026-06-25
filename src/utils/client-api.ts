@@ -165,6 +165,30 @@ export async function abandonCheckout(checkoutSessionId: string): Promise<void> 
   });
 }
 
+export type CheckoutPaymentReturnRequest = {
+  checkout_session_id?: string;
+  flow?: 'enrollment' | 'subscription-update';
+  razorpay_payment_id: string;
+  razorpay_order_id?: string;
+  razorpay_subscription_id?: string;
+  razorpay_signature: string;
+};
+
+export type CheckoutPaymentReturnResponse = {
+  status: string;
+  enrolled?: boolean;
+};
+
+export async function confirmCheckoutPaymentReturn(
+  body: CheckoutPaymentReturnRequest
+): Promise<CheckoutPaymentReturnResponse> {
+  const response = await clientApiFetch('/me/checkout/payment-return', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return response.json() as Promise<CheckoutPaymentReturnResponse>;
+}
+
 export async function getCountries(): Promise<Country[]> {
   const response = await clientApiFetch('/reference/countries');
   return response.json() as Promise<Country[]>;
