@@ -41,7 +41,9 @@ export function DashboardHero({
     <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)] lg:items-start">
       <div className="flex min-w-0 flex-col gap-4">
         <header>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Hey {firstName}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
+            Hey {firstName}
+          </h1>
           {showPreStartPanel && upcoming ? (
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
               You&apos;re enrolled in {upcoming.program_name}

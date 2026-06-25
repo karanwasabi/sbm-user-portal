@@ -296,7 +296,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
             title="Cancel Subscription"
             subtitle="Stops the next renewal. Access continues until period end."
           />
-          <div className="flex items-center justify-between gap-4 rounded-[14px] border border-slate-100 bg-canvas-cool p-4">
+          <div className="flex flex-col gap-4 rounded-[14px] border border-slate-100 bg-canvas-cool p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 flex-1 items-start gap-3">
               <Calendar size={18} className="mt-0.5 shrink-0 text-slate-500" />
               <p className="text-sm leading-relaxed text-slate-600">
@@ -307,7 +307,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
             <Button
               variant="danger"
               size="sm"
-              className="shrink-0"
+              className="w-full shrink-0 sm:w-auto"
               onClick={() => setCancelDialogOpen(true)}
               disabled={cancelPending}
             >

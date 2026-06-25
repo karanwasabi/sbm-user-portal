@@ -350,9 +350,9 @@ export function RegisterView({
 
   return (
     <AuthLayout variant="register">
-      <div className="mb-4 flex items-center justify-between gap-6 border-b border-slate-100 pb-4">
+      <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:mb-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <SbmWordmark size="lg" showSubtitle={false} />
-        <h1 className="text-right text-[17px] font-bold tracking-tight text-slate-800 sm:text-lg">
+        <h1 className="text-lg font-bold tracking-tight text-slate-800 sm:text-right sm:text-[17px] lg:text-lg">
           Register for Take Control
         </h1>
       </div>
@@ -568,7 +568,7 @@ export function RegisterView({
           ) : null}
         </AuthCardBody>
 
-        <div className="min-w-0 lg:border-l lg:border-slate-100 lg:pl-8">
+        <div className="min-w-0 border-t border-slate-100 pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
           <RegisterCheckoutSection
             suggestedLegalName={suggestedLegalName}
             suggestedCountryIso={phoneSuggestedCountryIso}

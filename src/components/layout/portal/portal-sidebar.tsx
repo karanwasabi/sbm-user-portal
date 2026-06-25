@@ -1,100 +1,31 @@
 'use client';
 
-import { CreditCard, FileText, HelpCircle, Home, Settings, User } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { PortalNavLink } from '@/components/layout/portal/portal-nav-link';
-import { invoicesNavEnabled } from '@/lib/portal-features';
-
-const mainNavItems = [
-  {
-    href: '/',
-    label: 'Home',
-    icon: Home,
-    activeClass: 'border-b-brand-press bg-brand font-bold text-white shadow-[0_8px_14px_-6px_rgba(92,101,207,0.40)]',
-    iconActiveClass: 'text-white',
-  },
-  {
-    href: '/subscription',
-    label: 'Subscription',
-    icon: CreditCard,
-    activeClass:
-      'border-b-success-press bg-success font-bold text-white shadow-[0_8px_14px_-6px_rgba(16,185,129,0.35)]',
-    iconActiveClass: 'text-white',
-  },
-  ...(invoicesNavEnabled
-    ? [
-        {
-          href: '/invoices',
-          label: 'Invoices',
-          icon: FileText,
-          activeClass:
-            'border-b-[#E88A0C] bg-amber font-bold text-white shadow-[0_8px_14px_-6px_rgba(255,159,28,0.35)]',
-          iconActiveClass: 'text-white',
-        },
-      ]
-    : []),
-  {
-    href: '/profile',
-    label: 'Profile',
-    icon: User,
-    activeClass:
-      'border-b-brand-deep-press bg-brand-deep font-bold text-white shadow-[0_8px_14px_-6px_rgba(43,24,101,0.35)]',
-    iconActiveClass: 'text-white',
-  },
-  {
-    href: '/settings',
-    label: 'Settings',
-    icon: Settings,
-    activeClass: 'border-b-slate-600 bg-slate-700 font-bold text-white shadow-[0_8px_14px_-6px_rgba(51,65,85,0.35)]',
-    iconActiveClass: 'text-white',
-  },
-] as const;
-
-const supportNavItem = {
-  href: '/support',
-  label: 'Help & Support',
-  icon: HelpCircle,
-  activeClass: 'border-b-support-press bg-support font-bold text-white shadow-[0_8px_14px_-6px_rgba(14,165,233,0.35)]',
-  iconActiveClass: 'text-white',
-} as const;
-
-function isNavActive(pathname: string, href: string): boolean {
-  return href === '/' ? pathname === '/' : pathname.startsWith(href);
-}
+import {
+  isPortalNavActive,
+  portalMainNavItems,
+  portalSupportNavItem,
+} from '@/components/layout/portal/portal-nav-items';
 
 export function PortalSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-[232px] shrink-0 flex-col border-r border-slate-100 bg-canvas px-3.5 pb-[18px]">
+    <aside className="hidden h-full w-[232px] shrink-0 flex-col border-r border-slate-100 bg-canvas px-3.5 pb-[18px] lg:flex">
       <div className="flex h-[68px] shrink-0 items-center border-b border-slate-100 px-2">
         <SbmWordmark size="sm" />
       </div>
 
       <nav className="mt-3 flex flex-col gap-1">
-        {mainNavItems.map(({ href, label, icon, activeClass, iconActiveClass }) => (
-          <PortalNavLink
-            key={href}
-            href={href}
-            label={label}
-            icon={icon}
-            isActive={isNavActive(pathname, href)}
-            activeClass={activeClass}
-            iconActiveClass={iconActiveClass}
-          />
+        {portalMainNavItems.map((item) => (
+          <PortalNavLink key={item.href} {...item} isActive={isPortalNavActive(pathname, item.href)} />
         ))}
       </nav>
 
       <div className="mt-auto border-t border-slate-100 pt-3">
-        <PortalNavLink
-          href={supportNavItem.href}
-          label={supportNavItem.label}
-          icon={supportNavItem.icon}
-          isActive={isNavActive(pathname, supportNavItem.href)}
-          activeClass={supportNavItem.activeClass}
-          iconActiveClass={supportNavItem.iconActiveClass}
-        />
+        <PortalNavLink {...portalSupportNavItem} isActive={isPortalNavActive(pathname, portalSupportNavItem.href)} />
       </div>
     </aside>
   );

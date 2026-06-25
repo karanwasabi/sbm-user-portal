@@ -38,7 +38,7 @@ export function PortalShell({
           <div className="flex min-w-0 flex-1 flex-col">
             <PortalTopbar />
             {profileError && (
-              <div className="border-b border-[#FEE2E5] bg-[#FEE2E5]/40 px-7 py-2.5 text-sm font-medium text-danger-press">
+              <div className="border-b border-[#FEE2E5] bg-[#FEE2E5]/40 px-4 py-2.5 text-sm font-medium text-danger-press sm:px-6">
                 {profileError}
               </div>
             )}

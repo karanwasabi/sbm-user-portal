@@ -11,13 +11,13 @@ type AuthLayoutProps = {
 const shellClassName: Record<AuthLayoutVariant, string> = {
   account: 'items-center justify-center p-6',
   onboarding: 'items-center justify-center p-6',
-  register: 'items-start justify-center px-4 py-6 sm:px-6 sm:py-8',
+  register: 'items-start justify-center px-3 py-4 sm:px-6 sm:py-8',
 };
 
 const cardClassName: Record<AuthLayoutVariant, string> = {
   account: 'max-w-[400px] rounded-3xl p-8 shadow-[0_24px_48px_-12px_rgba(43,24,101,0.35)] sm:p-10',
   onboarding: 'max-w-[640px] rounded-3xl p-8 shadow-[0_24px_48px_-12px_rgba(43,24,101,0.35)] sm:p-10',
-  register: 'max-w-6xl rounded-2xl p-5 shadow-[0_16px_40px_-16px_rgba(43,24,101,0.28)] sm:p-6 lg:p-7',
+  register: 'max-w-6xl rounded-2xl p-4 shadow-[0_16px_40px_-16px_rgba(43,24,101,0.28)] sm:p-6 lg:p-7',
 };
 
 export function AuthLayout({ children, variant = 'account' }: AuthLayoutProps) {

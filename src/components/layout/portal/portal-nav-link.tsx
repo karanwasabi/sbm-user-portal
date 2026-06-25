@@ -13,6 +13,7 @@ type PortalNavLinkProps = {
   isActive: boolean;
   activeClass: string;
   iconActiveClass: string;
+  onNavigate?: () => void;
 };
 
 function PortalNavLinkInner({
@@ -35,10 +36,19 @@ function PortalNavLinkInner({
   );
 }
 
-export function PortalNavLink({ href, label, icon, isActive, activeClass, iconActiveClass }: PortalNavLinkProps) {
+export function PortalNavLink({
+  href,
+  label,
+  icon,
+  isActive,
+  activeClass,
+  iconActiveClass,
+  onNavigate,
+}: PortalNavLinkProps) {
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={cn(
         'flex items-center gap-3 rounded-[14px] px-3.5 py-[11px] text-[13.5px] font-semibold transition-colors',
         isActive ? activeClass : 'border-b-[3px] border-transparent text-slate-700 hover:bg-white/60'

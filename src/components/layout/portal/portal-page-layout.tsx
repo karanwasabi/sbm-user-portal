@@ -33,7 +33,7 @@ export function PortalPageLayout({
   const aside = (
     <div
       className={cn(
-        'relative overflow-hidden rounded-3xl border border-slate-100/80 p-6 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.10)]',
+        'relative overflow-hidden rounded-3xl border border-slate-100/80 p-5 shadow-[0_8px_32px_-12px_rgba(15,23,42,0.10)] sm:p-6',
         panelClassName
       )}
     >
