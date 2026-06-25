@@ -548,6 +548,7 @@ export function RegisterView({
                       disabled={verified || formLocked}
                       dialCodeClassName="w-38 shrink-0"
                       suggestedCountryIso={whatsapp.trim() ? undefined : phoneSuggestedCountryIso}
+                      preferredDialIso={whatsappDialIso || undefined}
                       syncToken={phoneSyncToken}
                       error={Boolean(fieldErrors.whatsapp)}
                       inputRef={whatsappRef}

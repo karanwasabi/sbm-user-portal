@@ -502,7 +502,14 @@ export function resolveIsoForDialCode(dialCode: string, preferredIso?: string): 
   if (!normalized) return '';
   const isos = DIAL_CODE_TO_ISOS[normalized] ?? [];
   if (isos.length === 0) return '';
-  if (preferredIso && isos.includes(preferredIso.toUpperCase())) return preferredIso.toUpperCase();
+  const preferred = preferredIso?.trim().toUpperCase();
+  if (preferred && isos.includes(preferred)) return preferred;
+  if (normalized === '+1') {
+    if (isos.includes('US')) return 'US';
+    if (isos.includes('CA')) return 'CA';
+  }
+  if (normalized === '+44' && isos.includes('GB')) return 'GB';
+  if (normalized === '+61' && isos.includes('AU')) return 'AU';
   return isos[0] ?? '';
 }
 

@@ -18,6 +18,8 @@ type PhoneInputProps = {
   countries: Country[];
   /** When the combined number is blank, auto-fill dial code from this country. */
   suggestedCountryIso?: string;
+  /** Explicit dial-country selection (e.g. US for +1). Used when parsing shared dial codes. */
+  preferredDialIso?: string;
   /** Bumped to force internal state to re-sync from `value` (e.g. form discard). */
   syncToken?: number;
   name?: string;
@@ -31,12 +33,12 @@ type PhoneInputProps = {
   useFieldFeedback?: boolean;
 };
 
-function initialParts(value: string, suggestedCountryIso?: string) {
-  const parsed = parseWhatsapp(value, suggestedCountryIso);
-  if (!value.trim() && suggestedCountryIso) {
-    const dial = getCountryDialCode(suggestedCountryIso);
+function initialParts(value: string, preferredIso?: string) {
+  const parsed = parseWhatsapp(value, preferredIso);
+  if (!value.trim() && preferredIso) {
+    const dial = getCountryDialCode(preferredIso);
     if (dial) {
-      return { dialCode: dial, dialIso: suggestedCountryIso, nationalNumber: '' };
+      return { dialCode: dial, dialIso: preferredIso, nationalNumber: '' };
     }
   }
   if (parsed.dialIso && parsed.nationalNumber) {
@@ -48,9 +50,17 @@ function initialParts(value: string, suggestedCountryIso?: string) {
   return parsed;
 }
 
+function resolvePreferredIso(
+  preferredDialIso: string | undefined,
+  suggestedCountryIso: string | undefined,
+  currentDialIso: string
+): string | undefined {
+  return preferredDialIso || currentDialIso || suggestedCountryIso;
+}
+
 function applyValueToParts(
   value: string,
-  suggestedCountryIso: string | undefined,
+  preferredIso: string | undefined,
   setters: {
     setDialCode: (v: string) => void;
     setDialIso: (v: string) => void;
@@ -58,12 +68,12 @@ function applyValueToParts(
   },
   refs: {
     lastEmitted: { current: string };
-    lastSuggestedIso: { current: string | undefined };
+    lastPreferredIso: { current: string | undefined };
   }
 ) {
   refs.lastEmitted.current = value;
-  refs.lastSuggestedIso.current = suggestedCountryIso;
-  const next = initialParts(value, suggestedCountryIso);
+  refs.lastPreferredIso.current = preferredIso;
+  const next = initialParts(value, preferredIso);
   setters.setDialCode(next.dialCode);
   setters.setDialIso(next.dialIso);
   setters.setNationalNumber(next.nationalNumber);
@@ -75,6 +85,7 @@ export function PhoneInput({
   onDialIsoChange,
   countries,
   suggestedCountryIso,
+  preferredDialIso,
   syncToken,
   name,
   disabled,
@@ -85,13 +96,16 @@ export function PhoneInput({
   inputRef,
   useFieldFeedback = false,
 }: PhoneInputProps) {
-  const initial = initialParts(value, suggestedCountryIso);
+  const initialPreferredIso = resolvePreferredIso(preferredDialIso, suggestedCountryIso, '');
+  const initial = initialParts(value, initialPreferredIso);
   const [dialCode, setDialCode] = useState(initial.dialCode);
   const [dialIso, setDialIso] = useState(initial.dialIso);
   const [nationalNumber, setNationalNumber] = useState(initial.nationalNumber);
   const lastEmitted = useRef(value);
-  const lastSuggestedIso = useRef(suggestedCountryIso);
+  const lastPreferredIso = useRef(initialPreferredIso);
   const lastSyncToken = useRef(syncToken);
+  const dialIsoRef = useRef(dialIso);
+  dialIsoRef.current = dialIso;
 
   useEffect(() => {
     if (!dialIso) return;
@@ -99,20 +113,22 @@ export function PhoneInput({
   }, [dialIso, onDialIsoChange]);
 
   useEffect(() => {
+    const preferredIso = resolvePreferredIso(preferredDialIso, suggestedCountryIso, dialIsoRef.current);
+
     if (syncToken !== undefined && syncToken !== lastSyncToken.current) {
       lastSyncToken.current = syncToken;
       applyValueToParts(
         value,
-        suggestedCountryIso,
+        preferredIso,
         { setDialCode, setDialIso, setNationalNumber },
-        { lastEmitted, lastSuggestedIso }
+        { lastEmitted, lastPreferredIso }
       );
       return;
     }
 
     if (value === lastEmitted.current) {
-      if (!value.trim() && suggestedCountryIso && suggestedCountryIso !== lastSuggestedIso.current) {
-        lastSuggestedIso.current = suggestedCountryIso;
+      if (!value.trim() && suggestedCountryIso && suggestedCountryIso !== lastPreferredIso.current) {
+        lastPreferredIso.current = suggestedCountryIso;
         const dial = getCountryDialCode(suggestedCountryIso);
         if (dial) {
           setDialCode(dial);
@@ -128,12 +144,12 @@ export function PhoneInput({
     }
 
     lastEmitted.current = value;
-    lastSuggestedIso.current = suggestedCountryIso;
-    const next = initialParts(value, suggestedCountryIso);
+    lastPreferredIso.current = preferredIso;
+    const next = initialParts(value, preferredIso);
     setDialCode(next.dialCode);
     setDialIso(next.dialIso);
     setNationalNumber(next.nationalNumber);
-  }, [value, suggestedCountryIso, syncToken]);
+  }, [value, suggestedCountryIso, preferredDialIso, syncToken]);
 
   const digitHint = useMemo(() => getMobileDigitHint(dialIso), [dialIso]);
   const validationError = useMemo(() => {
