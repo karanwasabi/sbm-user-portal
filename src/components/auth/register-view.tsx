@@ -1,7 +1,15 @@
 'use client';
 
-import Link from 'next/link';
-import { useActionState, useEffect, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react';
+import {
+  useActionState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type RefObject,
+} from 'react';
 import { Loader2, Mail } from 'lucide-react';
 import {
   resendRegisterOtp,
@@ -43,6 +51,7 @@ import type { RegisterFormValues } from '@/lib/merge-profile-patch';
 import { profileToRegisterDefaults } from '@/lib/merge-profile-patch';
 import { trackPortalSignUp } from '@/lib/gtag';
 import { buildLoginUrl } from '@/lib/login-url';
+import { cn } from '@/lib/cn';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
 import { getBillingProfileOrNull, getMyProfile } from '@/utils/client-api';
 import { SearchableSelect } from '@/components/ui/searchable-select';
@@ -106,6 +115,8 @@ export function RegisterView({
   const parentalConsentRef = useRef<HTMLButtonElement>(null);
   const dpdpConsentRef = useRef<HTMLButtonElement>(null);
   const otpRef = useRef<HTMLInputElement>(null);
+  const registerContentRef = useRef<HTMLDivElement>(null);
+  const [registerContentHeight, setRegisterContentHeight] = useState<number | null>(null);
   const startWasPending = useRef(false);
   const signUpTracked = useRef(false);
   const dateOfBirthBounds = useMemo(() => getDateOfBirthInputBounds(), []);
@@ -140,8 +151,17 @@ export function RegisterView({
     (dobLiveError && !isParentalConsentValidationError(dobLiveError) ? dobLiveError : undefined);
   const formLocked = otpSent && !verified;
   const profileHydrated = useRef(false);
+  const existingAccountStatus =
+    startState.status === 'already_enrolled' || startState.status === 'already_registered' ? startState.status : null;
+  const [dismissedExistingAccount, setDismissedExistingAccount] = useState(false);
+  const showExistingAccountNotice = Boolean(existingAccountStatus) && !dismissedExistingAccount;
   const loginUrl = useMemo(
-    () => buildLoginUrl(startState.status === 'already_registered' ? (startState.email ?? email) : undefined),
+    () =>
+      buildLoginUrl(
+        startState.status === 'already_registered' || startState.status === 'already_enrolled'
+          ? (startState.email ?? email)
+          : undefined
+      ),
     [startState.status, startState.email, email]
   );
 
@@ -256,6 +276,23 @@ export function RegisterView({
     void clearRegisterDraft();
   }, [fromDraft]);
 
+  useLayoutEffect(() => {
+    if (showExistingAccountNotice) return;
+
+    const node = registerContentRef.current;
+    if (!node) return;
+
+    const measure = () => {
+      setRegisterContentHeight(node.offsetHeight);
+    };
+
+    measure();
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [showExistingAccountNotice, verified, otpSent, startPending, countries.length]);
+
   useEffect(() => {
     if (startWasPending.current && !startPending) {
       if (startState.fieldErrors && Object.keys(startState.fieldErrors).length > 0) {
@@ -264,6 +301,9 @@ export function RegisterView({
         focusRegisterField(startState.focusField);
       } else if (startState.error) {
         setOtpSent(false);
+      } else if (startState.status === 'already_enrolled' || startState.status === 'already_registered') {
+        setDismissedExistingAccount(false);
+        setOtpSent(false);
       }
     }
     startWasPending.current = startPending;
@@ -271,7 +311,7 @@ export function RegisterView({
 
   useEffect(() => {
     if (!startState.status || !startState.email) return;
-    if (startState.status === 'already_registered') return;
+    if (startState.status === 'already_registered' || startState.status === 'already_enrolled') return;
     setFieldErrors({});
     setOtpSent(true);
     setEmail(startState.email);
@@ -334,7 +374,15 @@ export function RegisterView({
       return;
     }
     setFormError(null);
-    setOtpSent(true);
+  };
+
+  const handleUseDifferentEmail = () => {
+    setDismissedExistingAccount(true);
+    setOtpSent(false);
+    setOtp('');
+    setResendCooldown(0);
+    setFormError(null);
+    emailRef.current?.focus();
   };
 
   const handleEditForm = () => {
@@ -364,241 +412,275 @@ export function RegisterView({
         </h1>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,22rem)] lg:gap-8">
-        <AuthCardBody variant="register" className="min-w-0">
-          {verified ? (
-            <form action={restartRegisterEditing} className="mb-2.5 flex justify-end">
-              {hiddenFields}
-              <button type="submit" className={linkButtonClass}>
-                Edit details
+      <div
+        className={cn(
+          showExistingAccountNotice && 'mx-auto flex w-full max-w-lg flex-col justify-center',
+          showExistingAccountNotice && !registerContentHeight && 'min-h-[44rem] lg:min-h-[26rem]'
+        )}
+        style={showExistingAccountNotice && registerContentHeight ? { minHeight: registerContentHeight } : undefined}
+      >
+        {showExistingAccountNotice ? (
+          <div
+            className="flex w-full flex-col gap-4 rounded-xl border border-danger-press/20 bg-danger-press/5 px-4 py-4 sm:px-5 sm:py-5"
+            role="alert"
+          >
+            <div>
+              <p className="text-base font-bold text-slate-900">
+                {existingAccountStatus === 'already_enrolled'
+                  ? 'This email is already enrolled'
+                  : 'An account already exists'}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-700">
+                {existingAccountStatus === 'already_enrolled' ? (
+                  <>
+                    <span className="font-semibold text-slate-900">{startState.email ?? email}</span> is linked to an
+                    active Take Control enrollment. Registration can&apos;t continue with this email.
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold text-slate-900">{startState.email ?? email}</span> is already
+                    registered. Sign in instead of creating a new account.
+                  </>
+                )}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+              <Button href={loginUrl} variant="primary" size="md" className="sm:w-auto">
+                Sign in
+              </Button>
+              <button type="button" className={linkButtonClass} onClick={handleUseDifferentEmail}>
+                Use a different email
               </button>
-            </form>
-          ) : null}
-
-          <form action={startAction} onSubmit={handleStartSubmit} className="flex flex-col gap-2.5">
-            {hiddenFields}
-
-            {formLocked ? (
-              <div className="flex justify-end">
-                <button type="button" className={linkButtonClass} onClick={handleEditForm}>
-                  Edit details
-                </button>
-              </div>
-            ) : null}
-
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              <Field label="First name" error={fieldErrors.firstName}>
-                <TextInput
-                  ref={firstNameRef}
-                  value={firstName}
-                  onChange={(value) => {
-                    setFirstName(toTitleCase(value));
-                    clearFieldError('firstName');
-                  }}
-                  placeholder="First name"
-                  disabled={verified || formLocked}
-                  autoFocus={!verified && !otpSent}
-                  error={Boolean(fieldErrors.firstName)}
-                />
-              </Field>
-              <Field label="Last name">
-                <TextInput
-                  value={lastName}
-                  onChange={(value) => setLastName(toTitleCase(value))}
-                  placeholder="Last name"
-                  disabled={verified || formLocked}
-                />
-              </Field>
             </div>
-
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              <Field label="Email" error={fieldErrors.email}>
-                <TextInput
-                  ref={emailRef}
-                  value={email}
-                  onChange={(value) => {
-                    setEmail(value);
-                    clearFieldError('email');
-                  }}
-                  type="email"
-                  placeholder="you@example.com"
-                  disabled={verified || formLocked}
-                  error={Boolean(fieldErrors.email)}
-                />
-              </Field>
-
-              <Field label="Sex" error={fieldErrors.sex}>
-                <SearchableSelect
-                  value={sex}
-                  onChange={(value) => {
-                    setSex(value as (typeof SEX_OPTIONS)[number]['value']);
-                    clearFieldError('sex');
-                  }}
-                  options={SEX_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
-                  placeholder="Select sex"
-                  searchPlaceholder="Search"
-                  emptyMessage="No options found."
-                  disabled={verified || formLocked}
-                  focusRef={sexRef}
-                  error={Boolean(fieldErrors.sex)}
-                />
-              </Field>
-            </div>
-
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              <Field label="WhatsApp number" error={fieldErrors.whatsapp}>
-                <PhoneInput
-                  value={whatsapp}
-                  onChange={(value) => {
-                    setWhatsapp(value);
-                    clearFieldError('whatsapp');
-                  }}
-                  onDialIsoChange={setWhatsappDialIso}
-                  countries={countries}
-                  disabled={verified || formLocked}
-                  dialCodeClassName="w-38 shrink-0"
-                  suggestedCountryIso={whatsapp.trim() ? undefined : phoneSuggestedCountryIso}
-                  syncToken={phoneSyncToken}
-                  error={Boolean(fieldErrors.whatsapp)}
-                  inputRef={whatsappRef}
-                  useFieldFeedback
-                />
-              </Field>
-
-              <Field label="Date of birth" error={dateOfBirthDisplayError}>
-                <TextInput
-                  ref={dateOfBirthRef}
-                  value={dateOfBirth}
-                  onChange={(value) => {
-                    setDateOfBirth(value);
-                    setParentalConsent(false);
-                    clearFieldError('dateOfBirth');
-                    clearFieldError('parentalConsent');
-                  }}
-                  type="date"
-                  min={dateOfBirthBounds.min}
-                  max={dateOfBirthBounds.max}
-                  disabled={verified || formLocked}
-                  error={Boolean(dateOfBirthDisplayError)}
-                />
-              </Field>
-            </div>
-
-            <div className={showParentalConsent ? 'my-1.5 flex flex-col gap-4' : 'my-1.5'}>
-              {showParentalConsent ? (
-                <ParentalConsentBlock
-                  checked={parentalConsent}
-                  onChange={(checked) => {
-                    setParentalConsent(checked);
-                    clearFieldError('parentalConsent');
-                    clearFieldError('dateOfBirth');
-                  }}
-                  disabled={verified || formLocked}
-                  error={showParentalConsentError}
-                  inputRef={parentalConsentRef}
-                />
+          </div>
+        ) : (
+          <div ref={registerContentRef} className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,22rem)] lg:gap-8">
+            <AuthCardBody variant="register" className="min-w-0">
+              {verified ? (
+                <form action={restartRegisterEditing} className="mb-2.5 flex justify-end">
+                  {hiddenFields}
+                  <button type="submit" className={linkButtonClass}>
+                    Edit details
+                  </button>
+                </form>
               ) : null}
 
-              <DpdpConsentCheckbox
-                checked={dpdpConsent}
-                onChange={(checked) => {
-                  setDpdpConsent(checked);
-                  clearFieldError('dpdpConsent');
-                }}
-                disabled={verified || formLocked}
-                error={Boolean(fieldErrors.dpdpConsent)}
-                inputRef={dpdpConsentRef}
+              <form action={startAction} onSubmit={handleStartSubmit} className="flex flex-col gap-2.5">
+                {hiddenFields}
+
+                {formLocked ? (
+                  <div className="flex justify-end">
+                    <button type="button" className={linkButtonClass} onClick={handleEditForm}>
+                      Edit details
+                    </button>
+                  </div>
+                ) : null}
+
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <Field label="First name" error={fieldErrors.firstName}>
+                    <TextInput
+                      ref={firstNameRef}
+                      value={firstName}
+                      onChange={(value) => {
+                        setFirstName(toTitleCase(value));
+                        clearFieldError('firstName');
+                      }}
+                      placeholder="First name"
+                      disabled={verified || formLocked}
+                      autoFocus={!verified && !otpSent}
+                      error={Boolean(fieldErrors.firstName)}
+                    />
+                  </Field>
+                  <Field label="Last name">
+                    <TextInput
+                      value={lastName}
+                      onChange={(value) => setLastName(toTitleCase(value))}
+                      placeholder="Last name"
+                      disabled={verified || formLocked}
+                    />
+                  </Field>
+                </div>
+
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <Field label="Email" error={fieldErrors.email}>
+                    <TextInput
+                      ref={emailRef}
+                      value={email}
+                      onChange={(value) => {
+                        setEmail(value);
+                        clearFieldError('email');
+                      }}
+                      type="email"
+                      placeholder="you@example.com"
+                      disabled={verified || formLocked}
+                      error={Boolean(fieldErrors.email)}
+                    />
+                  </Field>
+
+                  <Field label="Sex" error={fieldErrors.sex}>
+                    <SearchableSelect
+                      value={sex}
+                      onChange={(value) => {
+                        setSex(value as (typeof SEX_OPTIONS)[number]['value']);
+                        clearFieldError('sex');
+                      }}
+                      options={SEX_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+                      placeholder="Select sex"
+                      searchPlaceholder="Search"
+                      emptyMessage="No options found."
+                      disabled={verified || formLocked}
+                      focusRef={sexRef}
+                      error={Boolean(fieldErrors.sex)}
+                    />
+                  </Field>
+                </div>
+
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <Field label="WhatsApp number" error={fieldErrors.whatsapp}>
+                    <PhoneInput
+                      value={whatsapp}
+                      onChange={(value) => {
+                        setWhatsapp(value);
+                        clearFieldError('whatsapp');
+                      }}
+                      onDialIsoChange={setWhatsappDialIso}
+                      countries={countries}
+                      disabled={verified || formLocked}
+                      dialCodeClassName="w-38 shrink-0"
+                      suggestedCountryIso={whatsapp.trim() ? undefined : phoneSuggestedCountryIso}
+                      syncToken={phoneSyncToken}
+                      error={Boolean(fieldErrors.whatsapp)}
+                      inputRef={whatsappRef}
+                      useFieldFeedback
+                    />
+                  </Field>
+
+                  <Field label="Date of birth" error={dateOfBirthDisplayError}>
+                    <TextInput
+                      ref={dateOfBirthRef}
+                      value={dateOfBirth}
+                      onChange={(value) => {
+                        setDateOfBirth(value);
+                        setParentalConsent(false);
+                        clearFieldError('dateOfBirth');
+                        clearFieldError('parentalConsent');
+                      }}
+                      type="date"
+                      min={dateOfBirthBounds.min}
+                      max={dateOfBirthBounds.max}
+                      disabled={verified || formLocked}
+                      error={Boolean(dateOfBirthDisplayError)}
+                    />
+                  </Field>
+                </div>
+
+                <div className={showParentalConsent ? 'my-1.5 flex flex-col gap-4' : 'my-1.5'}>
+                  {showParentalConsent ? (
+                    <ParentalConsentBlock
+                      checked={parentalConsent}
+                      onChange={(checked) => {
+                        setParentalConsent(checked);
+                        clearFieldError('parentalConsent');
+                        clearFieldError('dateOfBirth');
+                      }}
+                      disabled={verified || formLocked}
+                      error={showParentalConsentError}
+                      inputRef={parentalConsentRef}
+                    />
+                  ) : null}
+
+                  <DpdpConsentCheckbox
+                    checked={dpdpConsent}
+                    onChange={(checked) => {
+                      setDpdpConsent(checked);
+                      clearFieldError('dpdpConsent');
+                    }}
+                    disabled={verified || formLocked}
+                    error={Boolean(fieldErrors.dpdpConsent)}
+                    inputRef={dpdpConsentRef}
+                  />
+                </div>
+
+                {!verified && !otpSent ? (
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    disabled={startPending}
+                    leftIcon={
+                      startPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />
+                    }
+                  >
+                    {startPending ? 'Sending code…' : 'Generate OTP'}
+                  </Button>
+                ) : null}
+
+                {startState.error && !verified ? (
+                  <p className="text-[12.5px] font-semibold text-danger-press" role="alert">
+                    {startState.error}
+                  </p>
+                ) : null}
+
+                {formError && !verified ? (
+                  <p className="text-[12.5px] font-semibold text-danger-press" role="alert">
+                    {formError}
+                  </p>
+                ) : null}
+              </form>
+
+              {otpSent && !verified ? (
+                <form action={verifyAction} className="mt-3 flex flex-col gap-2.5 border-t border-slate-100 pt-3">
+                  {hiddenFields}
+                  {startPending ? (
+                    <p className="text-xs font-medium text-slate-500">Sending code to your email…</p>
+                  ) : null}
+                  <Field
+                    label={
+                      <span className="flex w-full items-center justify-between gap-3">
+                        <span>OTP</span>
+                        {resendControl}
+                      </span>
+                    }
+                    error={verifyState.error}
+                  >
+                    <TextInput
+                      ref={otpRef}
+                      name="otp"
+                      value={otp}
+                      onChange={setOtp}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      autoFocus
+                      maxLength={EMAIL_OTP_MAX_LENGTH}
+                      placeholder="Enter code from email"
+                      disabled={startPending}
+                      error={Boolean(verifyState.error)}
+                    />
+                  </Field>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    disabled={verifyPending || startPending || !isValidEmailOtp(otp)}
+                    leftIcon={verifyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+                  >
+                    {verifyPending ? 'Verifying…' : 'Confirm code'}
+                  </Button>
+                </form>
+              ) : null}
+            </AuthCardBody>
+
+            <div className="min-w-0 border-t border-slate-100 pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
+              <RegisterCheckoutSection
+                suggestedLegalName={suggestedLegalName}
+                suggestedCountryIso={phoneSuggestedCountryIso}
+                whatsappCountryIso={whatsappDialIso || undefined}
+                countries={countries}
+                enabled={verified}
               />
             </div>
-
-            {!verified && !otpSent ? (
-              <Button
-                type="submit"
-                variant="primary"
-                size="md"
-                disabled={startPending}
-                leftIcon={startPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-              >
-                {startPending ? 'Sending code…' : 'Generate OTP'}
-              </Button>
-            ) : null}
-
-            {startState.status === 'already_registered' && !verified ? (
-              <div
-                className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm leading-relaxed text-slate-700"
-                role="alert"
-              >
-                <p className="font-semibold text-slate-900">You already have an account</p>
-                <p className="mt-1">
-                  Sign in with <span className="font-semibold text-slate-900">{startState.email ?? email}</span> to
-                  continue.
-                </p>
-                <Link href={loginUrl} className="mt-2.5 inline-flex text-sm font-semibold text-brand hover:underline">
-                  Go to sign in
-                </Link>
-              </div>
-            ) : startState.error && !verified ? (
-              <p className="text-[12.5px] font-semibold text-danger-press" role="alert">
-                {startState.error}
-              </p>
-            ) : null}
-
-            {formError && !verified ? (
-              <p className="text-[12.5px] font-semibold text-danger-press" role="alert">
-                {formError}
-              </p>
-            ) : null}
-          </form>
-
-          {otpSent && !verified ? (
-            <form action={verifyAction} className="mt-3 flex flex-col gap-2.5 border-t border-slate-100 pt-3">
-              {hiddenFields}
-              {startPending ? <p className="text-xs font-medium text-slate-500">Sending code to your email…</p> : null}
-              <Field
-                label={
-                  <span className="flex w-full items-center justify-between gap-3">
-                    <span>OTP</span>
-                    {resendControl}
-                  </span>
-                }
-                error={verifyState.error}
-              >
-                <TextInput
-                  ref={otpRef}
-                  name="otp"
-                  value={otp}
-                  onChange={setOtp}
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  autoFocus
-                  maxLength={EMAIL_OTP_MAX_LENGTH}
-                  placeholder="Enter code from email"
-                  disabled={startPending}
-                  error={Boolean(verifyState.error)}
-                />
-              </Field>
-              <Button
-                type="submit"
-                variant="primary"
-                size="md"
-                disabled={verifyPending || startPending || !isValidEmailOtp(otp)}
-                leftIcon={verifyPending ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
-              >
-                {verifyPending ? 'Verifying…' : 'Confirm code'}
-              </Button>
-            </form>
-          ) : null}
-        </AuthCardBody>
-
-        <div className="min-w-0 border-t border-slate-100 pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
-          <RegisterCheckoutSection
-            suggestedLegalName={suggestedLegalName}
-            suggestedCountryIso={phoneSuggestedCountryIso}
-            whatsappCountryIso={whatsappDialIso || undefined}
-            countries={countries}
-            enabled={verified}
-          />
-        </div>
+          </div>
+        )}
       </div>
     </AuthLayout>
   );

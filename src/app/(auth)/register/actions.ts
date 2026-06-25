@@ -2,6 +2,7 @@
 
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { DPDP_PRIVACY_URL, DPDP_TERMS_URL } from '@/lib/dpdp-consent';
 import { emailOtpInvalidMessage, isValidEmailOtp } from '@/lib/email-otp';
 import { formatUserFacingError } from '@/lib/format-user-error';
@@ -78,7 +79,7 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
     );
 
     if (result.status === 'already_enrolled') {
-      redirect('/');
+      return { error: null, status: 'already_enrolled', email: values.email };
     }
 
     if (result.status === 'already_registered') {
@@ -118,6 +119,7 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
 
     return { error: null, status: result.status, email: values.email };
   } catch (err) {
+    if (isRedirectError(err)) throw err;
     const message = err instanceof ProfileFetchError ? err.message : 'Failed to start registration.';
     return { error: message, status: null, email: null };
   }
