@@ -28,11 +28,30 @@ export function loadRazorpayScript(): Promise<void> {
   });
 }
 
+type RazorpayPricingRegion = CheckoutStartResponse['pricing_region'];
+
+const INTERNATIONAL_CARD_ONLY_METHODS = {
+  card: true,
+  upi: false,
+  netbanking: false,
+  wallet: false,
+  paylater: false,
+  emi: false,
+} as const;
+
+function razorpayOptionsForRegion(pricingRegion?: RazorpayPricingRegion): Record<string, unknown> {
+  if (pricingRegion !== 'international') {
+    return {};
+  }
+  return { method: INTERNATIONAL_CARD_ONLY_METHODS };
+}
+
 type OpenRazorpaySubscriptionOptions = {
   key: string;
   subscriptionId: string;
   orderId?: string;
   description: string;
+  pricingRegion?: RazorpayPricingRegion;
   subscriptionCardChange?: boolean;
   checkoutSessionId?: string;
   returnDestination?: string;
@@ -119,6 +138,7 @@ export async function openRazorpaySubscriptionCheckout({
   subscriptionId,
   orderId,
   description,
+  pricingRegion,
   subscriptionCardChange = false,
   checkoutSessionId,
   returnDestination = '/',
@@ -157,6 +177,7 @@ export async function openRazorpaySubscriptionCheckout({
     name: 'Slow Burn Method',
     description,
     callback_url: callbackUrl,
+    ...razorpayOptionsForRegion(pricingRegion),
     handler: () => {
       watcher?.stop();
       complete();
@@ -234,6 +255,7 @@ export async function openRazorpayEnrollmentCheckout({
     subscriptionId: start.razorpay_subscription_id,
     orderId: start.razorpay_order_id,
     description: `Take Control · ${start.cohort_name}`,
+    pricingRegion: start.pricing_region,
     checkoutSessionId: start.checkout_session_id,
     returnDestination,
     returnFlow: 'enrollment',

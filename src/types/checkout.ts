@@ -46,6 +46,7 @@ export type CheckoutQuoteRequest = {
 export type CheckoutStartResponse = {
   checkout_session_id: string;
   enrollment_id: string;
+  pricing_region: 'domestic' | 'international';
   razorpay_key_id?: string;
   razorpay_order_id?: string;
   razorpay_subscription_id?: string;
