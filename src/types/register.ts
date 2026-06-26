@@ -41,6 +41,8 @@ export type RegisterDraft = {
   lastName: string;
   email: string;
   whatsapp: string;
+  /** Dial-country ISO from the picker (needed for shared codes like +1). */
+  whatsappDialIso?: string;
   sex: string;
   dateOfBirth: string;
   parentalConsent: boolean;

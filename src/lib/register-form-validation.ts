@@ -1,9 +1,8 @@
-import { getMobileDigitLimits, validateMobileNational } from '@/lib/country-mobile-rules';
 import { isParentalConsentValidationError, validateDateOfBirth } from '@/lib/date-of-birth';
 import { isValidEmailFormat } from '@/lib/email-validation';
 import type { RegisterFormValues } from '@/lib/merge-profile-patch';
-import { parseWhatsapp } from '@/lib/phone-number';
 import { SEX_OPTIONS } from '@/types/profile';
+import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
 
 export type RegisterField =
   | 'firstName'
@@ -16,7 +15,10 @@ export type RegisterField =
 
 export type RegisterFieldErrors = Partial<Record<RegisterField, string>>;
 
-export type RegisterFormInput = RegisterFormValues & { dpdpConsent: boolean };
+export type RegisterFormInput = RegisterFormValues & {
+  dpdpConsent: boolean;
+  whatsappDialIso?: string;
+};
 
 const VALID_SEX = new Set(SEX_OPTIONS.map((option) => option.value));
 
@@ -30,20 +32,8 @@ const FIELD_ORDER: RegisterField[] = [
   'dpdpConsent',
 ];
 
-function validateWhatsapp(value: string): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) return 'WhatsApp number is required.';
-
-  const parsed = parseWhatsapp(trimmed);
-  if (!parsed.dialIso) return 'Select a country code.';
-  if (!parsed.nationalNumber) return 'WhatsApp number is required.';
-
-  const limits = getMobileDigitLimits(parsed.dialIso);
-  if (parsed.nationalNumber.length < limits.min) {
-    return 'WhatsApp number is required.';
-  }
-
-  return validateMobileNational(parsed.nationalNumber, parsed.dialIso);
+function validateWhatsapp(value: string, preferredDialIso?: string): string | null {
+  return validateWhatsappNumber(value, preferredDialIso);
 }
 
 export function validateRegisterForm(values: RegisterFormInput): RegisterFieldErrors {
@@ -76,7 +66,7 @@ export function validateRegisterForm(values: RegisterFormInput): RegisterFieldEr
     }
   }
 
-  const whatsappError = validateWhatsapp(values.whatsapp);
+  const whatsappError = validateWhatsapp(values.whatsapp, values.whatsappDialIso);
   if (whatsappError) {
     errors.whatsapp = whatsappError;
   }

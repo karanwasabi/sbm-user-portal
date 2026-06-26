@@ -70,6 +70,8 @@ type RegisterViewProps = {
   fromDraft?: boolean;
   countries: Country[];
   suggestedCountryIso?: string;
+  /** Restored from register draft cookie when the user picked a shared dial code (+1). */
+  initialWhatsappDialIso?: string;
 };
 
 export function RegisterView({
@@ -80,6 +82,7 @@ export function RegisterView({
   fromDraft = false,
   countries,
   suggestedCountryIso,
+  initialWhatsappDialIso,
 }: RegisterViewProps) {
   const { toast } = useToast();
   const [firstName, setFirstName] = useState(initialValues?.firstName ?? '');
@@ -100,6 +103,8 @@ export function RegisterView({
   const [phoneSyncToken, setPhoneSyncToken] = useState(0);
   const [phoneSuggestedCountryIso, setPhoneSuggestedCountryIso] = useState(suggestedCountryIso);
   const [whatsappDialIso, setWhatsappDialIso] = useState(() => {
+    const fromDraft = initialWhatsappDialIso?.trim().toUpperCase();
+    if (fromDraft) return fromDraft;
     const parsed = parseWhatsapp(initialValues?.whatsapp ?? '', suggestedCountryIso);
     return parsed.dialIso || suggestedCountryIso?.trim().toUpperCase() || '';
   });
@@ -135,8 +140,9 @@ export function RegisterView({
       dateOfBirth,
       parentalConsent,
       dpdpConsent,
+      whatsappDialIso: whatsappDialIso || undefined,
     }),
-    [firstName, lastName, email, whatsapp, sex, dateOfBirth, parentalConsent, dpdpConsent]
+    [firstName, lastName, email, whatsapp, sex, dateOfBirth, parentalConsent, dpdpConsent, whatsappDialIso]
   );
 
   const dobLiveError = useMemo(
@@ -169,7 +175,17 @@ export function RegisterView({
     setPhoneSuggestedCountryIso(suggestedCountryIso);
   }, [suggestedCountryIso]);
 
-  const applyRegisterDefaults = (defaults: RegisterFormValues) => {
+  const syncWhatsappDialIso = (whatsappValue: string, countryHint?: string) => {
+    const hint = countryHint ?? phoneSuggestedCountryIso;
+    if (!whatsappValue.trim()) {
+      if (hint) setWhatsappDialIso(hint.trim().toUpperCase());
+      return;
+    }
+    const dialIso = parseWhatsapp(whatsappValue, hint).dialIso;
+    if (dialIso) setWhatsappDialIso(dialIso);
+  };
+
+  const applyRegisterDefaults = (defaults: RegisterFormValues, countryHint?: string) => {
     setFirstName((value) => defaults.firstName || value);
     setLastName((value) => defaults.lastName || value);
     setEmail((value) => defaults.email || value);
@@ -177,6 +193,7 @@ export function RegisterView({
       const next = defaults.whatsapp || value;
       if (defaults.whatsapp?.trim() && defaults.whatsapp !== value) {
         setPhoneSyncToken((token) => token + 1);
+        syncWhatsappDialIso(defaults.whatsapp, countryHint);
       }
       return next;
     });
@@ -187,8 +204,9 @@ export function RegisterView({
 
   useEffect(() => {
     if (!initialValues) return;
-    applyRegisterDefaults(initialValues);
+    applyRegisterDefaults(initialValues, suggestedCountryIso);
     if (initialValues.whatsapp?.trim()) {
+      syncWhatsappDialIso(initialValues.whatsapp, suggestedCountryIso ?? initialWhatsappDialIso);
       setPhoneSyncToken((token) => token + 1);
     }
   }, [initialValues]);
@@ -218,7 +236,10 @@ export function RegisterView({
         if (profile.country_code) {
           setPhoneSuggestedCountryIso(profile.country_code);
         }
-        applyRegisterDefaults(profileToRegisterDefaults(profile, profile.email || email, billing?.legal_name));
+        applyRegisterDefaults(
+          profileToRegisterDefaults(profile, profile.email || email, billing?.legal_name),
+          profile.country_code ?? undefined
+        );
         profileHydrated.current = true;
       } catch {
         // Leave fields as-is; user can tap Edit details if needed.
@@ -349,6 +370,7 @@ export function RegisterView({
       <input type="hidden" name="lastName" value={lastName} />
       <input type="hidden" name="email" value={email} />
       <input type="hidden" name="whatsapp" value={whatsapp} />
+      <input type="hidden" name="whatsappDialIso" value={whatsappDialIso} />
       <input type="hidden" name="sex" value={sex} />
       <input type="hidden" name="dateOfBirth" value={dateOfBirth} />
       <input type="hidden" name="parentalConsent" value={parentalConsent ? 'true' : 'false'} />

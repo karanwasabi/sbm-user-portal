@@ -62,12 +62,16 @@ export function buildRegisterProfilePatch(values: RegisterFormValues): ProfilePa
   return patch;
 }
 
-export function registerDraftFromValues(values: RegisterFormValues & { dpdpConsent: boolean }): RegisterDraft {
+export function registerDraftFromValues(
+  values: RegisterFormValues & { dpdpConsent: boolean; whatsappDialIso?: string }
+): RegisterDraft {
+  const whatsappDialIso = values.whatsappDialIso?.trim().toUpperCase();
   return {
     firstName: values.firstName,
     lastName: values.lastName,
     email: values.email,
     whatsapp: values.whatsapp,
+    whatsappDialIso: whatsappDialIso || undefined,
     sex: values.sex,
     dateOfBirth: values.dateOfBirth,
     parentalConsent: values.parentalConsent,
@@ -99,6 +103,10 @@ export function parseRegisterDraft(raw: string | undefined): RegisterDraft | nul
         .trim()
         .toLowerCase(),
       whatsapp: String(parsed.whatsapp ?? ''),
+      whatsappDialIso:
+        String(parsed.whatsappDialIso ?? '')
+          .trim()
+          .toUpperCase() || undefined,
       sex: String(parsed.sex ?? ''),
       dateOfBirth: String(parsed.dateOfBirth ?? ''),
       parentalConsent: parsed.parentalConsent === true,

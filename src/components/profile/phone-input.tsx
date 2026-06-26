@@ -197,7 +197,7 @@ export function PhoneInput({
           error={error || Boolean(validationError)}
           leftIcon={<Phone size={16} className="text-slate-400" />}
         />
-        {!useFieldFeedback ? (
+        {!useFieldFeedback || digitHint || validationError ? (
           <div className="min-h-[18px]">
             <p
               className={cn(

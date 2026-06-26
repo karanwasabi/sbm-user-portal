@@ -33,6 +33,7 @@ import {
 import { getProfileCompletionPercentFromValues } from '@/lib/profile-completion';
 import { formatTimezoneLabel } from '@/lib/profile-timezone';
 import { toTitleCase } from '@/lib/title-case';
+import { parseWhatsapp } from '@/lib/phone-number';
 import {
   getFullName,
   getInitials,
@@ -108,6 +109,9 @@ export function ProfileView({ countries }: ProfileViewProps) {
   const [city, setCity] = useState(profile?.city ?? '');
   const [mealPreference, setMealPreference] = useState<MealPreference | ''>(profile?.meal_preference ?? '');
   const [whatsapp, setWhatsapp] = useState(profile?.whatsapp ?? '');
+  const [whatsappDialIso, setWhatsappDialIso] = useState(
+    () => parseWhatsapp(profile?.whatsapp ?? '', profile?.country_code ?? '').dialIso
+  );
   const [parentalConsent, setParentalConsent] = useState(profile?.parental_consent ?? false);
   const [savedSnapshot, setSavedSnapshot] = useState<ProfileFormSnapshot>(() => snapshotFromProfile(profile));
   const [phoneSyncToken, setPhoneSyncToken] = useState(0);
@@ -141,6 +145,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
     setCity(snapshot.city);
     setMealPreference(snapshot.mealPreference);
     setWhatsapp(snapshot.whatsapp);
+    setWhatsappDialIso(parseWhatsapp(snapshot.whatsapp, snapshot.countryCode).dialIso);
     setParentalConsent(snapshot.parentalConsent);
   }, [profile]);
 
@@ -188,6 +193,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
     setCity(savedSnapshot.city);
     setMealPreference(savedSnapshot.mealPreference);
     setWhatsapp(savedSnapshot.whatsapp);
+    setWhatsappDialIso(parseWhatsapp(savedSnapshot.whatsapp, savedSnapshot.countryCode).dialIso);
     setParentalConsent(savedSnapshot.parentalConsent);
     setPhoneSyncToken((token) => token + 1);
   };
@@ -340,11 +346,14 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 name="whatsapp"
                 value={whatsapp}
                 onChange={setWhatsapp}
+                onDialIsoChange={setWhatsappDialIso}
                 countries={countries}
                 suggestedCountryIso={countryCode}
+                preferredDialIso={whatsappDialIso || undefined}
                 syncToken={phoneSyncToken}
                 disabled={pending}
               />
+              <input type="hidden" name="whatsappDialIso" value={whatsappDialIso} />
             </Field>
             <div className="flex flex-col gap-2">
               <Field label="Date of Birth" error={dateOfBirthError ?? undefined}>

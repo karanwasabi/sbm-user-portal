@@ -85,6 +85,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
       fromDraft={Boolean(draft) && !emailVerified}
       countries={countries}
       suggestedCountryIso={initialValues?.whatsapp?.trim() ? undefined : (profileCountryCode ?? suggestedCountryIso)}
+      initialWhatsappDialIso={draft?.whatsappDialIso}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { validateDateOfBirth } from '@/lib/date-of-birth';
 import { parseWhatsapp } from '@/lib/phone-number';
 import { normalizeProfileTimezoneForDb } from '@/lib/profile-timezone';
+import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
 import type { MealPreference, ProfilePatch, Sex } from '@/types/profile';
 
 export type ProfileFormValues = {
@@ -13,6 +14,7 @@ export type ProfileFormValues = {
   city: string;
   mealPreference: string;
   whatsapp: string;
+  whatsappDialIso: string;
   parentalConsent: boolean;
 };
 
@@ -38,6 +40,9 @@ function valuesFromFormData(formData: FormData): ProfileFormValues {
     city: String(formData.get('city') ?? '').trim(),
     mealPreference: String(formData.get('mealPreference') ?? '').trim(),
     whatsapp: String(formData.get('whatsapp') ?? '').trim(),
+    whatsappDialIso: String(formData.get('whatsappDialIso') ?? '')
+      .trim()
+      .toUpperCase(),
     parentalConsent: formData.get('parentalConsent') === 'true',
   };
 }
@@ -45,6 +50,7 @@ function valuesFromFormData(formData: FormData): ProfileFormValues {
 export function buildProfilePatch(formData: FormData, options: ProfileFormParseOptions = {}): ProfileFormParseResult {
   const values = valuesFromFormData(formData);
   const { requireAll = false, requireOnboarding = false } = options;
+  const whatsappDialIso = values.whatsappDialIso || undefined;
 
   if (requireOnboarding) {
     if (!values.firstName) return { ok: false, error: 'First name is required.' };
@@ -53,6 +59,8 @@ export function buildProfilePatch(formData: FormData, options: ProfileFormParseO
     const dobError = validateDateOfBirth(values.dateOfBirth, values.parentalConsent);
     if (dobError) return { ok: false, error: dobError };
     if (!values.whatsapp.trim()) return { ok: false, error: 'WhatsApp number is required.' };
+    const whatsappError = validateWhatsappNumber(values.whatsapp, whatsappDialIso);
+    if (whatsappError) return { ok: false, error: whatsappError };
 
     const patch: ProfilePatch = {
       first_name: values.firstName,
@@ -97,6 +105,15 @@ export function buildProfilePatch(formData: FormData, options: ProfileFormParseO
   if (values.countryCode) patch.country_code = values.countryCode;
   if (values.city) patch.city = values.city;
   if (values.mealPreference) patch.meal_preference = values.mealPreference as MealPreference;
+
+  if (values.whatsapp.trim()) {
+    const whatsappError = validateWhatsappNumber(values.whatsapp, whatsappDialIso);
+    if (whatsappError) {
+      return { ok: false, error: whatsappError };
+    }
+  } else if (requireAll) {
+    return { ok: false, error: 'WhatsApp number is required.' };
+  }
   patch.whatsapp = values.whatsapp;
 
   if (values.timezoneId) {

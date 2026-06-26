@@ -31,7 +31,9 @@ async function getForwardedHeaders(): Promise<HeadersInit> {
   return out;
 }
 
-function parseRegisterForm(formData: FormData): RegisterFormValues & { dpdpConsent: boolean } {
+function parseRegisterForm(
+  formData: FormData
+): RegisterFormValues & { dpdpConsent: boolean; whatsappDialIso?: string } {
   return {
     firstName: String(formData.get('firstName') ?? '').trim(),
     lastName: String(formData.get('lastName') ?? '').trim(),
@@ -39,6 +41,10 @@ function parseRegisterForm(formData: FormData): RegisterFormValues & { dpdpConse
       .trim()
       .toLowerCase(),
     whatsapp: String(formData.get('whatsapp') ?? '').trim(),
+    whatsappDialIso:
+      String(formData.get('whatsappDialIso') ?? '')
+        .trim()
+        .toUpperCase() || undefined,
     sex: String(formData.get('sex') ?? '') as RegisterFormValues['sex'],
     dateOfBirth: String(formData.get('dateOfBirth') ?? '').trim(),
     parentalConsent: formData.get('parentalConsent') === 'true',
