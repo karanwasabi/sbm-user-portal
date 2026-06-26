@@ -4,7 +4,12 @@ import { Phone } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { DialCodePicker } from '@/components/profile/dial-code-picker';
 import { TextInput } from '@/components/ui/text-input';
-import { getMobileDigitHint, sanitizeNationalDigits, validateMobileNational } from '@/lib/country-mobile-rules';
+import {
+  getMobileDigitHint,
+  getMobileDigitLimits,
+  sanitizeNationalDigits,
+  validateMobileNational,
+} from '@/lib/country-mobile-rules';
 import { getCountryDialCode } from '@/lib/country-dial-codes';
 import { combineWhatsapp, parseWhatsapp } from '@/lib/phone-number';
 import { cn } from '@/lib/utils';
@@ -151,12 +156,14 @@ export function PhoneInput({
     setNationalNumber(next.nationalNumber);
   }, [value, suggestedCountryIso, preferredDialIso, syncToken]);
 
+  const digitLimits = useMemo(() => getMobileDigitLimits(dialIso), [dialIso]);
   const digitHint = useMemo(() => getMobileDigitHint(dialIso), [dialIso]);
   const validationError = useMemo(() => {
-    if (error || useFieldFeedback) return null;
+    // Parent `error` means submit/server validation — Field shows that message.
+    if (error) return null;
     if (!nationalNumber) return null;
     return validateMobileNational(nationalNumber, dialIso);
-  }, [error, useFieldFeedback, nationalNumber, dialIso, dialCode]);
+  }, [error, nationalNumber, dialIso]);
 
   const updateCombined = (nextDial: string, nextIso: string, nextNational: string) => {
     const sanitized = nextIso ? sanitizeNationalDigits(nextNational, nextIso) : nextNational.replace(/\D/g, '');
@@ -194,6 +201,7 @@ export function PhoneInput({
           disabled={disabled}
           inputMode="tel"
           autoComplete="tel-national"
+          maxLength={digitLimits.max > 0 ? digitLimits.max : undefined}
           error={error || Boolean(validationError)}
           leftIcon={<Phone size={16} className="text-slate-400" />}
         />
