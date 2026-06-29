@@ -26,43 +26,44 @@ export default async function PortalLayout({ children }: { children: React.React
     if (!hasProduct(access.products, PRODUCT_MEMBER_PORTAL)) {
       redirect('/unauthorized');
     }
+
+    let profile = null;
+    let profileError: string | null = null;
+    let enrollments: Awaited<ReturnType<typeof getMyEnrollments>> = [];
+
+    try {
+      profile = await getLatestProfile();
+    } catch (error) {
+      if (error instanceof ProfileFetchError && (error.status === 404 || error.status === 403)) {
+        redirect('/register');
+      }
+      profileError = error instanceof ProfileFetchError ? error.message : 'Failed to load profile.';
+    }
+
+    try {
+      enrollments = await getMyEnrollments();
+    } catch {
+      enrollments = [];
+    }
+
+    const isStaff = access.roles.includes('staff');
+    if (profile && !hasPortalAccess(profile, enrollments) && !isStaff) {
+      redirect('/register');
+    }
+
+    const showPasswordBanner = userNeedsPassword(user);
+
+    return (
+      <PortalShell
+        profile={profile}
+        profileError={profileError}
+        enrollments={enrollments}
+        showPasswordBanner={showPasswordBanner}
+      >
+        {children}
+      </PortalShell>
+    );
   } catch {
     redirect('/unauthorized');
   }
-
-  let profile = null;
-  let profileError: string | null = null;
-  let enrollments: Awaited<ReturnType<typeof getMyEnrollments>> = [];
-
-  try {
-    profile = await getLatestProfile();
-  } catch (error) {
-    if (error instanceof ProfileFetchError && (error.status === 404 || error.status === 403)) {
-      redirect('/register');
-    }
-    profileError = error instanceof ProfileFetchError ? error.message : 'Failed to load profile.';
-  }
-
-  try {
-    enrollments = await getMyEnrollments();
-  } catch {
-    enrollments = [];
-  }
-
-  if (profile && !hasPortalAccess(profile, enrollments)) {
-    redirect('/register');
-  }
-
-  const showPasswordBanner = userNeedsPassword(user);
-
-  return (
-    <PortalShell
-      profile={profile}
-      profileError={profileError}
-      enrollments={enrollments}
-      showPasswordBanner={showPasswordBanner}
-    >
-      {children}
-    </PortalShell>
-  );
 }
