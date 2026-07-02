@@ -519,12 +519,14 @@ export function RegisterCheckoutSection({
   useEffect(() => {
     const wasEnabled = wasEnabledRef.current;
     wasEnabledRef.current = enabled;
-    if (wasEnabled || !enabled || !readRegisterCheckoutDraft()) return;
+    if (wasEnabled || !enabled) return;
+    const draft = readRegisterCheckoutDraft();
+    if (!appliedPromo && !draft?.appliedPromo) return;
 
     void syncLocalDraftToAccount().catch(() => {
       // Local draft stays authoritative until the user saves again.
     });
-  }, [enabled, syncLocalDraftToAccount]);
+  }, [enabled, appliedPromo, syncLocalDraftToAccount]);
 
   const handleBillingSectionBlur = (event: React.FocusEvent<HTMLDivElement>) => {
     if (!enabled) return;
@@ -581,7 +583,6 @@ export function RegisterCheckoutSection({
       setPromoError('Enter a discount code.');
       return;
     }
-    if (!enabled) return;
 
     setPromoCode(normalized);
     setPromoError(null);
@@ -594,7 +595,9 @@ export function RegisterCheckoutSection({
         billing_country_code: billingCountryCode,
         promo_code: normalized,
       });
-      await putRegistrationPromo(normalized);
+      if (enabled) {
+        await putRegistrationPromo(normalized);
+      }
       setAppliedPromo(normalized);
       setError(null);
     } catch (err) {
@@ -885,7 +888,7 @@ export function RegisterCheckoutSection({
             variant="light"
             size="md"
             onClick={() => void handleApplyPromo()}
-            disabled={quotePending || !enabled}
+            disabled={quotePending}
           >
             Apply
           </Button>
