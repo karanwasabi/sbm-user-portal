@@ -1,8 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useEffect, useState, type ReactNode } from 'react';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import {
@@ -11,23 +10,42 @@ import {
   isExpiredLinkAuthError,
   parseAuthCallbackParams,
 } from '@/lib/auth-callback-hash';
-import { completeEmailVerification } from '@/lib/complete-email-verification';
-import { buildOpenPaymentLinkRecoveryPath, resolveContinuePaymentEmail } from '@/lib/payment-handoff';
+import { forwardPaymentAuthFromLoginToPortal, shouldForwardPaymentAuthFromLogin } from '@/lib/payment-handoff';
 import { createClient } from '@/utils/supabase/client';
 
 type LoginAuthHashHandlerProps = {
   children: ReactNode;
 };
 
+const paymentLinkLoader = (
+  <AuthLayout>
+    <div className="mb-7">
+      <SbmWordmark size="lg" />
+    </div>
+    <div className="flex flex-col items-center justify-center py-8">
+      <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden />
+      <p className="mt-4 text-sm font-medium text-slate-500">Opening your payment link…</p>
+    </div>
+  </AuthLayout>
+);
+
 /** Handles Supabase auth tokens/errors that land on /login (site URL fallback). */
 export function LoginAuthHashHandler({ children }: LoginAuthHashHandlerProps) {
-  const router = useRouter();
+  const [forwardingPaymentAuth] = useState(() => shouldForwardPaymentAuthFromLogin());
   const [isProcessing, setIsProcessing] = useState(() => {
+    if (shouldForwardPaymentAuthFromLogin()) return false;
     const params = parseAuthCallbackParams();
     return Boolean(params && hasAuthCallbackPayload(params));
   });
 
+  useLayoutEffect(() => {
+    if (!forwardingPaymentAuth) return;
+    forwardPaymentAuthFromLoginToPortal();
+  }, [forwardingPaymentAuth]);
+
   useEffect(() => {
+    if (forwardingPaymentAuth) return;
+
     const params = parseAuthCallbackParams();
     if (!params || !hasAuthCallbackPayload(params)) return;
 
@@ -38,21 +56,14 @@ export function LoginAuthHashHandler({ children }: LoginAuthHashHandlerProps) {
       if (!cancelled) setIsProcessing(false);
     };
 
-    const handoffEmail = resolveContinuePaymentEmail(searchParams);
-    const isPaymentHandoff = Boolean(handoffEmail);
-
     const redirectExpired = () => {
       clearAuthParamsFromUrl();
-      if (isPaymentHandoff) {
-        router.replace(buildOpenPaymentLinkRecoveryPath(handoffEmail));
-        return;
-      }
-      router.replace('/login?link_error=expired');
+      window.location.replace('/login?link_error=expired');
     };
 
     const completeStandardSignIn = () => {
       clearAuthParamsFromUrl();
-      router.refresh();
+      window.location.reload();
     };
 
     const processAuthCallback = async () => {
@@ -70,13 +81,6 @@ export function LoginAuthHashHandler({ children }: LoginAuthHashHandlerProps) {
           redirectExpired();
           return;
         }
-
-        if (isPaymentHandoff) {
-          const result = await completeEmailVerification();
-          if (result.error) redirectExpired();
-          return;
-        }
-
         completeStandardSignIn();
         return;
       }
@@ -95,12 +99,6 @@ export function LoginAuthHashHandler({ children }: LoginAuthHashHandlerProps) {
           return;
         }
 
-        if (isPaymentHandoff) {
-          const result = await completeEmailVerification();
-          if (result.error) redirectExpired();
-          return;
-        }
-
         completeStandardSignIn();
         return;
       }
@@ -113,7 +111,11 @@ export function LoginAuthHashHandler({ children }: LoginAuthHashHandlerProps) {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [forwardingPaymentAuth]);
+
+  if (forwardingPaymentAuth) {
+    return paymentLinkLoader;
+  }
 
   if (isProcessing) {
     return (
