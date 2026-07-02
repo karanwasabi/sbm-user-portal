@@ -189,6 +189,11 @@ export async function confirmCheckoutPaymentReturn(
   return response.json() as Promise<CheckoutPaymentReturnResponse>;
 }
 
+export async function syncCheckoutPayment(): Promise<{ enrolled: boolean }> {
+  const response = await clientApiFetch('/me/checkout/sync', { method: 'POST' });
+  return response.json() as Promise<{ enrolled: boolean }>;
+}
+
 export async function getCountries(): Promise<Country[]> {
   const response = await clientApiFetch('/reference/countries');
   return response.json() as Promise<Country[]>;

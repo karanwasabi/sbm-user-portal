@@ -1,6 +1,11 @@
 import type { CheckoutStartResponse } from '@/types/checkout';
 import type { Enrollment } from '@/types/enrollment';
-import { abandonCheckout, getMyEnrollments } from '@/utils/client-api';
+import {
+  abandonCheckout,
+  confirmCheckoutPaymentReturn,
+  getMyEnrollments,
+  syncCheckoutPayment,
+} from '@/utils/client-api';
 import {
   buildPaymentReturnUrl,
   clearPendingCheckout,
@@ -178,9 +183,30 @@ export async function openRazorpaySubscriptionCheckout({
     description,
     callback_url: callbackUrl,
     ...razorpayOptionsForRegion(pricingRegion),
-    handler: () => {
+    handler: (response: {
+      razorpay_payment_id: string;
+      razorpay_order_id?: string;
+      razorpay_subscription_id?: string;
+      razorpay_signature: string;
+    }) => {
       watcher?.stop();
-      complete();
+      void (async () => {
+        if (enrollmentFlow && checkoutSessionId) {
+          try {
+            await confirmCheckoutPaymentReturn({
+              checkout_session_id: checkoutSessionId,
+              flow: returnFlow,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_subscription_id: response.razorpay_subscription_id ?? subscriptionId,
+              razorpay_signature: response.razorpay_signature,
+            });
+          } catch {
+            // Webhook/callback may still confirm; sync runs on poll as backup.
+          }
+        }
+        complete();
+      })();
     },
     modal: {
       ondismiss: () => {
@@ -274,12 +300,29 @@ export async function pollUntilEnrolled(options?: { intervalMs?: number; timeout
   const timeoutMs = options?.timeoutMs ?? 30000;
   const started = Date.now();
 
-  while (Date.now() - started < timeoutMs) {
+  const checkEnrolled = async (): Promise<boolean> => {
+    try {
+      const synced = await syncCheckoutPayment();
+      if (synced.enrolled) {
+        return true;
+      }
+    } catch {
+      // Fall back to enrollment list (which also syncs server-side).
+    }
+
     const enrollments = await getMyEnrollments();
-    if (enrollments.some((entry) => isEnrolledStatus(entry.status))) {
+    return enrollments.some((entry) => isEnrolledStatus(entry.status));
+  };
+
+  if (await checkEnrolled()) {
+    return true;
+  }
+
+  while (Date.now() - started < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    if (await checkEnrolled()) {
       return true;
     }
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
 
   return false;
