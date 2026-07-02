@@ -8,6 +8,12 @@ export function buildContinuePaymentPath(email?: string): string {
   return `/register/continue-payment?email=${encodeURIComponent(normalized)}`;
 }
 
+export function buildOpenPaymentLinkRecoveryPath(email?: string): string {
+  const normalized = normalizeLoginEmailParam(email);
+  if (!normalized) return '/register/open-payment-link?expired=1';
+  return `/register/open-payment-link?email=${encodeURIComponent(normalized)}&expired=1`;
+}
+
 export function readPaymentHandoffEmailFromSearch(searchParams: URLSearchParams): string {
   return normalizeLoginEmailParam(searchParams.get('email') ?? undefined);
 }

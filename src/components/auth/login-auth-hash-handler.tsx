@@ -12,14 +12,15 @@ import {
   parseAuthCallbackParams,
 } from '@/lib/auth-callback-hash';
 import { completeEmailVerification } from '@/lib/complete-email-verification';
-import { buildContinuePaymentPath, resolveContinuePaymentEmail } from '@/lib/payment-handoff';
+import { buildOpenPaymentLinkRecoveryPath, resolveContinuePaymentEmail } from '@/lib/payment-handoff';
 import { createClient } from '@/utils/supabase/client';
 
-type AuthCallbackHashHandlerProps = {
+type LoginAuthHashHandlerProps = {
   children: ReactNode;
 };
 
-export function AuthCallbackHashHandler({ children }: AuthCallbackHashHandlerProps) {
+/** Handles Supabase auth tokens/errors that land on /login (site URL fallback). */
+export function LoginAuthHashHandler({ children }: LoginAuthHashHandlerProps) {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(() => {
     const params = parseAuthCallbackParams();
@@ -37,21 +38,25 @@ export function AuthCallbackHashHandler({ children }: AuthCallbackHashHandlerPro
       if (!cancelled) setIsProcessing(false);
     };
 
+    const handoffEmail = resolveContinuePaymentEmail(searchParams);
+    const isPaymentHandoff = Boolean(handoffEmail);
+
     const redirectExpired = () => {
-      const email = resolveContinuePaymentEmail(searchParams);
-      router.replace(buildContinuePaymentPath(email));
+      clearAuthParamsFromUrl();
+      if (isPaymentHandoff) {
+        router.replace(buildOpenPaymentLinkRecoveryPath(handoffEmail));
+        return;
+      }
+      router.replace('/login?link_error=expired');
+    };
+
+    const completeStandardSignIn = () => {
+      clearAuthParamsFromUrl();
+      router.refresh();
     };
 
     const processAuthCallback = async () => {
-      if (isExpiredLinkAuthError(hashParams)) {
-        clearAuthParamsFromUrl();
-        redirectExpired();
-        return;
-      }
-
-      const hashError = hashParams.get('error');
-      if (hashError) {
-        clearAuthParamsFromUrl();
+      if (isExpiredLinkAuthError(hashParams) || hashParams.get('error')) {
         redirectExpired();
         return;
       }
@@ -61,16 +66,18 @@ export function AuthCallbackHashHandler({ children }: AuthCallbackHashHandlerPro
 
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        clearAuthParamsFromUrl();
         if (exchangeError) {
           redirectExpired();
           return;
         }
 
-        const result = await completeEmailVerification();
-        if (result.error) {
-          redirectExpired();
+        if (isPaymentHandoff) {
+          const result = await completeEmailVerification();
+          if (result.error) redirectExpired();
+          return;
         }
+
+        completeStandardSignIn();
         return;
       }
 
@@ -82,17 +89,19 @@ export function AuthCallbackHashHandler({ children }: AuthCallbackHashHandlerPro
           access_token: accessToken,
           refresh_token: refreshToken,
         });
-        clearAuthParamsFromUrl();
 
         if (sessionError) {
           redirectExpired();
           return;
         }
 
-        const result = await completeEmailVerification();
-        if (result.error) {
-          redirectExpired();
+        if (isPaymentHandoff) {
+          const result = await completeEmailVerification();
+          if (result.error) redirectExpired();
+          return;
         }
+
+        completeStandardSignIn();
         return;
       }
 

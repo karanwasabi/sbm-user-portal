@@ -6,7 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { clearAuthParamsFromUrl, isExpiredLinkAuthError, parseAuthCallbackParams } from '@/lib/auth-callback-hash';
 import { completeEmailVerification } from '@/lib/complete-email-verification';
-import { buildContinuePaymentPath, resolveContinuePaymentEmail } from '@/lib/payment-handoff';
+import { buildOpenPaymentLinkRecoveryPath, resolveContinuePaymentEmail } from '@/lib/payment-handoff';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { Button } from '@/components/ui/button';
@@ -16,19 +16,27 @@ export function ConfirmEmailLinkForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
-  const [continuePaymentPath, setContinuePaymentPath] = useState('/register/continue-payment');
+  const [continuePaymentPath, setContinuePaymentPath] = useState('/register');
+  const [isPaymentHandoff, setIsPaymentHandoff] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
 
     const confirmFromLink = async () => {
       const authParams = parseAuthCallbackParams();
-      const recoveryPath = buildContinuePaymentPath(resolveContinuePaymentEmail(authParams?.searchParams ?? null));
-      setContinuePaymentPath(recoveryPath);
+      const handoffEmail = resolveContinuePaymentEmail(authParams?.searchParams ?? null);
+      const paymentRecoveryPath = buildOpenPaymentLinkRecoveryPath(handoffEmail);
+      setIsPaymentHandoff(Boolean(handoffEmail));
+      setContinuePaymentPath(handoffEmail ? paymentRecoveryPath : '/register');
 
       if (authParams && isExpiredLinkAuthError(authParams.hashParams)) {
         clearAuthParamsFromUrl();
-        router.replace(recoveryPath);
+        if (handoffEmail) {
+          router.replace(paymentRecoveryPath);
+          return;
+        }
+        setError('This confirmation link is invalid or has expired.');
+        setIsChecking(false);
         return;
       }
 
@@ -120,7 +128,7 @@ export function ConfirmEmailLinkForm() {
       </p>
       <div className="mt-6 flex flex-col gap-3">
         <Button href={continuePaymentPath} variant="primary" size="lg" fullWidth>
-          Get a new sign-in code
+          {isPaymentHandoff ? 'Get a new sign-in code' : 'Continue registration'}
         </Button>
         <Link href="/login" className="text-center text-xs font-semibold text-brand no-underline">
           Back to sign in

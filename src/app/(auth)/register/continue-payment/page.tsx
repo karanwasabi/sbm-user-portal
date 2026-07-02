@@ -1,4 +1,3 @@
-import { AuthCallbackHashHandler } from '@/components/auth/auth-callback-hash-handler';
 import { ContinuePaymentForm } from '@/components/auth/continue-payment-form';
 import { normalizeLoginEmailParam } from '@/lib/login-url';
 
@@ -10,9 +9,5 @@ export default async function ContinuePaymentPage({ searchParams }: ContinuePaym
   const params = await searchParams;
   const initialEmail = normalizeLoginEmailParam(params.email);
 
-  return (
-    <AuthCallbackHashHandler>
-      <ContinuePaymentForm initialEmail={initialEmail} />
-    </AuthCallbackHashHandler>
-  );
+  return <ContinuePaymentForm initialEmail={initialEmail} />;
 }

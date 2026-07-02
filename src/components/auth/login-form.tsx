@@ -29,9 +29,10 @@ const linkButtonClass =
 
 type LoginFormProps = {
   initialEmail?: string;
+  linkError?: 'expired' | null;
 };
 
-export function LoginForm({ initialEmail = '' }: LoginFormProps) {
+export function LoginForm({ initialEmail = '', linkError = null }: LoginFormProps) {
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
@@ -167,6 +168,12 @@ export function LoginForm({ initialEmail = '' }: LoginFormProps) {
       </div>
 
       <div className="flex flex-col gap-3.5">
+        {linkError === 'expired' ? (
+          <p className="text-[12.5px] leading-snug font-semibold text-danger-press" role="alert">
+            This sign-in link is invalid or has expired. Sign in with your email and password, or request an OTP below.
+          </p>
+        ) : null}
+
         <Field label="Email">
           <TextInput
             ref={emailRef}

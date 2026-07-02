@@ -15,7 +15,8 @@ export function parseAuthCallbackParams(): AuthCallbackParams | null {
 
 export function clearAuthParamsFromUrl() {
   if (typeof window === 'undefined') return;
-  window.history.replaceState(null, '', window.location.pathname);
+  const query = window.location.search;
+  window.history.replaceState(null, '', query ? `${window.location.pathname}${query}` : window.location.pathname);
 }
 
 export function hasAuthCallbackPayload(params: AuthCallbackParams): boolean {
