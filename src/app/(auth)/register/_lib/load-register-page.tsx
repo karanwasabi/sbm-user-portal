@@ -7,11 +7,10 @@ import {
   profileToRegisterDefaults,
   registerDraftToFormValues,
 } from '@/lib/merge-profile-patch';
-import { hasPortalAccess, isEnrolled } from '@/lib/onboarding';
+import { isEnrolled } from '@/lib/onboarding';
 import { getRequestCountryIso } from '@/lib/request-country-code';
 import { PENDING_DPDP_COOKIE } from '@/types/onboarding';
 import { REGISTER_DRAFT_COOKIE } from '@/types/register';
-import { hasPaidTakeControlEnrollment } from '@/types/enrollment';
 import type { BillingProfile } from '@/types/billing';
 import { fetchCountries, getBillingProfile, getLatestProfile, getMyEnrollments } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
@@ -43,24 +42,24 @@ export async function loadRegisterPage({ assisted, searchParams }: LoadRegisterP
   if (user?.email_confirmed_at && user.email) {
     emailVerified = true;
 
+    let enrollments: Awaited<ReturnType<typeof getMyEnrollments>> = [];
     try {
-      const [loadedProfile, enrollments, billing] = await Promise.all([
-        getLatestProfile().catch(() => null),
-        getMyEnrollments().catch(() => []),
-        getBillingProfile().catch(() => null),
-      ]);
-      if (hasPaidTakeControlEnrollment(enrollments)) {
-        redirect('/');
-      }
-      profileCountryCode = loadedProfile?.country_code ?? undefined;
-      initialBillingProfile = billing;
-      if (loadedProfile && (hasPortalAccess(loadedProfile, enrollments) || isEnrolled(enrollments))) {
-        redirect('/');
-      }
-      initialValues = profileToRegisterDefaults(loadedProfile, user.email, billing?.legal_name);
+      enrollments = await getMyEnrollments();
     } catch {
-      initialValues = profileToRegisterDefaults(null, user.email);
+      // Do not allow enrolled users to view register when enrollment lookup is unstable.
+      redirect('/');
     }
+    if (isEnrolled(enrollments)) {
+      redirect('/');
+    }
+
+    const [loadedProfile, billing] = await Promise.all([
+      getLatestProfile().catch(() => null),
+      getBillingProfile().catch(() => null),
+    ]);
+    profileCountryCode = loadedProfile?.country_code ?? undefined;
+    initialBillingProfile = billing;
+    initialValues = profileToRegisterDefaults(loadedProfile, user.email, billing?.legal_name);
   } else if (user?.email) {
     const [loadedProfile, billing] = await Promise.all([
       getLatestProfile().catch(() => null),
