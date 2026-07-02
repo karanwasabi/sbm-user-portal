@@ -13,7 +13,8 @@ import {
   type RegisterFieldErrors,
 } from '@/lib/register-form-validation';
 import { syncPasswordSetMetadata } from '@/lib/sync-password-set-metadata';
-import { patchProfile, ProfileFetchError, recordDpdpConsent, registerMember } from '@/utils/api';
+import { getMyEnrollments, patchProfile, ProfileFetchError, recordDpdpConsent, registerMember } from '@/utils/api';
+import { hasPaidTakeControlEnrollment } from '@/types/enrollment';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
 import { ASSISTED_REGISTER_COOKIE, REGISTER_DRAFT_COOKIE, REGISTER_EMAIL_COOKIE } from '@/types/register';
 import { createClient } from '@/utils/supabase/server';
@@ -98,12 +99,12 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
       await getForwardedHeaders()
     );
 
-    if (result.status === 'already_enrolled') {
-      return { error: null, status: 'already_enrolled', email: values.email };
-    }
-
     if (result.status === 'already_registered') {
       return { error: null, status: 'already_registered', email: values.email };
+    }
+
+    if (assisted && result.status === 'already_enrolled') {
+      return { error: null, status: 'already_enrolled', email: values.email };
     }
 
     cookieStore.delete(REGISTER_DRAFT_COOKIE);
@@ -120,21 +121,13 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
       path: '/',
     });
 
-    if (result.status === 'resume') {
-      cookieStore.set(REGISTER_FLOW_COOKIE, 'resume', {
-        httpOnly: true,
-        sameSite: 'lax',
-        maxAge: 60 * 60,
-        path: '/',
-      });
-    } else {
-      cookieStore.set(REGISTER_FLOW_COOKIE, 'signup', {
-        httpOnly: true,
-        sameSite: 'lax',
-        maxAge: 60 * 60,
-        path: '/',
-      });
-    }
+    const resumeFlow = result.status === 'resume' || result.status === 'already_enrolled';
+    cookieStore.set(REGISTER_FLOW_COOKIE, resumeFlow ? 'resume' : 'signup', {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60,
+      path: '/',
+    });
 
     return { error: null, status: result.status, email: values.email };
   } catch (err) {
@@ -173,6 +166,15 @@ export async function verifyRegisterOtp(_prev: RegisterVerifyState, formData: Fo
   } catch (err) {
     const message = err instanceof ProfileFetchError ? err.message : 'Failed to save your profile.';
     return { error: message, verified: false };
+  }
+
+  try {
+    const enrollments = await getMyEnrollments();
+    if (hasPaidTakeControlEnrollment(enrollments)) {
+      redirect('/');
+    }
+  } catch {
+    // Continue to registration checkout if enrollment status is unavailable.
   }
 
   return { error: null, verified: true };

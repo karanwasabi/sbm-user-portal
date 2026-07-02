@@ -16,3 +16,11 @@ export function hasPendingPayment(enrollments: Enrollment[]): boolean {
   if (hasPaidAccess) return false;
   return enrollments.some((entry) => entry.status === 'pending_payment');
 }
+
+export function hasPaidTakeControlEnrollment(enrollments: Enrollment[]): boolean {
+  return enrollments.some(
+    (entry) =>
+      entry.program_slug === 'take-control' &&
+      (entry.status === 'upcoming' || entry.status === 'active' || entry.status === 'completed')
+  );
+}

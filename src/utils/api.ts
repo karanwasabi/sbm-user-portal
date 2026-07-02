@@ -225,7 +225,7 @@ export async function registerMember(
 
   const payload = (await response.json().catch(() => null)) as RegisterStartResponse & { error?: string };
 
-  if (response.status === 409 && (payload?.status === 'already_enrolled' || payload?.status === 'already_registered')) {
+  if (response.status === 409 && (payload?.status === 'already_registered' || payload?.status === 'already_enrolled')) {
     return payload;
   }
 

@@ -169,17 +169,15 @@ export function RegisterView({
     (dobLiveError && !isParentalConsentValidationError(dobLiveError) ? dobLiveError : undefined);
   const formLocked = otpSent && !verified;
   const profileHydrated = useRef(false);
-  const existingAccountStatus =
-    startState.status === 'already_enrolled' || startState.status === 'already_registered' ? startState.status : null;
+  const existingAccountStatus = startState.status === 'already_registered' ? startState.status : null;
+  const enrolledCustomerStatus = assistedMode && startState.status === 'already_enrolled' ? startState.status : null;
   const [dismissedExistingAccount, setDismissedExistingAccount] = useState(false);
+  const [dismissedEnrolledCustomer, setDismissedEnrolledCustomer] = useState(false);
   const showExistingAccountNotice = Boolean(existingAccountStatus) && !dismissedExistingAccount;
+  const showEnrolledCustomerNotice = Boolean(enrolledCustomerStatus) && !dismissedEnrolledCustomer;
+  const showBlockedNotice = showExistingAccountNotice || showEnrolledCustomerNotice;
   const loginUrl = useMemo(
-    () =>
-      buildLoginUrl(
-        startState.status === 'already_registered' || startState.status === 'already_enrolled'
-          ? (startState.email ?? email)
-          : undefined
-      ),
+    () => buildLoginUrl(startState.status === 'already_registered' ? (startState.email ?? email) : undefined),
     [startState.status, startState.email, email]
   );
 
@@ -310,7 +308,7 @@ export function RegisterView({
   }, [fromDraft]);
 
   useLayoutEffect(() => {
-    if (showExistingAccountNotice) return;
+    if (showBlockedNotice) return;
 
     const node = registerContentRef.current;
     if (!node) return;
@@ -324,7 +322,7 @@ export function RegisterView({
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [showExistingAccountNotice, verified, otpSent, startPending, countries.length]);
+  }, [showBlockedNotice, verified, otpSent, startPending, countries.length]);
 
   useEffect(() => {
     if (startWasPending.current && !startPending) {
@@ -334,8 +332,11 @@ export function RegisterView({
         focusRegisterField(startState.focusField);
       } else if (startState.error) {
         setOtpSent(false);
-      } else if (startState.status === 'already_enrolled' || startState.status === 'already_registered') {
+      } else if (startState.status === 'already_registered') {
         setDismissedExistingAccount(false);
+        setOtpSent(false);
+      } else if (assistedMode && startState.status === 'already_enrolled') {
+        setDismissedEnrolledCustomer(false);
         setOtpSent(false);
       }
     }
@@ -344,7 +345,8 @@ export function RegisterView({
 
   useEffect(() => {
     if (!startState.status || !startState.email) return;
-    if (startState.status === 'already_registered' || startState.status === 'already_enrolled') return;
+    if (startState.status === 'already_registered') return;
+    if (assistedMode && startState.status === 'already_enrolled') return;
     setFieldErrors({});
     setOtpSent(true);
     setEmail(startState.email);
@@ -412,7 +414,11 @@ export function RegisterView({
   };
 
   const handleUseDifferentEmail = () => {
-    setDismissedExistingAccount(true);
+    if (showEnrolledCustomerNotice) {
+      setDismissedEnrolledCustomer(true);
+    } else {
+      setDismissedExistingAccount(true);
+    }
     setOtpSent(false);
     setOtp('');
     setResendCooldown(0);
@@ -479,34 +485,39 @@ export function RegisterView({
 
       <div
         className={cn(
-          showExistingAccountNotice && 'mx-auto flex w-full max-w-lg flex-col justify-center',
-          showExistingAccountNotice && !registerContentHeight && 'min-h-[44rem] lg:min-h-[26rem]'
+          showBlockedNotice && 'mx-auto flex w-full max-w-lg flex-col justify-center',
+          showBlockedNotice && !registerContentHeight && 'min-h-[44rem] lg:min-h-[26rem]'
         )}
-        style={showExistingAccountNotice && registerContentHeight ? { minHeight: registerContentHeight } : undefined}
+        style={showBlockedNotice && registerContentHeight ? { minHeight: registerContentHeight } : undefined}
       >
-        {showExistingAccountNotice ? (
+        {showEnrolledCustomerNotice ? (
+          <div
+            className="flex w-full flex-col gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 sm:px-5 sm:py-5"
+            role="alert"
+          >
+            <div>
+              <p className="text-base font-bold text-amber-950">This customer is already enrolled</p>
+              <p className="mt-2 text-sm leading-relaxed text-amber-900">
+                <span className="font-semibold text-slate-900">{startState.email ?? email}</span>
+                {
+                  " already has an active Take Control enrollment. A payment link isn't needed — use a different email to register someone else."
+                }
+              </p>
+            </div>
+            <button type="button" className={linkButtonClass} onClick={handleUseDifferentEmail}>
+              Use a different email
+            </button>
+          </div>
+        ) : showExistingAccountNotice ? (
           <div
             className="flex w-full flex-col gap-4 rounded-xl border border-danger-press/20 bg-danger-press/5 px-4 py-4 sm:px-5 sm:py-5"
             role="alert"
           >
             <div>
-              <p className="text-base font-bold text-slate-900">
-                {existingAccountStatus === 'already_enrolled'
-                  ? 'This email is already enrolled'
-                  : 'An account already exists'}
-              </p>
+              <p className="text-base font-bold text-slate-900">An account already exists</p>
               <p className="mt-2 text-sm leading-relaxed text-slate-700">
-                {existingAccountStatus === 'already_enrolled' ? (
-                  <>
-                    <span className="font-semibold text-slate-900">{startState.email ?? email}</span> is linked to an
-                    active Take Control enrollment. Registration can&apos;t continue with this email.
-                  </>
-                ) : (
-                  <>
-                    <span className="font-semibold text-slate-900">{startState.email ?? email}</span> is already
-                    registered. Sign in instead of creating a new account.
-                  </>
-                )}
+                <span className="font-semibold text-slate-900">{startState.email ?? email}</span>
+                {' is already registered. Sign in instead of creating a new account.'}
               </p>
             </div>
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
