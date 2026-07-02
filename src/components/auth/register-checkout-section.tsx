@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ChevronDown, Copy, Link2, Loader2 } from 'lucide-react';
 import { BillingDetailsFields } from '@/components/billing/billing-details-fields';
@@ -9,17 +9,29 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
-import { billingProfileToFormState, buildBillingProfilePatch, isBillingPatchValid } from '@/lib/billing-form';
+import {
+  billingProfileToFormState,
+  buildBillingProfilePatch,
+  isBillingPatchValid,
+  type BillingFormSnapshot,
+} from '@/lib/billing-form';
 import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
 import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalPurchase } from '@/lib/gtag';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
+import {
+  clearRegisterCheckoutDraft,
+  readRegisterCheckoutDraft,
+  writeRegisterCheckoutDraft,
+  type RegisterCheckoutDraft,
+} from '@/lib/register-checkout-draft';
 import { openRazorpayEnrollmentCheckout, pollUntilEnrolled } from '@/lib/razorpay-checkout';
 import type { BillingProfile } from '@/types/billing';
 import type { CheckoutPreview, CheckoutQuote, CheckoutQuoteRequest } from '@/types/checkout';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
 import {
   deleteRegistrationPromo,
+  getBillingProfileOrNull,
   getCheckoutResume,
   getPublicCheckoutPreview,
   getPublicCountryCities,
@@ -93,6 +105,7 @@ export function RegisterCheckoutSection({
   const billingHydrated = useRef(false);
   const skipNextCountryReset = useRef(false);
   const promoHydrated = useRef(false);
+  const hasLocalCheckoutDraft = useRef(false);
   const lastCheckoutRef = useRef<{
     sessionId: string;
     valuePaise: number;
@@ -121,27 +134,122 @@ export function RegisterCheckoutSection({
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState('');
 
+  const applyBillingFormSnapshot = useCallback(
+    (snapshot: BillingFormSnapshot, options?: { billingCountryTouched?: boolean; legalNameTouched?: boolean }) => {
+      skipNextCountryReset.current = true;
+      setBillingCountryCode(snapshot.billingCountryCode);
+      setBillingType(snapshot.billingType);
+      setGstin(snapshot.gstin);
+      setLegalName(snapshot.legalName);
+      setBillingState(snapshot.billingState);
+      setAddressLine1(snapshot.addressLine1);
+      setAddressLine2(snapshot.addressLine2);
+      setBillingCity(snapshot.billingCity);
+      setPostalCode(snapshot.postalCode);
+      if (options?.billingCountryTouched) setBillingCountryTouched(true);
+      if (options?.legalNameTouched || snapshot.legalName.trim()) setLegalNameTouched(true);
+      billingHydrated.current = true;
+    },
+    []
+  );
+
+  const applyBillingSnapshot = useCallback(
+    (profile: BillingProfile) => {
+      applyBillingFormSnapshot(billingProfileToFormState(profile), {
+        billingCountryTouched: true,
+        legalNameTouched: Boolean(profile.legal_name?.trim()),
+      });
+    },
+    [applyBillingFormSnapshot]
+  );
+
+  const buildCheckoutDraft = useCallback((): RegisterCheckoutDraft => {
+    return {
+      billingCountryCode,
+      billingType,
+      gstin,
+      legalName,
+      billingState,
+      addressLine1,
+      addressLine2,
+      billingCity,
+      postalCode,
+      billingCountryTouched,
+      legalNameTouched,
+      promoCode,
+      appliedPromo,
+      billingOpen,
+    };
+  }, [
+    addressLine1,
+    addressLine2,
+    appliedPromo,
+    billingCity,
+    billingCountryCode,
+    billingCountryTouched,
+    billingOpen,
+    billingState,
+    billingType,
+    gstin,
+    legalName,
+    legalNameTouched,
+    postalCode,
+    promoCode,
+  ]);
+
+  const checkoutDraftRef = useRef<RegisterCheckoutDraft>(buildCheckoutDraft());
+  checkoutDraftRef.current = buildCheckoutDraft();
+
+  useLayoutEffect(() => {
+    const draft = readRegisterCheckoutDraft();
+    if (!draft) return;
+
+    hasLocalCheckoutDraft.current = true;
+    applyBillingFormSnapshot(draft, {
+      billingCountryTouched: draft.billingCountryTouched,
+      legalNameTouched: draft.legalNameTouched,
+    });
+    setPromoCode(draft.promoCode);
+    setAppliedPromo(draft.appliedPromo);
+    if (draft.billingOpen) setBillingOpen(true);
+    promoHydrated.current = true;
+  }, [applyBillingFormSnapshot]);
+
+  useEffect(() => {
+    writeRegisterCheckoutDraft(buildCheckoutDraft());
+  }, [buildCheckoutDraft]);
+
+  useEffect(() => {
+    return () => {
+      writeRegisterCheckoutDraft(checkoutDraftRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     setCountries(initialCountries);
   }, [initialCountries]);
 
   useEffect(() => {
-    if (!initialBillingProfile || billingHydrated.current) return;
-    const snapshot = billingProfileToFormState(initialBillingProfile);
-    skipNextCountryReset.current = true;
-    setBillingCountryCode(snapshot.billingCountryCode);
-    setBillingType(snapshot.billingType);
-    setGstin(snapshot.gstin);
-    setLegalName(snapshot.legalName);
-    setBillingState(snapshot.billingState);
-    setAddressLine1(snapshot.addressLine1);
-    setAddressLine2(snapshot.addressLine2);
-    setBillingCity(snapshot.billingCity);
-    setPostalCode(snapshot.postalCode);
-    setBillingCountryTouched(true);
-    if (snapshot.legalName.trim()) setLegalNameTouched(true);
-    billingHydrated.current = true;
-  }, [initialBillingProfile]);
+    if (!initialBillingProfile || billingHydrated.current || hasLocalCheckoutDraft.current) return;
+    applyBillingSnapshot(initialBillingProfile);
+  }, [initialBillingProfile, applyBillingSnapshot]);
+
+  useEffect(() => {
+    if (!enabled || billingHydrated.current || hasLocalCheckoutDraft.current) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const billing = await getBillingProfileOrNull();
+        if (cancelled || !billing) return;
+        applyBillingSnapshot(billing);
+      } catch {
+        // Billing can be entered manually if restore fails.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, applyBillingSnapshot]);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,7 +272,8 @@ export function RegisterCheckoutSection({
   }, []);
 
   useEffect(() => {
-    if (!enabled || promoHydrated.current) return;
+    if (promoHydrated.current || hasLocalCheckoutDraft.current) return;
+    if (!enabled) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -364,6 +473,56 @@ export function RegisterCheckoutSection({
     pricingRegion,
   ]);
 
+  const syncLocalDraftToAccount = useCallback(async () => {
+    const trimmedLegalName = resolveLegalName();
+    const patch = buildBillingProfilePatch({
+      billingCountryCode,
+      billingType,
+      gstin,
+      legalName: trimmedLegalName,
+      billingState,
+      addressLine1,
+      addressLine2,
+      billingCity,
+      postalCode,
+      billingCountry,
+      hasSubdivisions,
+      pricingRegion,
+    });
+    if (isBillingPatchValid(patch)) {
+      await patchBillingProfile(patch);
+    }
+    if (appliedPromo) {
+      await putRegistrationPromo(appliedPromo);
+    }
+  }, [
+    appliedPromo,
+    resolveLegalName,
+    billingCountryCode,
+    billingType,
+    gstin,
+    billingState,
+    addressLine1,
+    addressLine2,
+    billingCity,
+    postalCode,
+    billingCountry,
+    hasSubdivisions,
+    pricingRegion,
+  ]);
+
+  const wasEnabledRef = useRef(enabled);
+
+  useEffect(() => {
+    const wasEnabled = wasEnabledRef.current;
+    wasEnabledRef.current = enabled;
+    if (wasEnabled || !enabled || !readRegisterCheckoutDraft()) return;
+
+    void syncLocalDraftToAccount().catch(() => {
+      // Local draft stays authoritative until the user saves again.
+    });
+  }, [enabled, syncLocalDraftToAccount]);
+
   const handleBillingSectionBlur = (event: React.FocusEvent<HTMLDivElement>) => {
     if (!enabled) return;
     const next = event.relatedTarget as Node | null;
@@ -477,6 +636,7 @@ export function RegisterCheckoutSection({
     } catch {
       // Non-blocking.
     }
+    clearRegisterCheckoutDraft();
     await pollUntilEnrolled();
     router.push('/');
     router.refresh();

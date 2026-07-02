@@ -444,7 +444,7 @@ export function RegisterView({
         <SbmWordmark size="lg" showSubtitle={false} />
         <div className="flex flex-col gap-2 sm:items-end">
           <h1 className="text-lg font-bold tracking-tight text-slate-800 sm:text-right sm:text-[17px] lg:text-lg">
-            {assistedMode ? 'Assisted registration' : 'Register for Take Control'}
+            {assistedMode ? 'Assisted Registration' : 'Register for Take Control'}
           </h1>
           {assistedMode && (verified || otpSent) ? (
             <Button

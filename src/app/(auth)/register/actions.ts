@@ -178,24 +178,11 @@ export async function verifyRegisterOtp(_prev: RegisterVerifyState, formData: Fo
   return { error: null, verified: true };
 }
 
-async function completeRegisterProfile(formData: FormData): Promise<void> {
-  const values = parseRegisterForm(formData);
-  const patch = buildRegisterProfilePatch(values);
-  if (Object.keys(patch).length > 0) {
-    await patchProfile(patch);
-  }
-
-  const cookieStore = await cookies();
-  if (cookieStore.get(REGISTER_DPDP_COOKIE)?.value === '1') {
-    await recordDpdpConsent(DPDP_TERMS_URL, DPDP_PRIVACY_URL, 'register');
-    cookieStore.delete(REGISTER_DPDP_COOKIE);
-  }
-}
-
-/** Signs out, saves the current form as a draft, and returns to registration for edits. */
+/** Signs out, saves the current form as a draft, and returns to registration for edits (re-OTP required). */
 export async function restartRegisterEditing(formData: FormData): Promise<void> {
   const values = parseRegisterForm(formData);
   const cookieStore = await cookies();
+  const assisted = formData.get('assisted') === '1' || cookieStore.get(ASSISTED_REGISTER_COOKIE)?.value === '1';
 
   cookieStore.set(REGISTER_DRAFT_COOKIE, JSON.stringify(registerDraftFromValues(values)), {
     httpOnly: true,
@@ -219,7 +206,21 @@ export async function restartRegisterEditing(formData: FormData): Promise<void> 
   const supabase = await createClient();
   await supabase.auth.signOut();
 
-  redirect('/register');
+  redirect(assisted ? '/register/assisted' : '/register');
+}
+
+async function completeRegisterProfile(formData: FormData): Promise<void> {
+  const values = parseRegisterForm(formData);
+  const patch = buildRegisterProfilePatch(values);
+  if (Object.keys(patch).length > 0) {
+    await patchProfile(patch);
+  }
+
+  const cookieStore = await cookies();
+  if (cookieStore.get(REGISTER_DPDP_COOKIE)?.value === '1') {
+    await recordDpdpConsent(DPDP_TERMS_URL, DPDP_PRIVACY_URL, 'register');
+    cookieStore.delete(REGISTER_DPDP_COOKIE);
+  }
 }
 
 export async function clearRegisterDraft(): Promise<void> {
