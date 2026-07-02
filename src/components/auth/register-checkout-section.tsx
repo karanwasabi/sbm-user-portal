@@ -39,6 +39,7 @@ import {
   getRegistrationPromo,
   mockCompleteCheckout,
   patchBillingProfile,
+  PaymentLinkError,
   postPublicCheckoutQuote,
   postRegistrationPaymentLink,
   putRegistrationPromo,
@@ -738,6 +739,10 @@ export function RegisterCheckoutSection({
         variant: 'success',
       });
     } catch (err) {
+      if (err instanceof PaymentLinkError && err.status === 'already_enrolled') {
+        setError(err.message);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to generate payment link.');
     } finally {
       setPaymentLinkPending(false);

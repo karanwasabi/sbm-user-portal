@@ -3,8 +3,10 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { DPDP_PRIVACY_URL, DPDP_TERMS_URL } from '@/lib/dpdp-consent';
+import { dashboardUrlForCompletedPayment } from '@/lib/payment-complete';
 import { PENDING_DPDP_COOKIE } from '@/types/onboarding';
-import { ProfileFetchError, recordDpdpConsent } from '@/utils/api';
+import { hasPaidTakeControlEnrollment } from '@/types/enrollment';
+import { ProfileFetchError, getMyEnrollments, recordDpdpConsent } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
 
 export type CompleteEmailVerificationResult = {
@@ -42,6 +44,15 @@ export async function completeEmailVerification(): Promise<CompleteEmailVerifica
           : 'Your email was verified but we could not save your consent. Please contact support.';
       return { error: message };
     }
+  }
+
+  try {
+    const enrollments = await getMyEnrollments();
+    if (hasPaidTakeControlEnrollment(enrollments)) {
+      redirect(dashboardUrlForCompletedPayment());
+    }
+  } catch {
+    // Fall through to registration checkout when enrollment status is unavailable.
   }
 
   redirect('/register?verified=1');

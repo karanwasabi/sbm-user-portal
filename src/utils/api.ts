@@ -304,3 +304,43 @@ export async function sendLoginOTP(
     );
   }
 }
+
+export type PaymentRecoveryStatus = 'enrolled' | 'pending_payment' | 'not_found';
+
+export async function lookupPaymentRecoveryStatus(
+  email: string,
+  extraHeaders: HeadersInit = {}
+): Promise<PaymentRecoveryStatus> {
+  let response: Response;
+  try {
+    response = await fetch(`${getBackendUrl()}/auth/payment-recovery/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...extraHeaders,
+      },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ProfileFetchError('Could not reach the backend. Is it running?', 503);
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new ProfileFetchError(
+      formatUserFacingError(payload?.error ?? `Failed to check payment status (${response.status})`),
+      response.status
+    );
+  }
+
+  const payload = (await response.json()) as { status?: PaymentRecoveryStatus };
+  switch (payload.status) {
+    case 'enrolled':
+    case 'pending_payment':
+    case 'not_found':
+      return payload.status;
+    default:
+      return 'not_found';
+  }
+}

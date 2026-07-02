@@ -3,6 +3,7 @@
 import { ArrowRight, Loader2, Mail } from 'lucide-react';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import {
+  getPaymentRecoveryStatus,
   resendContinuePaymentOtp,
   sendContinuePaymentOtp,
   verifyContinuePaymentOtp,
@@ -28,8 +29,11 @@ type ContinuePaymentRecoveryProps = {
   initialEmail?: string;
 };
 
+type RecoveryMode = 'loading' | 'enrolled' | 'pending_payment';
+
 export function ContinuePaymentRecovery({ initialEmail = '' }: ContinuePaymentRecoveryProps) {
   const [email, setEmail] = useState(initialEmail);
+  const [recoveryMode, setRecoveryMode] = useState<RecoveryMode>('loading');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -49,6 +53,25 @@ export function ContinuePaymentRecovery({ initialEmail = '' }: ContinuePaymentRe
     const cookieEmail = readPaymentHandoffEmailFromCookie();
     if (cookieEmail) setEmail(cookieEmail);
   }, [initialEmail]);
+
+  useEffect(() => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setRecoveryMode('pending_payment');
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const status = await getPaymentRecoveryStatus(normalizedEmail);
+      if (cancelled) return;
+      setRecoveryMode(status === 'enrolled' ? 'enrolled' : 'pending_payment');
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [email]);
 
   useEffect(() => {
     if (!email) return;
@@ -147,14 +170,38 @@ export function ContinuePaymentRecovery({ initialEmail = '' }: ContinuePaymentRe
     );
   }
 
+  if (recoveryMode === 'loading') {
+    return (
+      <div className="flex flex-col items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden />
+        <p className="mt-4 text-sm font-medium text-slate-500">Checking your enrollment status…</p>
+      </div>
+    );
+  }
+
+  const isEnrolled = recoveryMode === 'enrolled';
+
   return (
     <>
-      <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
-        <p className="text-sm font-semibold text-amber-900">This payment link has expired</p>
-        <p className="mt-2 text-[13px] leading-snug text-amber-800">
-          To finish enrollment and pay, generate an OTP for:
+      <div
+        className={
+          isEnrolled
+            ? 'mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3.5'
+            : 'mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5'
+        }
+      >
+        <p className={`text-sm font-semibold ${isEnrolled ? 'text-emerald-950' : 'text-amber-900'}`}>
+          {isEnrolled ? 'Payment is already complete' : 'This payment link has expired'}
+        </p>
+        <p className={`mt-2 text-[13px] leading-snug ${isEnrolled ? 'text-emerald-900' : 'text-amber-800'}`}>
+          {isEnrolled ? 'Your enrollment is active for:' : 'To finish enrollment and pay, generate an OTP for:'}
         </p>
         <p className="mt-1.5 text-[15px] font-bold tracking-tight text-slate-900">{email}</p>
+        {isEnrolled ? (
+          <p className="mt-2 text-[13px] leading-snug text-emerald-900">
+            Generate an OTP below to sign in to your member dashboard.
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-3.5">
@@ -229,7 +276,7 @@ export function ContinuePaymentRecovery({ initialEmail = '' }: ContinuePaymentRe
                 verifyOtpPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />
               }
             >
-              {verifyOtpPending ? 'Signing in…' : 'Continue to payment'}
+              {verifyOtpPending ? 'Signing in…' : isEnrolled ? 'Sign in to dashboard' : 'Continue to payment'}
             </Button>
           </form>
         )}

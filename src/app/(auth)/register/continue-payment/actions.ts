@@ -6,8 +6,10 @@ import { hasProduct, PRODUCT_MEMBER_PORTAL } from '@/lib/access';
 import { emailOtpInvalidMessage, isValidEmailOtp } from '@/lib/email-otp';
 import { formatUserFacingError } from '@/lib/format-user-error';
 import { LOGIN_PRODUCT_MEMBER_PORTAL, MEMBER_PORTAL_LOGIN_DENIED_MESSAGE } from '@/lib/login-access';
+import { dashboardUrlForCompletedPayment } from '@/lib/payment-complete';
 import { getMyAccess } from '@/utils/access-api';
-import { ProfileFetchError, sendLoginOTP } from '@/utils/api';
+import { ProfileFetchError, getMyEnrollments, sendLoginOTP } from '@/utils/api';
+import { hasPaidTakeControlEnrollment } from '@/types/enrollment';
 import { createClient } from '@/utils/supabase/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -111,6 +113,15 @@ export async function verifyContinuePaymentOtp(
   const denied = await ensureMemberPortalAccess(supabase, 'otp');
   if (denied) return denied;
 
+  try {
+    const enrollments = await getMyEnrollments();
+    if (hasPaidTakeControlEnrollment(enrollments)) {
+      redirect(dashboardUrlForCompletedPayment());
+    }
+  } catch {
+    // Continue to registration checkout when enrollment status is unavailable.
+  }
+
   redirect('/register?verified=1');
 }
 
@@ -127,5 +138,21 @@ export async function resendContinuePaymentOtp(email: string): Promise<{ error: 
     return {
       error: err instanceof ProfileFetchError ? err.message : 'Failed to resend OTP.',
     };
+  }
+}
+
+export async function getPaymentRecoveryStatus(
+  email: string
+): Promise<'enrolled' | 'pending_payment' | 'not_found' | 'unknown'> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) {
+    return 'unknown';
+  }
+
+  try {
+    const { lookupPaymentRecoveryStatus } = await import('@/utils/api');
+    return await lookupPaymentRecoveryStatus(normalizedEmail, await getForwardedHeaders());
+  } catch {
+    return 'unknown';
   }
 }

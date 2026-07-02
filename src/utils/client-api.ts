@@ -265,7 +265,30 @@ export type PaymentLinkResponse = {
   expires_at: string;
 };
 
+export class PaymentLinkError extends Error {
+  constructor(
+    message: string,
+    readonly status: 'already_enrolled'
+  ) {
+    super(message);
+    this.name = 'PaymentLinkError';
+  }
+}
+
 export async function postRegistrationPaymentLink(): Promise<PaymentLinkResponse> {
   const response = await clientApiFetch('/me/registration/payment-link', { method: 'POST' });
+  if (response.status === 409) {
+    const payload = (await response.json().catch(() => null)) as { status?: string; error?: string } | null;
+    if (payload?.status === 'already_enrolled') {
+      throw new PaymentLinkError(
+        'This customer is already enrolled. A payment link is not needed.',
+        'already_enrolled'
+      );
+    }
+  }
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? 'Failed to generate payment link.');
+  }
   return response.json() as Promise<PaymentLinkResponse>;
 }

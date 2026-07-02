@@ -11,6 +11,7 @@ import { hasPortalAccess, isEnrolled } from '@/lib/onboarding';
 import { getRequestCountryIso } from '@/lib/request-country-code';
 import { PENDING_DPDP_COOKIE } from '@/types/onboarding';
 import { REGISTER_DRAFT_COOKIE } from '@/types/register';
+import { hasPaidTakeControlEnrollment } from '@/types/enrollment';
 import type { BillingProfile } from '@/types/billing';
 import { fetchCountries, getBillingProfile, getLatestProfile, getMyEnrollments } from '@/utils/api';
 import { createClient } from '@/utils/supabase/server';
@@ -48,6 +49,9 @@ export async function loadRegisterPage({ assisted, searchParams }: LoadRegisterP
         getMyEnrollments().catch(() => []),
         getBillingProfile().catch(() => null),
       ]);
+      if (hasPaidTakeControlEnrollment(enrollments)) {
+        redirect('/');
+      }
       profileCountryCode = loadedProfile?.country_code ?? undefined;
       initialBillingProfile = billing;
       if (loadedProfile && (hasPortalAccess(loadedProfile, enrollments) || isEnrolled(enrollments))) {
