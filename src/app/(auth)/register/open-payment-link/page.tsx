@@ -1,7 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { ContinuePaymentRecovery } from '@/components/auth/continue-payment-recovery';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
@@ -33,15 +33,19 @@ export default function OpenPaymentLinkPage() {
     typeof window === 'undefined' ? '' : readInitialPaymentLinkState().email
   );
 
+  useLayoutEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const email = normalizeLoginEmailParam(params.get('email') ?? undefined);
+    if (email) {
+      rememberPaymentHandoffEmail(email);
+    }
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const email = normalizeLoginEmailParam(params.get('email') ?? undefined);
     const auth = params.get('auth')?.trim();
     const expiredHint = params.get('expired') === '1';
-
-    if (email) {
-      rememberPaymentHandoffEmail(email);
-    }
 
     const authParams = parseAuthCallbackParams();
 

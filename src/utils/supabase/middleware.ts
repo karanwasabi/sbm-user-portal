@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { PAYMENT_HANDOFF_EMAIL_COOKIE } from '@/lib/payment-handoff';
 import { ASSISTED_REGISTER_COOKIE } from '@/types/register';
 
 const PUBLIC_ROUTES = [
@@ -61,6 +62,18 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  if (pathname === '/login') {
+    const paymentEmail = request.cookies.get(PAYMENT_HANDOFF_EMAIL_COOKIE)?.value?.trim();
+    const authCode = request.nextUrl.searchParams.get('code');
+    if (paymentEmail && authCode) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/register/open-payment-link';
+      url.searchParams.set('email', paymentEmail);
+      return NextResponse.redirect(url);
+    }
+  }
+
   const publicRoute = isPublicRoute(pathname);
   const requiresAuth = isProtectedRoute(pathname);
   const isConfirmRoute = pathname === '/auth/confirm';

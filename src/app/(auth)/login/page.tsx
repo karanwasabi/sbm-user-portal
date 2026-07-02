@@ -1,5 +1,5 @@
 import { LoginAuthHashHandler } from '@/components/auth/login-auth-hash-handler';
-import { LoginForm } from '@/components/auth/login-form';
+import { PaymentHandoffRedirectScript } from '@/components/auth/payment-handoff-redirect-script';
 import { normalizeLoginEmailParam } from '@/lib/login-url';
 
 type LoginPageProps = {
@@ -12,8 +12,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const linkError = params.link_error === 'expired' ? 'expired' : null;
 
   return (
-    <LoginAuthHashHandler>
-      <LoginForm initialEmail={initialEmail} linkError={linkError} />
-    </LoginAuthHashHandler>
+    <>
+      <PaymentHandoffRedirectScript />
+      <LoginAuthHashHandler initialEmail={initialEmail} linkError={linkError} />
+    </>
   );
 }

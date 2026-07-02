@@ -1,7 +1,8 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { useLayoutEffect, useEffect, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useEffect, useState } from 'react';
+import { LoginForm } from '@/components/auth/login-form';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import {
@@ -14,46 +15,74 @@ import { forwardPaymentAuthFromLoginToPortal, shouldForwardPaymentAuthFromLogin 
 import { createClient } from '@/utils/supabase/client';
 
 type LoginAuthHashHandlerProps = {
-  children: ReactNode;
+  initialEmail?: string;
+  linkError?: 'expired' | null;
 };
 
-const paymentLinkLoader = (
-  <AuthLayout>
-    <div className="mb-7">
-      <SbmWordmark size="lg" />
-    </div>
-    <div className="flex flex-col items-center justify-center py-8">
-      <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden />
-      <p className="mt-4 text-sm font-medium text-slate-500">Opening your payment link…</p>
-    </div>
-  </AuthLayout>
-);
+type LoginView = 'pending' | 'payment-forward' | 'auth-processing' | 'form';
+
+function PaymentLinkLoader() {
+  return (
+    <AuthLayout>
+      <div className="mb-7">
+        <SbmWordmark size="lg" />
+      </div>
+      <div className="flex flex-col items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden />
+        <p className="mt-4 text-sm font-medium text-slate-500">Opening your payment link…</p>
+      </div>
+    </AuthLayout>
+  );
+}
+
+function AuthProcessingLoader() {
+  return (
+    <AuthLayout>
+      <div className="mb-7">
+        <SbmWordmark size="lg" />
+      </div>
+      <div className="flex flex-col items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden />
+        <p className="mt-4 text-sm font-medium text-slate-500">Signing you in…</p>
+      </div>
+    </AuthLayout>
+  );
+}
 
 /** Handles Supabase auth tokens/errors that land on /login (site URL fallback). */
-export function LoginAuthHashHandler({ children }: LoginAuthHashHandlerProps) {
-  const [forwardingPaymentAuth] = useState(() => shouldForwardPaymentAuthFromLogin());
-  const [isProcessing, setIsProcessing] = useState(() => {
-    if (shouldForwardPaymentAuthFromLogin()) return false;
-    const params = parseAuthCallbackParams();
-    return Boolean(params && hasAuthCallbackPayload(params));
-  });
+export function LoginAuthHashHandler({ initialEmail = '', linkError = null }: LoginAuthHashHandlerProps) {
+  const [view, setView] = useState<LoginView>('pending');
 
   useLayoutEffect(() => {
-    if (!forwardingPaymentAuth) return;
-    forwardPaymentAuthFromLoginToPortal();
-  }, [forwardingPaymentAuth]);
-
-  useEffect(() => {
-    if (forwardingPaymentAuth) return;
+    if (shouldForwardPaymentAuthFromLogin()) {
+      setView('payment-forward');
+      forwardPaymentAuthFromLoginToPortal();
+      return;
+    }
 
     const params = parseAuthCallbackParams();
-    if (!params || !hasAuthCallbackPayload(params)) return;
+    if (!params || !hasAuthCallbackPayload(params)) {
+      setView('form');
+      return;
+    }
+
+    setView('auth-processing');
+  }, []);
+
+  useEffect(() => {
+    if (view !== 'auth-processing') return;
+
+    const params = parseAuthCallbackParams();
+    if (!params || !hasAuthCallbackPayload(params)) {
+      setView('form');
+      return;
+    }
 
     const { searchParams, hashParams } = params;
     let cancelled = false;
 
     const finish = () => {
-      if (!cancelled) setIsProcessing(false);
+      if (!cancelled) setView('form');
     };
 
     const redirectExpired = () => {
@@ -111,25 +140,15 @@ export function LoginAuthHashHandler({ children }: LoginAuthHashHandlerProps) {
     return () => {
       cancelled = true;
     };
-  }, [forwardingPaymentAuth]);
+  }, [view]);
 
-  if (forwardingPaymentAuth) {
-    return paymentLinkLoader;
+  if (view === 'pending' || view === 'payment-forward') {
+    return <PaymentLinkLoader />;
   }
 
-  if (isProcessing) {
-    return (
-      <AuthLayout>
-        <div className="mb-7">
-          <SbmWordmark size="lg" />
-        </div>
-        <div className="flex flex-col items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-brand" aria-hidden />
-          <p className="mt-4 text-sm font-medium text-slate-500">Signing you in…</p>
-        </div>
-      </AuthLayout>
-    );
+  if (view === 'auth-processing') {
+    return <AuthProcessingLoader />;
   }
 
-  return children;
+  return <LoginForm initialEmail={initialEmail} linkError={linkError} />;
 }
