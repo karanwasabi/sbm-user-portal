@@ -3,8 +3,10 @@
 import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { trackMetaPurchase } from '@/lib/meta-pixel';
+import { clearPendingCheckout, readPendingCheckout } from '@/lib/payment-return';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { pollUntilEnrolled } from '@/lib/razorpay-checkout';
-import { clearPendingCheckout } from '@/lib/payment-return';
 
 type PaymentReturnViewProps = {
   error?: string | null;
@@ -22,8 +24,9 @@ export function PaymentReturnView({ error: initialError }: PaymentReturnViewProp
   useEffect(() => {
     if (initialError) return;
 
-    const destination = searchParams.get('destination') || '/';
+    const destination = searchParams.get('destination') || PORTAL_HOME_PATH;
     const flow = searchParams.get('flow') || 'enrollment';
+    const pending = readPendingCheckout();
 
     const finish = () => {
       clearPendingCheckout();
@@ -41,6 +44,9 @@ export function PaymentReturnView({ error: initialError }: PaymentReturnViewProp
       const enrolled = await pollUntilEnrolled({ intervalMs: 1500, timeoutMs: 120000 });
       if (cancelled) return;
       if (enrolled) {
+        if (pending?.checkoutSessionId) {
+          trackMetaPurchase({ eventID: `purchase:${pending.checkoutSessionId}` });
+        }
         finish();
         return;
       }
@@ -49,6 +55,9 @@ export function PaymentReturnView({ error: initialError }: PaymentReturnViewProp
       const retry = await pollUntilEnrolled({ intervalMs: 2000, timeoutMs: 60000 });
       if (cancelled) return;
       if (retry) {
+        if (pending?.checkoutSessionId) {
+          trackMetaPurchase({ eventID: `purchase:${pending.checkoutSessionId}` });
+        }
         finish();
         return;
       }

@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { PAYMENT_HANDOFF_EMAIL_COOKIE } from '@/lib/payment-handoff';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { ASSISTED_REGISTER_COOKIE } from '@/types/register';
 
 const PUBLIC_ROUTES = [
@@ -23,8 +24,7 @@ function isPublicRoute(pathname: string) {
 }
 
 function isProtectedRoute(pathname: string) {
-  if (pathname === '/') return true;
-  return ['/subscription', '/invoices', '/profile', '/settings', '/support'].some(
+  return [PORTAL_HOME_PATH, '/subscription', '/invoices', '/profile', '/settings', '/support'].some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 }
@@ -91,6 +91,12 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (pathname === '/') {
+    const url = request.nextUrl.clone();
+    url.pathname = user ? (isEmailVerified(user) ? PORTAL_HOME_PATH : '/register') : '/login';
+    return NextResponse.redirect(url);
+  }
+
   if (!user && requiresAuth) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
@@ -99,7 +105,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && pathname === '/login') {
     const url = request.nextUrl.clone();
-    url.pathname = isEmailVerified(user) ? '/' : '/register';
+    url.pathname = isEmailVerified(user) ? PORTAL_HOME_PATH : '/register';
     return NextResponse.redirect(url);
   }
 

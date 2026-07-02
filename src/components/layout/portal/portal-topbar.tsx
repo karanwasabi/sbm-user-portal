@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { PortalMobileNav } from '@/components/layout/portal/portal-mobile-nav';
 import { PortalUserMenu } from '@/components/layout/portal/portal-user-menu';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 
 const pageMeta: Record<string, string> = {
   '/subscription': 'Subscription',
@@ -21,7 +22,7 @@ type PortalTopbarProps = {
 export function PortalTopbar({ right }: PortalTopbarProps) {
   const pathname = usePathname();
   const pageTitle = pageMeta[pathname];
-  const isHome = pathname === '/';
+  const isHome = pathname === PORTAL_HOME_PATH;
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-canvas px-4 sm:h-[68px] sm:px-6">

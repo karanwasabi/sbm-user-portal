@@ -1,5 +1,6 @@
-import { DashboardView } from '@/components/dashboard/dashboard-view';
+import { redirect } from 'next/navigation';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 
 export default function HomePage() {
-  return <DashboardView />;
+  redirect(PORTAL_HOME_PATH);
 }

@@ -55,6 +55,7 @@ import type { RegisterFormValues } from '@/lib/merge-profile-patch';
 import { profileToRegisterDefaults } from '@/lib/merge-profile-patch';
 import { clearRegisterCheckoutDraft, suppressRegisterCheckoutDraftPersist } from '@/lib/register-checkout-draft';
 import { trackPortalSignUp } from '@/lib/gtag';
+import { trackMetaLead } from '@/lib/meta-pixel';
 import { buildLoginUrl } from '@/lib/login-url';
 import { cn } from '@/lib/cn';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
@@ -369,6 +370,7 @@ export function RegisterView({
     if (!verifyState.verified || signUpTracked.current) return;
     signUpTracked.current = true;
     trackPortalSignUp();
+    trackMetaLead();
     setVerified(true);
     setFormError(null);
   }, [verifyState.verified]);

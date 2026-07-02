@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SectionHead } from '@/components/ui/section-head';
 import { PASSWORD_REQUIREMENTS_COPY } from '@/lib/password-requirements';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 
 const initialState = { error: null as string | null, success: false };
 
@@ -48,7 +49,7 @@ export function SetPasswordForm() {
         </Link>
         <Card>
           <SectionHead title="Password Saved" subtitle="You can now sign in with your email and password." />
-          <Button variant="primary" size="md" className="mt-5" href="/">
+          <Button variant="primary" size="md" className="mt-5" href={PORTAL_HOME_PATH}>
             Go to Dashboard
           </Button>
         </Card>

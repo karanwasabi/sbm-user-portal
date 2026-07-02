@@ -1,5 +1,6 @@
 import { CreditCard, FileText, HelpCircle, Home, Settings, User, type LucideIcon } from 'lucide-react';
 import { invoicesNavEnabled } from '@/lib/portal-features';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 
 export type PortalNavItem = {
   href: string;
@@ -11,7 +12,7 @@ export type PortalNavItem = {
 
 export const portalMainNavItems: PortalNavItem[] = [
   {
-    href: '/',
+    href: PORTAL_HOME_PATH,
     label: 'Home',
     icon: Home,
     activeClass: 'border-b-brand-press bg-brand font-bold text-white shadow-[0_8px_14px_-6px_rgba(92,101,207,0.40)]',
@@ -63,5 +64,5 @@ export const portalSupportNavItem: PortalNavItem = {
 };
 
 export function isPortalNavActive(pathname: string, href: string): boolean {
-  return href === '/' ? pathname === '/' : pathname.startsWith(href);
+  return href === PORTAL_HOME_PATH ? pathname === PORTAL_HOME_PATH : pathname.startsWith(href);
 }

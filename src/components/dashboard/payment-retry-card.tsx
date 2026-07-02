@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { trackMetaPurchase } from '@/lib/meta-pixel';
 import { openRazorpayEnrollmentCheckout, pollUntilEnrolled } from '@/lib/razorpay-checkout';
 import { getCheckoutResume, mockCompleteCheckout, startCheckout } from '@/utils/client-api';
 import { useRouter } from 'next/navigation';
@@ -56,6 +57,7 @@ export function PaymentRetryCard({ legalName = 'Member' }: PaymentRetryCardProps
         await mockCompleteCheckout(start.checkout_session_id);
         setConfirming(true);
         await pollUntilEnrolled();
+        trackMetaPurchase({ eventID: `purchase:${start.checkout_session_id}` });
         router.refresh();
         return;
       }
@@ -66,6 +68,7 @@ export function PaymentRetryCard({ legalName = 'Member' }: PaymentRetryCardProps
           void (async () => {
             setConfirming(true);
             await pollUntilEnrolled();
+            trackMetaPurchase({ eventID: `purchase:${start.checkout_session_id}` });
             router.refresh();
           })();
         },

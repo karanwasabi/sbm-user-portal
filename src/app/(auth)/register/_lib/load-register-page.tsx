@@ -9,6 +9,7 @@ import {
 } from '@/lib/merge-profile-patch';
 import { isEnrolled } from '@/lib/onboarding';
 import { getRequestCountryIso } from '@/lib/request-country-code';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { PENDING_DPDP_COOKIE } from '@/types/onboarding';
 import { REGISTER_DRAFT_COOKIE } from '@/types/register';
 import type { BillingProfile } from '@/types/billing';
@@ -47,10 +48,10 @@ export async function loadRegisterPage({ assisted, searchParams }: LoadRegisterP
       enrollments = await getMyEnrollments();
     } catch {
       // Do not allow enrolled users to view register when enrollment lookup is unstable.
-      redirect('/');
+      redirect(PORTAL_HOME_PATH);
     }
     if (isEnrolled(enrollments)) {
-      redirect('/');
+      redirect(PORTAL_HOME_PATH);
     }
 
     const [loadedProfile, billing] = await Promise.all([

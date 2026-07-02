@@ -16,9 +16,11 @@ import {
   type BillingFormSnapshot,
 } from '@/lib/billing-form';
 import { cn } from '@/lib/cn';
+import { trackMetaBeginCheckout, trackMetaPurchase } from '@/lib/meta-pixel';
 import { formatInrFromPaise } from '@/lib/money';
 import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalPurchase } from '@/lib/gtag';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 import {
   clearRegisterCheckoutDraft,
   readRegisterCheckoutDraft,
@@ -629,6 +631,10 @@ export function RegisterCheckoutSection({
         pricingRegion,
         promoCode: checkout.promoCode,
       });
+      trackMetaPurchase({
+        eventID: `purchase:${checkout.sessionId}`,
+        valuePaise: checkout.valuePaise,
+      });
     }
 
     setConfirmingPayment(true);
@@ -639,7 +645,7 @@ export function RegisterCheckoutSection({
     }
     clearRegisterCheckoutDraft();
     await pollUntilEnrolled();
-    router.push('/');
+    router.push(PORTAL_HOME_PATH);
     router.refresh();
   };
 
@@ -671,6 +677,7 @@ export function RegisterCheckoutSection({
       pricingRegion,
       promoCode: displayQuote.promo_code,
     });
+    trackMetaBeginCheckout({ valuePaise: displayQuote.total_paise });
 
     try {
       await saveBillingProfile();

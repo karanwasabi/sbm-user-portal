@@ -12,6 +12,7 @@ import {
   savePendingCheckout,
   type PaymentReturnFlow,
 } from '@/lib/payment-return';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 
 declare global {
   interface Window {
@@ -146,7 +147,7 @@ export async function openRazorpaySubscriptionCheckout({
   pricingRegion,
   subscriptionCardChange = false,
   checkoutSessionId,
-  returnDestination = '/',
+  returnDestination = PORTAL_HOME_PATH,
   returnFlow = 'enrollment',
   onSuccess,
   onDismiss,
@@ -268,7 +269,7 @@ type OpenEnrollmentCheckoutOptions = {
 
 export async function openRazorpayEnrollmentCheckout({
   start,
-  returnDestination = '/',
+  returnDestination = PORTAL_HOME_PATH,
   onSuccess,
   onDismiss,
 }: OpenEnrollmentCheckoutOptions): Promise<void> {

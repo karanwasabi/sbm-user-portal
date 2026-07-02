@@ -1,4 +1,5 @@
 import { shouldShowParentalConsent } from '@/lib/date-of-birth';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { hasPendingPayment, type Enrollment } from '@/types/enrollment';
 import type { Profile } from '@/types/profile';
 
@@ -38,6 +39,11 @@ export function getOnboardingStep(profile: Profile | null, enrollments: Enrollme
   return 2;
 }
 
-export function getPostAuthRedirectPath(profile: Profile | null, enrollments: Enrollment[] = []): '/register' | '/' {
-  return hasPortalAccess(profile, enrollments) || isOnboardingComplete(profile, enrollments) ? '/' : '/register';
+export function getPostAuthRedirectPath(
+  profile: Profile | null,
+  enrollments: Enrollment[] = []
+): '/register' | typeof PORTAL_HOME_PATH {
+  return hasPortalAccess(profile, enrollments) || isOnboardingComplete(profile, enrollments)
+    ? PORTAL_HOME_PATH
+    : '/register';
 }

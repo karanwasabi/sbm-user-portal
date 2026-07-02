@@ -24,8 +24,8 @@ Get these from Supabase Dashboard → Project Settings → API. Email/password a
 
 1. Visit `/` while logged out → redirects to `/login`
 2. Submit invalid credentials → error shown below password field, inputs turn red
-3. Submit valid credentials → redirects to `/`, session cookie set
-4. Visit `/login` while authenticated → redirects to `/`
+3. Submit valid credentials → redirects to `/home`, session cookie set
+4. Visit `/login` while authenticated → redirects to `/home`
 
 ### Go API
 
@@ -49,7 +49,7 @@ Set in `.env.local` / Vercel env for staging and production:
 NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 
 # Meta Pixel (Events Manager)
-NEXT_PUBLIC_META_PIXEL_ID=
+NEXT_PUBLIC_META_PIXEL_ID=2147725022394519
 ```
 
 Scripts load only when the env var is set. GA4 tracks page views on client-side route changes.

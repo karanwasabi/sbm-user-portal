@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Poppins, Geist } from 'next/font/google';
 import './globals.css';
 import { siteMetadata } from '@/lib/site-metadata';
 import { GoogleAnalytics } from '@/components/analytics/google-analytics';
+import { MetaPixelPageViews } from '@/components/analytics/meta-pixel-pageviews';
 import { MetaPixel } from '@/components/analytics/meta-pixel';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +28,9 @@ export default function RootLayout({
       <body className="flex min-h-dvh flex-col font-sans text-slate-900">
         <GoogleAnalytics />
         <MetaPixel />
+        <Suspense fallback={null}>
+          <MetaPixelPageViews />
+        </Suspense>
         {children}
       </body>
     </html>

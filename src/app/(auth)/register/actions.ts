@@ -7,6 +7,7 @@ import { DPDP_PRIVACY_URL, DPDP_TERMS_URL } from '@/lib/dpdp-consent';
 import { emailOtpInvalidMessage, isValidEmailOtp } from '@/lib/email-otp';
 import { formatUserFacingError } from '@/lib/format-user-error';
 import { buildRegisterProfilePatch, registerDraftFromValues, type RegisterFormValues } from '@/lib/merge-profile-patch';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 import {
   firstRegisterFieldError,
   validateRegisterForm,
@@ -171,7 +172,7 @@ export async function verifyRegisterOtp(_prev: RegisterVerifyState, formData: Fo
   try {
     const enrollments = await getMyEnrollments();
     if (hasPaidTakeControlEnrollment(enrollments)) {
-      redirect('/');
+      redirect(PORTAL_HOME_PATH);
     }
   } catch {
     // Continue to registration checkout if enrollment status is unavailable.

@@ -13,6 +13,7 @@ import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
 import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalPurchase } from '@/lib/gtag';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { openRazorpayEnrollmentCheckout } from '@/lib/razorpay-checkout';
 import type { CheckoutPreview, CheckoutQuote } from '@/types/checkout';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
@@ -307,7 +308,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
           promoCode: activeQuote.promo_code,
         });
         onPaid?.();
-        router.push('/');
+        router.push(PORTAL_HOME_PATH);
         router.refresh();
         return;
       }
@@ -330,7 +331,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
             });
           }
           onPaid?.();
-          router.push('/');
+          router.push(PORTAL_HOME_PATH);
           router.refresh();
         },
         onDismiss: () => {

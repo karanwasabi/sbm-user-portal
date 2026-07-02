@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { apiFetch } from '@/utils/api';
 
 type RazorpayReturnFields = {
@@ -30,9 +31,9 @@ async function readRazorpayReturnFields(request: NextRequest): Promise<RazorpayR
 }
 
 function safeDestination(value: string | null): string {
-  const destination = (value ?? '/').trim();
+  const destination = (value ?? PORTAL_HOME_PATH).trim();
   if (!destination.startsWith('/') || destination.startsWith('//')) {
-    return '/';
+    return PORTAL_HOME_PATH;
   }
   return destination;
 }
