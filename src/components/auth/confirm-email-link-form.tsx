@@ -1,23 +1,38 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { clearAuthParamsFromUrl, isExpiredLinkAuthError, parseAuthCallbackParams } from '@/lib/auth-callback-hash';
 import { completeEmailVerification } from '@/lib/complete-email-verification';
+import { buildContinuePaymentPath, resolveContinuePaymentEmail } from '@/lib/payment-handoff';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/utils/supabase/client';
 
 export function ConfirmEmailLinkForm() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const [continuePaymentPath, setContinuePaymentPath] = useState('/register/continue-payment');
 
   useEffect(() => {
     const supabase = createClient();
 
     const confirmFromLink = async () => {
-      const searchParams = new URLSearchParams(window.location.search);
+      const authParams = parseAuthCallbackParams();
+      const recoveryPath = buildContinuePaymentPath(resolveContinuePaymentEmail(authParams?.searchParams ?? null));
+      setContinuePaymentPath(recoveryPath);
+
+      if (authParams && isExpiredLinkAuthError(authParams.hashParams)) {
+        clearAuthParamsFromUrl();
+        router.replace(recoveryPath);
+        return;
+      }
+
+      const searchParams = authParams?.searchParams ?? new URLSearchParams(window.location.search);
       const code = searchParams.get('code');
       const tokenHash = searchParams.get('token_hash');
       const type = searchParams.get('type');
@@ -79,7 +94,7 @@ export function ConfirmEmailLinkForm() {
     };
 
     void confirmFromLink();
-  }, []);
+  }, [router]);
 
   if (isChecking) {
     return (
@@ -104,8 +119,8 @@ export function ConfirmEmailLinkForm() {
         {error}
       </p>
       <div className="mt-6 flex flex-col gap-3">
-        <Button href="/register" variant="primary" size="lg" fullWidth>
-          Continue registration
+        <Button href={continuePaymentPath} variant="primary" size="lg" fullWidth>
+          Get a new sign-in code
         </Button>
         <Link href="/login" className="text-center text-xs font-semibold text-brand no-underline">
           Back to sign in
