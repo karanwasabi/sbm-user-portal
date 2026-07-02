@@ -238,7 +238,8 @@ export async function resetAssistedRegister(): Promise<void> {
   cookieStore.delete(REGISTER_DPDP_COOKIE);
 
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  // Local only: staff is switching customers on this device; skip the slow global revoke round-trip.
+  await supabase.auth.signOut({ scope: 'local' });
 
   redirect('/register/assisted');
 }

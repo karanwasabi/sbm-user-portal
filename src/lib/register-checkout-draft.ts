@@ -2,6 +2,13 @@ import type { BillingFormSnapshot } from '@/lib/billing-form';
 
 export const REGISTER_CHECKOUT_DRAFT_KEY = 'sbm_register_checkout_draft';
 
+let suppressCheckoutDraftPersist = false;
+
+/** Prevents unmount cleanup from re-writing billing/promo after assisted staff logout. */
+export function suppressRegisterCheckoutDraftPersist() {
+  suppressCheckoutDraftPersist = true;
+}
+
 export type RegisterCheckoutDraft = BillingFormSnapshot & {
   billingCountryTouched: boolean;
   legalNameTouched: boolean;
@@ -56,6 +63,10 @@ export function readRegisterCheckoutDraft(): RegisterCheckoutDraft | null {
 
 export function writeRegisterCheckoutDraft(draft: RegisterCheckoutDraft) {
   if (typeof window === 'undefined') return;
+  if (suppressCheckoutDraftPersist) {
+    sessionStorage.removeItem(REGISTER_CHECKOUT_DRAFT_KEY);
+    return;
+  }
   if (!draftHasContent(draft)) {
     sessionStorage.removeItem(REGISTER_CHECKOUT_DRAFT_KEY);
     return;
@@ -66,4 +77,5 @@ export function writeRegisterCheckoutDraft(draft: RegisterCheckoutDraft) {
 export function clearRegisterCheckoutDraft() {
   if (typeof window === 'undefined') return;
   sessionStorage.removeItem(REGISTER_CHECKOUT_DRAFT_KEY);
+  suppressCheckoutDraftPersist = false;
 }

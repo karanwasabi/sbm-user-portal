@@ -53,6 +53,7 @@ import type { Country } from '@/types/reference';
 import type { BillingProfile } from '@/types/billing';
 import type { RegisterFormValues } from '@/lib/merge-profile-patch';
 import { profileToRegisterDefaults } from '@/lib/merge-profile-patch';
+import { clearRegisterCheckoutDraft, suppressRegisterCheckoutDraftPersist } from '@/lib/register-checkout-draft';
 import { trackPortalSignUp } from '@/lib/gtag';
 import { buildLoginUrl } from '@/lib/login-url';
 import { cn } from '@/lib/cn';
@@ -476,6 +477,8 @@ export function RegisterView({
         confirmPending={logoutPending}
         onConfirm={() => {
           setLogoutPending(true);
+          suppressRegisterCheckoutDraftPersist();
+          clearRegisterCheckoutDraft();
           void resetAssistedRegister().catch((err) => {
             if (isRedirectError(err)) throw err;
             setLogoutPending(false);
