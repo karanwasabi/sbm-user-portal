@@ -18,6 +18,7 @@ export type RegisterStartInput = {
   date_of_birth: string;
   parental_consent: boolean;
   dpdp_consent: boolean;
+  assisted?: boolean;
 };
 
 export type RegisterVerifyState = {
@@ -35,6 +36,7 @@ export type RegisterStartState = {
 
 export const REGISTER_EMAIL_COOKIE = 'sbm_register_email';
 export const REGISTER_DRAFT_COOKIE = 'sbm_register_draft';
+export const ASSISTED_REGISTER_COOKIE = 'sbm_assisted_register';
 
 export type RegisterDraft = {
   firstName: string;

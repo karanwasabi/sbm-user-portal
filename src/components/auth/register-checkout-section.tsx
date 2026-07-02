@@ -2,36 +2,47 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
+import { ArrowRight, ChevronDown, Copy, Link2, Loader2 } from 'lucide-react';
 import { BillingDetailsFields } from '@/components/billing/billing-details-fields';
 import { CheckoutPanelSkeleton } from '@/components/loading/checkout-panel-skeleton';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
+import { useToast } from '@/components/ui/toast';
+import { billingProfileToFormState, buildBillingProfilePatch, isBillingPatchValid } from '@/lib/billing-form';
 import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
 import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalPurchase } from '@/lib/gtag';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { openRazorpayEnrollmentCheckout, pollUntilEnrolled } from '@/lib/razorpay-checkout';
+import type { BillingProfile } from '@/types/billing';
 import type { CheckoutPreview, CheckoutQuote, CheckoutQuoteRequest } from '@/types/checkout';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
 import {
+  deleteRegistrationPromo,
   getCheckoutResume,
   getPublicCheckoutPreview,
   getPublicCountryCities,
   getPublicCountryStates,
+  getRegistrationPromo,
   mockCompleteCheckout,
+  patchBillingProfile,
   postPublicCheckoutQuote,
+  postRegistrationPaymentLink,
+  putRegistrationPromo,
   startCheckout,
 } from '@/utils/client-api';
+
+const PAYMENT_LINK_REGENERATE_SECONDS = 30;
 
 type RegisterCheckoutSectionProps = {
   suggestedLegalName: string;
   suggestedCountryIso?: string;
-  /** Live ISO from the WhatsApp dial-code picker (does not require a valid full number). */
   whatsappCountryIso?: string;
   countries: Country[];
   enabled: boolean;
+  assistedMode?: boolean;
+  initialBillingProfile?: BillingProfile | null;
 };
 
 function resolveDefaultBillingCountry(countryRows: Country[], preferredIso?: string): string {
@@ -51,8 +62,11 @@ export function RegisterCheckoutSection({
   whatsappCountryIso,
   countries: initialCountries,
   enabled,
+  assistedMode = false,
+  initialBillingProfile = null,
 }: RegisterCheckoutSectionProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [preview, setPreview] = useState<CheckoutPreview | null>(null);
   const [quote, setQuote] = useState<CheckoutQuote | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +74,13 @@ export function RegisterCheckoutSection({
   const [payPending, setPayPending] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
   const [billingOpen, setBillingOpen] = useState(false);
+  const [billingSavePending, setBillingSavePending] = useState(false);
+
+  const [paymentLinkUrl, setPaymentLinkUrl] = useState<string | null>(null);
+  const [paymentLinkPending, setPaymentLinkPending] = useState(false);
+  const [paymentLinkCooldownSeconds, setPaymentLinkCooldownSeconds] = useState(0);
 
   const [countries, setCountries] = useState<Country[]>(initialCountries);
   const [countryCities, setCountryCities] = useState<CountryCity[]>([]);
@@ -70,6 +90,9 @@ export function RegisterCheckoutSection({
   const [billingCountryCode, setBillingCountryCode] = useState(() => suggestedCountryIso?.trim().toUpperCase() || 'IN');
   const [billingCountryTouched, setBillingCountryTouched] = useState(false);
   const wasBillingOpen = useRef(false);
+  const billingHydrated = useRef(false);
+  const skipNextCountryReset = useRef(false);
+  const promoHydrated = useRef(false);
   const lastCheckoutRef = useRef<{
     sessionId: string;
     valuePaise: number;
@@ -94,12 +117,31 @@ export function RegisterCheckoutSection({
     [countries, billingCountryCode]
   );
   const billingCountry = selectedCountry?.name ?? billingCountryCode;
+  const hasSubdivisions = countryStates.length > 0;
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState('');
 
   useEffect(() => {
     setCountries(initialCountries);
   }, [initialCountries]);
+
+  useEffect(() => {
+    if (!initialBillingProfile || billingHydrated.current) return;
+    const snapshot = billingProfileToFormState(initialBillingProfile);
+    skipNextCountryReset.current = true;
+    setBillingCountryCode(snapshot.billingCountryCode);
+    setBillingType(snapshot.billingType);
+    setGstin(snapshot.gstin);
+    setLegalName(snapshot.legalName);
+    setBillingState(snapshot.billingState);
+    setAddressLine1(snapshot.addressLine1);
+    setAddressLine2(snapshot.addressLine2);
+    setBillingCity(snapshot.billingCity);
+    setPostalCode(snapshot.postalCode);
+    setBillingCountryTouched(true);
+    if (snapshot.legalName.trim()) setLegalNameTouched(true);
+    billingHydrated.current = true;
+  }, [initialBillingProfile]);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,13 +163,40 @@ export function RegisterCheckoutSection({
     };
   }, []);
 
+  useEffect(() => {
+    if (!enabled || promoHydrated.current) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const saved = await getRegistrationPromo();
+        if (cancelled || !saved.promo_code) return;
+        setPromoCode(saved.promo_code);
+        setAppliedPromo(saved.promo_code);
+        promoHydrated.current = true;
+      } catch {
+        // Ignore — user can apply manually.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  useEffect(() => {
+    if (paymentLinkCooldownSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setPaymentLinkCooldownSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [paymentLinkCooldownSeconds]);
+
   const handleBillingCountryChange = (code: string) => {
     setBillingCountryTouched(true);
     setBillingCountryCode(code);
   };
 
   useEffect(() => {
-    if (billingCountryTouched || countries.length === 0) return;
+    if (billingCountryTouched || countries.length === 0 || billingHydrated.current) return;
     const iso = whatsappCountryIso ?? suggestedCountryIso;
     if (!iso) return;
     const next = resolveDefaultBillingCountry(countries, iso);
@@ -181,7 +250,14 @@ export function RegisterCheckoutSection({
     };
   }, [billingCountryCode]);
 
+  const previousBillingCountry = useRef(billingCountryCode);
   useEffect(() => {
+    if (previousBillingCountry.current === billingCountryCode) return;
+    previousBillingCountry.current = billingCountryCode;
+    if (skipNextCountryReset.current) {
+      skipNextCountryReset.current = false;
+      return;
+    }
     setBillingCity('');
     setBillingState('');
   }, [billingCountryCode]);
@@ -210,7 +286,6 @@ export function RegisterCheckoutSection({
 
   const buildCheckoutRequest = useCallback((): CheckoutQuoteRequest => {
     const trimmedGstin = gstin.trim().toUpperCase();
-    const subdivisions = countryStates.length > 0;
     const trimmedLegalName = resolveLegalName();
     return {
       program_slug: 'take-control',
@@ -224,7 +299,7 @@ export function RegisterCheckoutSection({
         line1: addressLine1,
         line2: addressLine2 || undefined,
         city: billingCity,
-        state: subdivisions ? billingState : '',
+        state: hasSubdivisions ? billingState : '',
         postal_code: postalCode,
         country: billingCountry,
       },
@@ -239,12 +314,70 @@ export function RegisterCheckoutSection({
     billingCountryCode,
     billingState,
     billingType,
-    countryStates.length,
     gstin,
+    hasSubdivisions,
     postalCode,
     pricingRegion,
     resolveLegalName,
   ]);
+
+  const saveBillingProfile = useCallback(async () => {
+    if (!enabled) return;
+    const trimmedLegalName = resolveLegalName();
+    const patch = buildBillingProfilePatch({
+      billingCountryCode,
+      billingType,
+      gstin,
+      legalName: trimmedLegalName,
+      billingState,
+      addressLine1,
+      addressLine2,
+      billingCity,
+      postalCode,
+      billingCountry,
+      hasSubdivisions,
+      pricingRegion,
+    });
+    if (!isBillingPatchValid(patch)) return;
+
+    setBillingSavePending(true);
+    try {
+      await patchBillingProfile(patch);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save billing details.');
+    } finally {
+      setBillingSavePending(false);
+    }
+  }, [
+    enabled,
+    resolveLegalName,
+    billingCountryCode,
+    billingType,
+    gstin,
+    billingState,
+    addressLine1,
+    addressLine2,
+    billingCity,
+    postalCode,
+    billingCountry,
+    hasSubdivisions,
+    pricingRegion,
+  ]);
+
+  const handleBillingSectionBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (!enabled) return;
+    const next = event.relatedTarget as Node | null;
+    if (next && event.currentTarget.contains(next)) return;
+    void saveBillingProfile();
+  };
+
+  const wasBillingOpenForSave = useRef(billingOpen);
+  useEffect(() => {
+    if (wasBillingOpenForSave.current && !billingOpen) {
+      void saveBillingProfile();
+    }
+    wasBillingOpenForSave.current = billingOpen;
+  }, [billingOpen, saveBillingProfile]);
 
   useEffect(() => {
     if (loading || !previewQuote) return;
@@ -256,7 +389,7 @@ export function RegisterCheckoutSection({
   const fetchPromoQuote = useCallback(async () => {
     if (!appliedPromo) return;
     setQuotePending(true);
-    setError(null);
+    setPromoError(null);
     try {
       const next = await postPublicCheckoutQuote('take-control', {
         program_slug: 'take-control',
@@ -267,7 +400,8 @@ export function RegisterCheckoutSection({
       });
       setQuote(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to calculate price.');
+      const message = err instanceof Error ? err.message : 'Failed to calculate price.';
+      setPromoError(message);
       if (previewQuote) setQuote(previewQuote);
     } finally {
       setQuotePending(false);
@@ -279,17 +413,48 @@ export function RegisterCheckoutSection({
     void fetchPromoQuote();
   }, [loading, appliedPromo, pricingRegion, fetchPromoQuote]);
 
-  const handleCitySuggestion = (city: CountryCity) => {
-    if (!city.state_code) return;
-    const matchedState = countryStates.find((state) => state.state_code === city.state_code);
-    if (matchedState) setBillingState(matchedState.name);
+  const handleApplyPromo = async () => {
+    const normalized = normalizePromoCode(promoCode);
+    if (!normalized) {
+      setPromoError('Enter a discount code.');
+      return;
+    }
+    if (!enabled) return;
+
+    setPromoCode(normalized);
+    setPromoError(null);
+    setQuotePending(true);
+    try {
+      await postPublicCheckoutQuote('take-control', {
+        program_slug: 'take-control',
+        pricing_region: pricingRegion,
+        billing_type: billingType,
+        billing_country_code: billingCountryCode,
+        promo_code: normalized,
+      });
+      await putRegistrationPromo(normalized);
+      setAppliedPromo(normalized);
+      setError(null);
+    } catch (err) {
+      setPromoError(err instanceof Error ? err.message : 'Failed to apply discount code.');
+    } finally {
+      setQuotePending(false);
+    }
   };
 
-  const handleClearPromo = () => {
+  const handleClearPromo = async () => {
     setAppliedPromo('');
     setPromoCode('');
+    setPromoError(null);
     if (previewQuote) setQuote(previewQuote);
     setError(null);
+    if (enabled) {
+      try {
+        await deleteRegistrationPromo();
+      } catch {
+        // Non-blocking.
+      }
+    }
   };
 
   const displayQuote = quote ?? previewQuote;
@@ -307,6 +472,11 @@ export function RegisterCheckoutSection({
     }
 
     setConfirmingPayment(true);
+    try {
+      await deleteRegistrationPromo();
+    } catch {
+      // Non-blocking.
+    }
     await pollUntilEnrolled();
     router.push('/');
     router.refresh();
@@ -342,6 +512,7 @@ export function RegisterCheckoutSection({
     });
 
     try {
+      await saveBillingProfile();
       const checkoutRequest = { ...buildCheckoutRequest(), legal_name: trimmedLegalName };
       let start;
       if (appliedPromo) {
@@ -388,6 +559,38 @@ export function RegisterCheckoutSection({
       setError(err instanceof Error ? err.message : 'Payment failed to start.');
     } finally {
       setPayPending(false);
+    }
+  };
+
+  const generatePaymentLink = async (regenerate: boolean) => {
+    if (!enabled) return;
+    if (regenerate && paymentLinkCooldownSeconds > 0) return;
+
+    setPaymentLinkPending(true);
+    setError(null);
+    try {
+      await saveBillingProfile();
+      const result = await postRegistrationPaymentLink();
+      setPaymentLinkUrl(result.url);
+      setPaymentLinkCooldownSeconds(PAYMENT_LINK_REGENERATE_SECONDS);
+      toast({
+        message: regenerate ? 'New payment link generated.' : 'Payment link ready to share.',
+        variant: 'success',
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate payment link.');
+    } finally {
+      setPaymentLinkPending(false);
+    }
+  };
+
+  const copyPaymentLink = async () => {
+    if (!paymentLinkUrl) return;
+    try {
+      await navigator.clipboard.writeText(paymentLinkUrl);
+      toast({ message: 'Payment link copied.', variant: 'success' });
+    } catch {
+      toast({ message: 'Could not copy link. Select and copy manually.', variant: 'error' });
     }
   };
 
@@ -448,7 +651,7 @@ export function RegisterCheckoutSection({
           <ChevronDown className={cn('h-4 w-4 transition-transform', billingOpen && 'rotate-180')} />
         </button>
         {billingOpen ? (
-          <div className="border-t border-slate-100 px-4 py-3">
+          <div className="border-t border-slate-100 px-4 py-3" onBlur={handleBillingSectionBlur}>
             <BillingDetailsFields
               countries={countries}
               billingCountryCode={billingCountryCode}
@@ -477,7 +680,12 @@ export function RegisterCheckoutSection({
               countryStates={countryStates}
               loadingCities={loadingCities}
               loadingStates={loadingStates}
-              onCitySuggestion={handleCitySuggestion}
+              onCitySuggestion={(city) => {
+                if (!city.state_code) return;
+                const matchedState = countryStates.find((state) => state.state_code === city.state_code);
+                if (matchedState) setBillingState(matchedState.name);
+              }}
+              disabled={billingSavePending}
             />
           </div>
         ) : (
@@ -504,26 +712,28 @@ export function RegisterCheckoutSection({
             type="button"
             variant="light"
             size="md"
-            onClick={() => {
-              const normalized = normalizePromoCode(promoCode);
-              if (!normalized) {
-                setError('Enter a discount code.');
-                return;
-              }
-              setPromoCode(normalized);
-              setAppliedPromo(normalized);
-              setError(null);
-            }}
-            disabled={quotePending}
+            onClick={() => void handleApplyPromo()}
+            disabled={quotePending || !enabled}
           >
             Apply
           </Button>
           {appliedPromo ? (
-            <Button type="button" variant="light" size="md" onClick={handleClearPromo} disabled={quotePending}>
+            <Button
+              type="button"
+              variant="light"
+              size="md"
+              onClick={() => void handleClearPromo()}
+              disabled={quotePending}
+            >
               Clear
             </Button>
           ) : null}
         </div>
+        {promoError ? (
+          <p className="mt-1.5 text-[12.5px] font-semibold text-danger-press" role="alert">
+            {promoError}
+          </p>
+        ) : null}
       </Field>
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -546,6 +756,56 @@ export function RegisterCheckoutSection({
         <div className="flex items-center justify-center gap-2 py-3 text-sm font-medium text-brand">
           <Loader2 className="h-4 w-4 animate-spin" />
           Confirming payment…
+        </div>
+      ) : assistedMode ? (
+        <div className="flex flex-col gap-2">
+          {!enabled ? (
+            <p className="text-[12.5px] leading-snug font-medium text-slate-500">
+              Generate and confirm OTP before sharing a payment link.
+            </p>
+          ) : null}
+          {paymentLinkUrl ? (
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <p className="text-xs font-semibold text-slate-700">Payment link</p>
+              <p className="mt-1 text-xs break-all text-slate-500">{paymentLinkUrl}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="light"
+                  size="sm"
+                  onClick={() => void copyPaymentLink()}
+                  leftIcon={<Copy className="h-3.5 w-3.5" />}
+                >
+                  Copy link
+                </Button>
+                <Button
+                  type="button"
+                  variant="light"
+                  size="sm"
+                  disabled={paymentLinkPending || paymentLinkCooldownSeconds > 0}
+                  onClick={() => void generatePaymentLink(true)}
+                >
+                  {paymentLinkCooldownSeconds > 0
+                    ? `Generate new link (${paymentLinkCooldownSeconds}s)`
+                    : 'Generate new link'}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              className="w-full"
+              disabled={!enabled || paymentLinkPending || quotePending}
+              onClick={() => void generatePaymentLink(false)}
+              leftIcon={
+                paymentLinkPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />
+              }
+            >
+              {paymentLinkPending ? 'Generating link…' : 'Share payment link'}
+            </Button>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-2">

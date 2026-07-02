@@ -15,7 +15,7 @@ import {
 import { syncPasswordSetMetadata } from '@/lib/sync-password-set-metadata';
 import { patchProfile, ProfileFetchError, recordDpdpConsent, registerMember } from '@/utils/api';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
-import { REGISTER_DRAFT_COOKIE, REGISTER_EMAIL_COOKIE } from '@/types/register';
+import { ASSISTED_REGISTER_COOKIE, REGISTER_DRAFT_COOKIE, REGISTER_EMAIL_COOKIE } from '@/types/register';
 import { createClient } from '@/utils/supabase/server';
 
 const REGISTER_FLOW_COOKIE = 'sbm_register_flow';
@@ -70,6 +70,19 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
   }
 
   try {
+    const cookieStore = await cookies();
+    const assistedFromForm = formData.get('assisted') === '1';
+    const assisted = assistedFromForm || cookieStore.get(ASSISTED_REGISTER_COOKIE)?.value === '1';
+
+    if (assistedFromForm) {
+      cookieStore.set(ASSISTED_REGISTER_COOKIE, '1', {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 2,
+        path: '/',
+      });
+    }
+
     const result = await registerMember(
       {
         email: values.email,
@@ -80,6 +93,7 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
         date_of_birth: values.dateOfBirth,
         parental_consent: values.parentalConsent,
         dpdp_consent: values.dpdpConsent,
+        assisted,
       },
       await getForwardedHeaders()
     );
@@ -92,7 +106,6 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
       return { error: null, status: 'already_registered', email: values.email };
     }
 
-    const cookieStore = await cookies();
     cookieStore.delete(REGISTER_DRAFT_COOKIE);
     cookieStore.set(REGISTER_EMAIL_COOKIE, values.email, {
       httpOnly: true,
@@ -212,6 +225,19 @@ export async function restartRegisterEditing(formData: FormData): Promise<void> 
 export async function clearRegisterDraft(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(REGISTER_DRAFT_COOKIE);
+}
+
+export async function resetAssistedRegister(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(REGISTER_EMAIL_COOKIE);
+  cookieStore.delete(REGISTER_FLOW_COOKIE);
+  cookieStore.delete(REGISTER_DRAFT_COOKIE);
+  cookieStore.delete(REGISTER_DPDP_COOKIE);
+
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+
+  redirect('/register/assisted');
 }
 
 export async function resendRegisterOtp(): Promise<{ error: string | null }> {

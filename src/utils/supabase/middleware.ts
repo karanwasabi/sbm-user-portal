@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { ASSISTED_REGISTER_COOKIE } from '@/types/register';
 
 const PUBLIC_ROUTES = [
   '/login',
@@ -111,6 +112,15 @@ export async function updateSession(request: NextRequest) {
       url.pathname = '/login';
       return NextResponse.redirect(url);
     }
+  }
+
+  if (pathname === '/register/assisted') {
+    supabaseResponse.cookies.set(ASSISTED_REGISTER_COOKIE, '1', {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 2,
+      path: '/',
+    });
   }
 
   return supabaseResponse;

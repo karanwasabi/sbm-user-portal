@@ -29,8 +29,11 @@ export function ConfirmEmailLinkForm() {
           setIsChecking(false);
           return;
         }
-      } else if (tokenHash && type === 'signup') {
-        const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'signup' });
+      } else if (tokenHash && (type === 'signup' || type === 'email')) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: type === 'email' ? 'email' : 'signup',
+        });
         if (verifyError) {
           setError('This confirmation link is invalid or has expired.');
           setIsChecking(false);

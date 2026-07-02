@@ -10,11 +10,13 @@ import {
   type FormEvent,
   type RefObject,
 } from 'react';
-import { Loader2, Mail } from 'lucide-react';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
+import { Loader2, LogOut, Mail } from 'lucide-react';
 import {
   resendRegisterOtp,
   clearRegisterDraft,
   restartRegisterEditing,
+  resetAssistedRegister,
   startRegister,
   verifyRegisterOtp,
 } from '@/app/(auth)/register/actions';
@@ -26,6 +28,7 @@ import { AuthCardBody, AuthLayout } from '@/components/layout/auth-layout';
 import { ParentalConsentBlock } from '@/components/profile/parental-consent-block';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
@@ -47,6 +50,7 @@ import { parseWhatsapp } from '@/lib/phone-number';
 import { toTitleCase } from '@/lib/title-case';
 import { SEX_OPTIONS } from '@/types/profile';
 import type { Country } from '@/types/reference';
+import type { BillingProfile } from '@/types/billing';
 import type { RegisterFormValues } from '@/lib/merge-profile-patch';
 import { profileToRegisterDefaults } from '@/lib/merge-profile-patch';
 import { trackPortalSignUp } from '@/lib/gtag';
@@ -72,6 +76,9 @@ type RegisterViewProps = {
   suggestedCountryIso?: string;
   /** Restored from register draft cookie when the user picked a shared dial code (+1). */
   initialWhatsappDialIso?: string;
+  assistedMode?: boolean;
+  initialBillingProfile?: BillingProfile | null;
+  registerPath?: string;
 };
 
 export function RegisterView({
@@ -83,6 +90,9 @@ export function RegisterView({
   countries,
   suggestedCountryIso,
   initialWhatsappDialIso,
+  assistedMode = false,
+  initialBillingProfile = null,
+  registerPath = '/register',
 }: RegisterViewProps) {
   const { toast } = useToast();
   const [firstName, setFirstName] = useState(initialValues?.firstName ?? '');
@@ -122,6 +132,8 @@ export function RegisterView({
   const otpRef = useRef<HTMLInputElement>(null);
   const registerContentRef = useRef<HTMLDivElement>(null);
   const [registerContentHeight, setRegisterContentHeight] = useState<number | null>(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
   const startWasPending = useRef(false);
   const signUpTracked = useRef(false);
   const dateOfBirthBounds = useMemo(() => getDateOfBirthInputBounds(), []);
@@ -254,9 +266,9 @@ export function RegisterView({
   useEffect(() => {
     if (!showVerifiedToast || verifiedToastShown.current) return;
     verifiedToastShown.current = true;
-    window.history.replaceState(null, '', '/register');
+    window.history.replaceState(null, '', registerPath);
     toast({ message: 'Your account has been verified.', variant: 'success', durationMs: 5000 });
-  }, [showVerifiedToast, toast]);
+  }, [showVerifiedToast, toast, registerPath]);
 
   const focusFieldRef = (field: RegisterField): RefObject<HTMLElement | null> | null => {
     const refs = {
@@ -366,6 +378,7 @@ export function RegisterView({
 
   const hiddenFields = (
     <>
+      {assistedMode ? <input type="hidden" name="assisted" value="1" /> : null}
       <input type="hidden" name="firstName" value={firstName} />
       <input type="hidden" name="lastName" value={lastName} />
       <input type="hidden" name="email" value={email} />
@@ -429,10 +442,40 @@ export function RegisterView({
       <PendingCheckoutRecovery />
       <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:mb-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <SbmWordmark size="lg" showSubtitle={false} />
-        <h1 className="text-lg font-bold tracking-tight text-slate-800 sm:text-right sm:text-[17px] lg:text-lg">
-          Register for Take Control
-        </h1>
+        <div className="flex flex-col gap-2 sm:items-end">
+          <h1 className="text-lg font-bold tracking-tight text-slate-800 sm:text-right sm:text-[17px] lg:text-lg">
+            {assistedMode ? 'Assisted registration' : 'Register for Take Control'}
+          </h1>
+          {assistedMode && (verified || otpSent) ? (
+            <Button
+              type="button"
+              variant="light"
+              size="sm"
+              onClick={() => setLogoutDialogOpen(true)}
+              leftIcon={<LogOut className="h-3.5 w-3.5" />}
+            >
+              Log out
+            </Button>
+          ) : null}
+        </div>
       </div>
+
+      <ConfirmDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
+        title="Log out for the next customer?"
+        description="Only log out after you have shared the payment link with the customer. Logging out will clear this session and reset the form."
+        confirmLabel="Log out"
+        confirmVariant="danger"
+        confirmPending={logoutPending}
+        onConfirm={() => {
+          setLogoutPending(true);
+          void resetAssistedRegister().catch((err) => {
+            if (isRedirectError(err)) throw err;
+            setLogoutPending(false);
+          });
+        }}
+      />
 
       <div
         className={cn(
@@ -700,6 +743,8 @@ export function RegisterView({
                 whatsappCountryIso={whatsappDialIso || undefined}
                 countries={countries}
                 enabled={verified}
+                assistedMode={assistedMode}
+                initialBillingProfile={initialBillingProfile}
               />
             </div>
           </div>

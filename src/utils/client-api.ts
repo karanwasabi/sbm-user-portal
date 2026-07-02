@@ -233,3 +233,34 @@ export async function patchBillingProfile(
   });
   return response.json() as Promise<import('@/types/billing').BillingProfile>;
 }
+
+export type RegistrationPromoResponse = {
+  promo_code?: string | null;
+};
+
+export async function getRegistrationPromo(): Promise<RegistrationPromoResponse> {
+  const response = await clientApiFetch('/me/registration/promo');
+  return response.json() as Promise<RegistrationPromoResponse>;
+}
+
+export async function putRegistrationPromo(promoCode: string): Promise<RegistrationPromoResponse> {
+  const response = await clientApiFetch('/me/registration/promo', {
+    method: 'PUT',
+    body: JSON.stringify({ promo_code: promoCode }),
+  });
+  return response.json() as Promise<RegistrationPromoResponse>;
+}
+
+export async function deleteRegistrationPromo(): Promise<void> {
+  await clientApiFetch('/me/registration/promo', { method: 'DELETE' });
+}
+
+export type PaymentLinkResponse = {
+  url: string;
+  expires_at: string;
+};
+
+export async function postRegistrationPaymentLink(): Promise<PaymentLinkResponse> {
+  const response = await clientApiFetch('/me/registration/payment-link', { method: 'POST' });
+  return response.json() as Promise<PaymentLinkResponse>;
+}
