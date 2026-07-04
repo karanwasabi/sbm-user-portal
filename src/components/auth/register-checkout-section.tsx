@@ -787,6 +787,7 @@ export function RegisterCheckoutSection({
     year: 'numeric',
   });
   const showGst = pricingRegion === 'domestic';
+  const showDueTodayBreakdown = showGst || displayQuote.discount_paise > 0;
 
   return (
     <div className="flex flex-col gap-3">
@@ -797,22 +798,34 @@ export function RegisterCheckoutSection({
             <p className="mt-0.5 text-xs font-medium text-slate-500">Starts {batchDate}</p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-lg font-extrabold tracking-tight text-slate-900">
+            <p
+              className={cn(
+                'text-lg font-extrabold tracking-tight text-slate-900',
+                displayQuote.discount_paise > 0 && 'text-sm font-semibold text-slate-400 line-through'
+              )}
+            >
               {formatInrFromPaise(displayQuote.upfront_base_paise)}
-              {showGst ? <span className="text-sm font-bold text-slate-600"> + GST</span> : null}
+              {showGst ? (
+                <span
+                  className={cn('font-bold', displayQuote.discount_paise > 0 ? 'text-xs' : 'text-sm text-slate-600')}
+                >
+                  {' '}
+                  + 18% GST
+                </span>
+              ) : null}
             </p>
+            {displayQuote.discount_paise > 0 ? (
+              <p className="text-sm font-extrabold tracking-tight text-success">
+                {formatInrFromPaise(displayQuote.upfront_base_paise - displayQuote.discount_paise)}
+                {showGst ? <span className="text-xs font-bold"> + 18% GST</span> : null}
+              </p>
+            ) : null}
             <p className="mt-0.5 text-[11px] font-medium text-slate-500">first 3 months</p>
           </div>
         </div>
-        {displayQuote.discount_paise > 0 ? (
-          <p className="mt-2 text-xs font-semibold text-success">
-            {displayQuote.promo_code ? `${displayQuote.promo_code}: ` : ''}−
-            {formatInrFromPaise(displayQuote.discount_paise)} · pay {formatInrFromPaise(displayQuote.total_paise)}
-          </p>
-        ) : null}
         <p className="mt-2 border-t border-slate-100 pt-2 text-xs leading-relaxed text-slate-500">
           Then {formatInrFromPaise(displayQuote.monthly_base_paise)}
-          {showGst ? ' + GST' : ''} / month · cancel anytime.
+          {showGst ? ' + 18% GST' : ''} / month · cancel anytime.
         </p>
       </div>
 
@@ -912,6 +925,26 @@ export function RegisterCheckoutSection({
       </Field>
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        {showDueTodayBreakdown ? (
+          <div className="mb-2.5 space-y-1 border-b border-slate-200 pb-2.5 text-xs">
+            <div className="flex items-center justify-between gap-3 text-slate-600">
+              <span>Program fee (3 months)</span>
+              <span className="font-medium text-slate-800">{formatInrFromPaise(displayQuote.upfront_base_paise)}</span>
+            </div>
+            {displayQuote.discount_paise > 0 ? (
+              <div className="flex items-center justify-between gap-3 text-success">
+                <span>{displayQuote.promo_code ? `Discount (${displayQuote.promo_code})` : 'Discount'}</span>
+                <span className="font-medium">−{formatInrFromPaise(displayQuote.discount_paise)}</span>
+              </div>
+            ) : null}
+            {showGst ? (
+              <div className="flex items-center justify-between gap-3 text-slate-600">
+                <span>GST (18%)</span>
+                <span className="font-medium text-slate-800">{formatInrFromPaise(displayQuote.gst_paise)}</span>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-600">Due today</span>
           <span className="text-lg font-extrabold text-slate-900">
