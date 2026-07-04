@@ -46,10 +46,14 @@ export async function POST(request: NextRequest) {
 
   const fields = await readRazorpayReturnFields(request);
   if (!fields) {
-    const errorUrl = new URL('/payment/return', url.origin);
-    errorUrl.searchParams.set('error', 'invalid');
-    errorUrl.searchParams.set('destination', destination);
-    return NextResponse.redirect(errorUrl, 303);
+    const pendingUrl = new URL('/payment/return', url.origin);
+    pendingUrl.searchParams.set('error', 'confirm_failed');
+    pendingUrl.searchParams.set('destination', destination);
+    pendingUrl.searchParams.set('flow', flow);
+    if (sessionId) {
+      pendingUrl.searchParams.set('session', sessionId);
+    }
+    return NextResponse.redirect(pendingUrl, 303);
   }
 
   const response = await apiFetch('/me/checkout/payment-return', {
@@ -65,11 +69,15 @@ export async function POST(request: NextRequest) {
   });
 
   if (!response.ok) {
-    const errorUrl = new URL('/payment/return', url.origin);
-    errorUrl.searchParams.set('error', 'invalid');
-    errorUrl.searchParams.set('destination', destination);
-    errorUrl.searchParams.set('flow', flow);
-    return NextResponse.redirect(errorUrl, 303);
+    // Enrollment may still complete via Razorpay webhook; let the return page poll.
+    const pendingUrl = new URL('/payment/return', url.origin);
+    pendingUrl.searchParams.set('destination', destination);
+    pendingUrl.searchParams.set('flow', flow);
+    pendingUrl.searchParams.set('error', 'confirm_failed');
+    if (sessionId) {
+      pendingUrl.searchParams.set('session', sessionId);
+    }
+    return NextResponse.redirect(pendingUrl, 303);
   }
 
   const successUrl = new URL('/payment/return', url.origin);

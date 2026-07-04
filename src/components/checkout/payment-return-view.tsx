@@ -12,18 +12,13 @@ type PaymentReturnViewProps = {
   error?: string | null;
 };
 
-export function PaymentReturnView({ error: initialError }: PaymentReturnViewProps) {
+export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [message, setMessage] = useState(
-    initialError
-      ? 'We could not confirm your payment. Please try again or contact support.'
-      : 'Confirming your payment…'
-  );
+  const [message, setMessage] = useState('Confirming your payment…');
+  const [showSpinner, setShowSpinner] = useState(true);
 
   useEffect(() => {
-    if (initialError) return;
-
     const destination = searchParams.get('destination') || PORTAL_HOME_PATH;
     const flow = searchParams.get('flow') || 'enrollment';
     const pending = readPendingCheckout();
@@ -44,8 +39,9 @@ export function PaymentReturnView({ error: initialError }: PaymentReturnViewProp
       const enrolled = await pollUntilEnrolled({ intervalMs: 1500, timeoutMs: 120000 });
       if (cancelled) return;
       if (enrolled) {
-        if (pending?.checkoutSessionId) {
-          trackMetaPurchase({ eventID: `purchase:${pending.checkoutSessionId}` });
+        const sessionId = pending?.checkoutSessionId ?? searchParams.get('session')?.trim();
+        if (sessionId) {
+          trackMetaPurchase({ eventID: `purchase:${sessionId}` });
         }
         finish();
         return;
@@ -55,26 +51,30 @@ export function PaymentReturnView({ error: initialError }: PaymentReturnViewProp
       const retry = await pollUntilEnrolled({ intervalMs: 2000, timeoutMs: 60000 });
       if (cancelled) return;
       if (retry) {
-        if (pending?.checkoutSessionId) {
-          trackMetaPurchase({ eventID: `purchase:${pending.checkoutSessionId}` });
+        const sessionId = pending?.checkoutSessionId ?? searchParams.get('session')?.trim();
+        if (sessionId) {
+          trackMetaPurchase({ eventID: `purchase:${sessionId}` });
         }
         finish();
         return;
       }
 
+      setShowSpinner(false);
       setMessage(
-        'Your payment went through but enrollment is still syncing. Please wait a moment and refresh, or contact support if this persists.'
+        returnConfirmFailed
+          ? 'Your payment may have gone through, but we could not confirm it in the browser. Please sign in to your dashboard — if you are enrolled, you are all set. Otherwise contact support.'
+          : 'Your payment went through but enrollment is still syncing. Please wait a moment and refresh, or contact support if this persists.'
       );
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [initialError, router, searchParams]);
+  }, [returnConfirmFailed, router, searchParams]);
 
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-6 text-center">
-      {!initialError ? <Loader2 className="h-8 w-8 animate-spin text-brand" /> : null}
+      {showSpinner ? <Loader2 className="h-8 w-8 animate-spin text-brand" /> : null}
       <p className="max-w-md text-sm font-medium text-slate-700">{message}</p>
     </div>
   );
