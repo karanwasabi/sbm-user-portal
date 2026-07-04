@@ -1,34 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseRazorpayReturnRequest } from '@/lib/razorpay-return-fields';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { apiFetch } from '@/utils/api';
-
-type RazorpayReturnFields = {
-  razorpay_payment_id: string;
-  razorpay_order_id?: string;
-  razorpay_subscription_id?: string;
-  razorpay_signature: string;
-};
-
-async function readRazorpayReturnFields(request: NextRequest): Promise<RazorpayReturnFields | null> {
-  const contentType = request.headers.get('content-type') ?? '';
-
-  if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
-    const form = await request.formData();
-    const paymentId = String(form.get('razorpay_payment_id') ?? '').trim();
-    const signature = String(form.get('razorpay_signature') ?? '').trim();
-    if (!paymentId || !signature) return null;
-    return {
-      razorpay_payment_id: paymentId,
-      razorpay_order_id: String(form.get('razorpay_order_id') ?? '').trim() || undefined,
-      razorpay_subscription_id: String(form.get('razorpay_subscription_id') ?? '').trim() || undefined,
-      razorpay_signature: signature,
-    };
-  }
-
-  const body = (await request.json().catch(() => null)) as RazorpayReturnFields | null;
-  if (!body?.razorpay_payment_id || !body.razorpay_signature) return null;
-  return body;
-}
 
 function safeDestination(value: string | null): string {
   const destination = (value ?? PORTAL_HOME_PATH).trim();
@@ -38,24 +11,51 @@ function safeDestination(value: string | null): string {
   return destination;
 }
 
+function redirectToPaymentReturn(
+  origin: string,
+  options: {
+    destination: string;
+    flow: string;
+    sessionId: string;
+    confirmFailed?: boolean;
+  }
+): NextResponse {
+  const url = new URL('/payment/return', origin);
+  url.searchParams.set('destination', options.destination);
+  url.searchParams.set('flow', options.flow);
+  if (options.confirmFailed) {
+    url.searchParams.set('error', 'confirm_failed');
+  }
+  if (options.sessionId) {
+    url.searchParams.set('session', options.sessionId);
+  }
+  return NextResponse.redirect(url, 303);
+}
+
 export async function POST(request: NextRequest) {
   const url = request.nextUrl;
   const sessionId = url.searchParams.get('session')?.trim() ?? '';
   const flow = url.searchParams.get('flow')?.trim() || 'enrollment';
   const destination = safeDestination(url.searchParams.get('destination'));
 
-  const fields = await readRazorpayReturnFields(request);
-  if (!fields) {
-    const pendingUrl = new URL('/payment/return', url.origin);
-    pendingUrl.searchParams.set('error', 'confirm_failed');
-    pendingUrl.searchParams.set('destination', destination);
-    pendingUrl.searchParams.set('flow', flow);
-    if (sessionId) {
-      pendingUrl.searchParams.set('session', sessionId);
-    }
-    return NextResponse.redirect(pendingUrl, 303);
+  const parsed = await parseRazorpayReturnRequest(request);
+  if (!parsed.ok) {
+    console.warn('[razorpay-return] could not parse callback body', {
+      reason: parsed.failure.reason,
+      contentType: parsed.failure.contentType,
+      bodyLength: parsed.failure.bodyLength,
+      sessionId: sessionId || undefined,
+      flow,
+    });
+    return redirectToPaymentReturn(url.origin, {
+      destination,
+      flow,
+      sessionId,
+      confirmFailed: true,
+    });
   }
 
+  const fields = parsed.fields;
   const response = await apiFetch('/me/checkout/payment-return', {
     method: 'POST',
     body: JSON.stringify({
@@ -69,22 +69,24 @@ export async function POST(request: NextRequest) {
   });
 
   if (!response.ok) {
-    // Enrollment may still complete via Razorpay webhook; let the return page poll.
-    const pendingUrl = new URL('/payment/return', url.origin);
-    pendingUrl.searchParams.set('destination', destination);
-    pendingUrl.searchParams.set('flow', flow);
-    pendingUrl.searchParams.set('error', 'confirm_failed');
-    if (sessionId) {
-      pendingUrl.searchParams.set('session', sessionId);
-    }
-    return NextResponse.redirect(pendingUrl, 303);
+    console.warn('[razorpay-return] backend payment-return failed', {
+      status: response.status,
+      sessionId: sessionId || undefined,
+      flow,
+      hasOrderId: Boolean(fields.razorpay_order_id),
+      hasSubscriptionId: Boolean(fields.razorpay_subscription_id),
+    });
+    return redirectToPaymentReturn(url.origin, {
+      destination,
+      flow,
+      sessionId,
+      confirmFailed: true,
+    });
   }
 
-  const successUrl = new URL('/payment/return', url.origin);
-  successUrl.searchParams.set('destination', destination);
-  successUrl.searchParams.set('flow', flow);
-  if (sessionId) {
-    successUrl.searchParams.set('session', sessionId);
-  }
-  return NextResponse.redirect(successUrl, 303);
+  return redirectToPaymentReturn(url.origin, {
+    destination,
+    flow,
+    sessionId,
+  });
 }
