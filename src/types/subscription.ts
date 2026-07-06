@@ -28,6 +28,7 @@ export type Subscription = {
   monthly_billing_start_at?: string | null;
   catch_up_charge_now?: boolean;
   has_phone_number: boolean;
+  has_country: boolean;
 };
 
 export type PaymentMethodUpdateResponse = {

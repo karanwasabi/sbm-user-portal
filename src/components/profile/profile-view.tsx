@@ -2,7 +2,7 @@
 
 import { Cake, Loader2, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { loadCountryCities, updateProfile } from '@/app/(portal)/profile/actions';
 import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
@@ -123,6 +123,16 @@ export function ProfileView({ countries }: ProfileViewProps) {
     setCountryCode,
     setTimezoneId,
   });
+
+  const handleWhatsappDialIsoChange = useCallback(
+    (nextDialIso: string) => {
+      setWhatsappDialIso(nextDialIso);
+      if (!countryCode.trim() && nextDialIso.trim()) {
+        handleCountryChange(nextDialIso);
+      }
+    },
+    [countryCode, handleCountryChange]
+  );
 
   const email = profile?.email ?? '';
   const fullName = profile ? getFullName(profile) : 'Member';
@@ -346,7 +356,7 @@ export function ProfileView({ countries }: ProfileViewProps) {
                 name="whatsapp"
                 value={whatsapp}
                 onChange={setWhatsapp}
-                onDialIsoChange={setWhatsappDialIso}
+                onDialIsoChange={handleWhatsappDialIsoChange}
                 countries={countries}
                 suggestedCountryIso={countryCode}
                 preferredDialIso={whatsappDialIso || undefined}

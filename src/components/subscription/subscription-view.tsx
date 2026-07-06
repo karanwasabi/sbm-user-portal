@@ -86,6 +86,40 @@ function statusTone(status: string): 'success' | 'brand' | 'danger' | 'neutral' 
   return 'neutral';
 }
 
+function profileLink() {
+  return (
+    <Link href="/profile" className="font-semibold text-brand hover:text-brand-deep">
+      profile
+    </Link>
+  );
+}
+
+function billingProfileRequirementMessage(missingPhone: boolean, missingCountry: boolean) {
+  if (missingPhone && missingCountry) {
+    return (
+      <>
+        Add your country and WhatsApp number on your {profileLink()} before setting up monthly billing. Razorpay needs
+        these for billing and payment reminders.
+      </>
+    );
+  }
+  if (missingCountry) {
+    return <>Add your country on your {profileLink()} before setting up monthly billing.</>;
+  }
+  return (
+    <>
+      Add your WhatsApp number on your {profileLink()} before setting up monthly billing. Razorpay needs it for payment
+      reminders and mandate authentication.
+    </>
+  );
+}
+
+function billingProfileRequirementButtonLabel(missingPhone: boolean, missingCountry: boolean): string {
+  if (missingPhone && missingCountry) return 'Complete profile';
+  if (missingCountry) return 'Add country';
+  return 'Add phone number';
+}
+
 export function SubscriptionView({ subscription, error }: SubscriptionViewProps) {
   const router = useRouter();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -188,12 +222,20 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
     }
   };
 
-  const needsPhoneForBilling =
-    (subscription.can_start_monthly_billing || subscription.can_restore_subscription) && !subscription.has_phone_number;
+  const canContinueBilling = subscription.can_start_monthly_billing || subscription.can_restore_subscription;
+  const missingPhoneForBilling = canContinueBilling && !subscription.has_phone_number;
+  const missingCountryForBilling = canContinueBilling && !subscription.has_country;
+  const needsProfileForBilling = missingPhoneForBilling || missingCountryForBilling;
 
   const handleContinueBilling = async () => {
-    if (needsPhoneForBilling) {
-      setActionError('Add your WhatsApp number on your profile before setting up billing.');
+    if (needsProfileForBilling) {
+      if (missingPhoneForBilling && missingCountryForBilling) {
+        setActionError('Add your country and WhatsApp number on your profile before setting up billing.');
+      } else if (missingCountryForBilling) {
+        setActionError('Add your country on your profile before setting up billing.');
+      } else {
+        setActionError('Add your WhatsApp number on your profile before setting up billing.');
+      }
       return;
     }
     setContinuePending(true);
@@ -382,15 +424,8 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
             <div className="flex min-w-0 flex-1 items-start gap-3">
               <Calendar size={18} className="mt-0.5 shrink-0 text-slate-500" />
               <p className="text-sm leading-relaxed text-slate-600">
-                {needsPhoneForBilling ? (
-                  <>
-                    Add your WhatsApp number on your{' '}
-                    <Link href="/profile" className="font-semibold text-brand hover:text-brand-deep">
-                      profile
-                    </Link>{' '}
-                    before setting up monthly billing. Razorpay needs it for payment reminders and mandate
-                    authentication.
-                  </>
+                {needsProfileForBilling ? (
+                  billingProfileRequirementMessage(missingPhoneForBilling, missingCountryForBilling)
                 ) : subscription.catch_up_charge_now ? (
                   <>
                     First charge today ({monthlyTotalDisplay}). Next renewal on{' '}
@@ -412,9 +447,9 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
                 )}
               </p>
             </div>
-            {needsPhoneForBilling ? (
+            {needsProfileForBilling ? (
               <Button size="sm" className="w-full shrink-0 sm:w-auto" href="/profile">
-                Add phone number
+                {billingProfileRequirementButtonLabel(missingPhoneForBilling, missingCountryForBilling)}
               </Button>
             ) : (
               <Button
