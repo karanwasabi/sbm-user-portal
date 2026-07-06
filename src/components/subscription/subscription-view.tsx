@@ -188,7 +188,14 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
     }
   };
 
+  const needsPhoneForBilling =
+    (subscription.can_start_monthly_billing || subscription.can_restore_subscription) && !subscription.has_phone_number;
+
   const handleContinueBilling = async () => {
+    if (needsPhoneForBilling) {
+      setActionError('Add your WhatsApp number on your profile before setting up billing.');
+      return;
+    }
     setContinuePending(true);
     setActionError(null);
     try {
@@ -375,7 +382,16 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
             <div className="flex min-w-0 flex-1 items-start gap-3">
               <Calendar size={18} className="mt-0.5 shrink-0 text-slate-500" />
               <p className="text-sm leading-relaxed text-slate-600">
-                {subscription.catch_up_charge_now ? (
+                {needsPhoneForBilling ? (
+                  <>
+                    Add your WhatsApp number on your{' '}
+                    <Link href="/profile" className="font-semibold text-brand hover:text-brand-deep">
+                      profile
+                    </Link>{' '}
+                    before setting up monthly billing. Razorpay needs it for payment reminders and mandate
+                    authentication.
+                  </>
+                ) : subscription.catch_up_charge_now ? (
                   <>
                     First charge today ({monthlyTotalDisplay}). Next renewal on{' '}
                     <span className="font-semibold text-slate-800">{formatDisplayDate(billingStartDate)}</span>.
@@ -396,21 +412,27 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
                 )}
               </p>
             </div>
-            <Button
-              size="sm"
-              className="w-full shrink-0 sm:w-auto"
-              onClick={() => void handleContinueBilling()}
-              disabled={continuePending}
-              aria-busy={continuePending}
-            >
-              {continuePending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : subscription.can_start_monthly_billing ? (
-                'Set up monthly billing'
-              ) : (
-                'Restore subscription'
-              )}
-            </Button>
+            {needsPhoneForBilling ? (
+              <Button size="sm" className="w-full shrink-0 sm:w-auto" href="/profile">
+                Add phone number
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="w-full shrink-0 sm:w-auto"
+                onClick={() => void handleContinueBilling()}
+                disabled={continuePending}
+                aria-busy={continuePending}
+              >
+                {continuePending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : subscription.can_start_monthly_billing ? (
+                  'Set up monthly billing'
+                ) : (
+                  'Restore subscription'
+                )}
+              </Button>
+            )}
           </div>
         </Card>
       ) : !pageRefreshing && subscription.cancel_at_period_end ? (

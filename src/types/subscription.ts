@@ -27,6 +27,7 @@ export type Subscription = {
   can_restore_subscription: boolean;
   monthly_billing_start_at?: string | null;
   catch_up_charge_now?: boolean;
+  has_phone_number: boolean;
 };
 
 export type PaymentMethodUpdateResponse = {
