@@ -167,7 +167,7 @@ export async function abandonCheckout(checkoutSessionId: string): Promise<void> 
 
 export type CheckoutPaymentReturnRequest = {
   checkout_session_id?: string;
-  flow?: 'enrollment' | 'subscription-update';
+  flow?: 'enrollment' | 'subscription-update' | 'subscription-continue';
   razorpay_payment_id: string;
   razorpay_order_id?: string;
   razorpay_subscription_id?: string;
@@ -222,6 +222,13 @@ export async function startPaymentMethodUpdate(): Promise<PaymentMethodUpdateRes
     method: 'POST',
   });
   return response.json() as Promise<PaymentMethodUpdateResponse>;
+}
+
+export async function continueBilling(): Promise<import('@/types/subscription').ContinueBillingResponse> {
+  const response = await clientApiFetch('/me/subscription/continue-billing', {
+    method: 'POST',
+  });
+  return response.json() as Promise<import('@/types/subscription').ContinueBillingResponse>;
 }
 
 export async function getBillingProfile(): Promise<import('@/types/billing').BillingProfile> {

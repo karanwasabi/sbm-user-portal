@@ -29,7 +29,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
       router.refresh();
     };
 
-    if (flow === 'subscription-update') {
+    if (flow === 'subscription-update' || flow === 'subscription-continue') {
       finish();
       return;
     }

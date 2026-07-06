@@ -11,7 +11,11 @@ export type Enrollment = {
 
 export function hasPendingPayment(enrollments: Enrollment[]): boolean {
   const hasPaidAccess = enrollments.some(
-    (entry) => entry.status === 'upcoming' || entry.status === 'active' || entry.status === 'completed'
+    (entry) =>
+      entry.status === 'upcoming' ||
+      entry.status === 'active' ||
+      entry.status === 'completed' ||
+      entry.status === 'cancelled'
   );
   if (hasPaidAccess) return false;
   return enrollments.some((entry) => entry.status === 'pending_payment');
@@ -21,6 +25,9 @@ export function hasPaidTakeControlEnrollment(enrollments: Enrollment[]): boolean
   return enrollments.some(
     (entry) =>
       entry.program_slug === 'take-control' &&
-      (entry.status === 'upcoming' || entry.status === 'active' || entry.status === 'completed')
+      (entry.status === 'upcoming' ||
+        entry.status === 'active' ||
+        entry.status === 'completed' ||
+        entry.status === 'cancelled')
   );
 }

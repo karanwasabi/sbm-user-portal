@@ -16,7 +16,13 @@ export function isProfileOnboardingComplete(profile: Profile | null): boolean {
 }
 
 export function isEnrolled(enrollments: Enrollment[]): boolean {
-  return enrollments.some((entry) => entry.status === 'active' || entry.status === 'upcoming');
+  return enrollments.some(
+    (entry) =>
+      entry.status === 'upcoming' ||
+      entry.status === 'active' ||
+      entry.status === 'completed' ||
+      entry.status === 'cancelled'
+  );
 }
 
 /** Enrolled members keep portal access even if they later clear onboarding fields (e.g. WhatsApp). */

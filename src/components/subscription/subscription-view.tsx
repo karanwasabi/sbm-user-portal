@@ -12,11 +12,11 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
 import { SubscriptionRenewalCardSkeleton } from '@/components/loading/subscription-page-skeleton';
-import { openRazorpayPaymentMethodUpdate } from '@/lib/razorpay-checkout';
+import { openRazorpayContinueBilling, openRazorpayPaymentMethodUpdate } from '@/lib/razorpay-checkout';
 import { formatInrFromPaise } from '@/lib/money';
 import { invoicesNavEnabled } from '@/lib/portal-features';
 import type { Subscription } from '@/types/subscription';
-import { cancelSubscription, startPaymentMethodUpdate } from '@/utils/client-api';
+import { cancelSubscription, continueBilling, startPaymentMethodUpdate } from '@/utils/client-api';
 
 type SubscriptionViewProps = {
   subscription: Subscription | null;
@@ -68,6 +68,8 @@ function statusLabel(status: string): string {
       return 'Cancelling';
     case 'cancelled':
       return 'Cancelled';
+    case 'prepaid':
+      return 'Prepaid';
     case 'pending':
       return 'Payment Pending';
     case 'halted':
@@ -78,7 +80,7 @@ function statusLabel(status: string): string {
 }
 
 function statusTone(status: string): 'success' | 'brand' | 'danger' | 'neutral' {
-  if (status === 'active' || status === 'authenticated') return 'success';
+  if (status === 'active' || status === 'authenticated' || status === 'prepaid') return 'success';
   if (status === 'cancelling' || status === 'pending') return 'brand';
   if (status === 'halted') return 'danger';
   return 'neutral';
@@ -89,6 +91,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelPending, setCancelPending] = useState(false);
   const [updatePending, setUpdatePending] = useState(false);
+  const [continuePending, setContinuePending] = useState(false);
   const [pageRefreshing, setPageRefreshing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -137,9 +140,12 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
     );
   }
 
-  const accessEnd = subscription.access_until ?? subscription.next_renewal_at;
-  const isCancelling = subscription.cancel_at_period_end || subscription.subscription_status === 'cancelling';
-  const renewalDays = daysUntil(subscription.next_renewal_at);
+  const accessEnd = subscription.access_until ?? subscription.next_renewal_at ?? subscription.recurring_start_at;
+  const isPrepaid = subscription.subscription_status === 'prepaid';
+  const isCancelling =
+    !isPrepaid && (subscription.cancel_at_period_end || subscription.subscription_status === 'cancelling');
+  const billingStartDate = subscription.monthly_billing_start_at ?? subscription.recurring_start_at ?? accessEnd;
+  const renewalDays = daysUntil(subscription.next_renewal_at ?? billingStartDate);
   const monthlyTotalDisplay = formatInrFromPaise(subscription.monthly_total_paise);
   const monthlyBaseDisplay = formatInrFromPaise(subscription.monthly_base_paise);
   const monthlyGstDisplay = formatInrFromPaise(subscription.monthly_gst_paise);
@@ -182,6 +188,42 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
     }
   };
 
+  const handleContinueBilling = async () => {
+    setContinuePending(true);
+    setActionError(null);
+    try {
+      const payload = await continueBilling();
+      if (payload.mock) {
+        setContinuePending(false);
+        setPageRefreshing(true);
+        router.refresh();
+        return;
+      }
+      if (!payload.razorpay_key_id || !payload.razorpay_subscription_id) {
+        throw new Error('Payment is not configured yet.');
+      }
+      await openRazorpayContinueBilling({
+        key: payload.razorpay_key_id,
+        subscriptionId: payload.razorpay_subscription_id,
+        description: subscription.plan_label,
+        onSuccess: () => {
+          setContinuePending(false);
+          setPageRefreshing(true);
+          router.refresh();
+        },
+        onDismiss: () => setContinuePending(false),
+      });
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to start billing setup.');
+      setContinuePending(false);
+    }
+  };
+
+  const paymentMethodLabel =
+    subscription.payment_method_summary === 'offline_crm'
+      ? 'Offline'
+      : (subscription.payment_method_summary ?? 'Not set up');
+
   return (
     <PortalPageLayout
       eyebrow="Your Membership"
@@ -193,8 +235,8 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
       highlights={[
         { label: 'Status', value: statusLabel(subscription.subscription_status) },
         {
-          label: isCancelling ? 'Access Until' : 'Next Renewal',
-          value: formatDisplayDate(isCancelling ? accessEnd : subscription.next_renewal_at),
+          label: isPrepaid ? 'Prepaid Until' : isCancelling ? 'Access Until' : 'Next Renewal',
+          value: formatDisplayDate(isPrepaid || isCancelling ? accessEnd : subscription.next_renewal_at),
         },
       ]}
     >
@@ -212,13 +254,17 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
-                  {isCancelling ? 'Access Ends' : 'Next Renewal'}
+                  {isPrepaid ? 'Prepaid Until' : isCancelling ? 'Access Ends' : 'Next Renewal'}
                 </p>
                 <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                  {formatRenewalDate(isCancelling ? accessEnd : subscription.next_renewal_at)}
+                  {formatRenewalDate(isPrepaid || isCancelling ? accessEnd : subscription.next_renewal_at)}
                 </p>
-                {!isCancelling ? (
+                {!isCancelling && !isPrepaid ? (
                   <p className="mt-2 text-sm font-semibold text-brand">{renewalCountdownLabel(renewalDays)}</p>
+                ) : isPrepaid ? (
+                  <p className="mt-2 text-sm font-medium text-slate-600">
+                    Set up monthly billing before this date to continue seamlessly.
+                  </p>
                 ) : (
                   <p className="mt-2 text-sm font-medium text-slate-600">Billing stops after this date.</p>
                 )}
@@ -239,9 +285,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
               <div className="rounded-[14px] border border-slate-100 bg-white px-4 py-3">
                 <p className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">Payment Method</p>
                 <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                  <p className="min-w-0 text-sm font-bold text-slate-800">
-                    {subscription.payment_method_summary ?? 'Card on File'}
-                  </p>
+                  <p className="min-w-0 text-sm font-bold text-slate-800">{paymentMethodLabel}</p>
                   {subscription.can_update_payment ? (
                     <Button
                       variant="ghost"
@@ -312,6 +356,60 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
               disabled={cancelPending}
             >
               {cancelPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cancel Subscription'}
+            </Button>
+          </div>
+        </Card>
+      ) : !pageRefreshing && (subscription.can_start_monthly_billing || subscription.can_restore_subscription) ? (
+        <Card>
+          <SectionHead
+            title={subscription.can_start_monthly_billing ? 'Continue your membership' : 'Restore your subscription'}
+            subtitle={
+              subscription.catch_up_charge_now
+                ? 'A catch-up monthly charge applies today. Future renewals stay on your billing calendar.'
+                : subscription.can_start_monthly_billing
+                  ? 'No upfront enrollment fee. Set up monthly billing to continue after your prepaid period.'
+                  : 'Re-enable monthly billing to keep your membership active.'
+            }
+          />
+          <div className="flex flex-col gap-4 rounded-[14px] border border-slate-100 bg-canvas-cool p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <Calendar size={18} className="mt-0.5 shrink-0 text-slate-500" />
+              <p className="text-sm leading-relaxed text-slate-600">
+                {subscription.catch_up_charge_now ? (
+                  <>
+                    First charge today ({monthlyTotalDisplay}). Next renewal on{' '}
+                    <span className="font-semibold text-slate-800">{formatDisplayDate(billingStartDate)}</span>.
+                  </>
+                ) : (
+                  <>
+                    First monthly charge on{' '}
+                    <span className="font-semibold text-slate-800">{formatDisplayDate(billingStartDate)}</span>
+                    {accessEnd && subscription.enrollment_status !== 'cancelled' ? (
+                      <>
+                        . Access continues until{' '}
+                        <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>.
+                      </>
+                    ) : subscription.enrollment_status === 'cancelled' ? (
+                      '. Billing starts immediately after setup.'
+                    ) : null}
+                  </>
+                )}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="w-full shrink-0 sm:w-auto"
+              onClick={() => void handleContinueBilling()}
+              disabled={continuePending}
+              aria-busy={continuePending}
+            >
+              {continuePending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : subscription.can_start_monthly_billing ? (
+                'Set up monthly billing'
+              ) : (
+                'Restore subscription'
+              )}
             </Button>
           </div>
         </Card>

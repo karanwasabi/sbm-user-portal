@@ -23,10 +23,22 @@ export type Subscription = {
   billing_schedule: BillingScheduleItem[];
   can_cancel: boolean;
   can_update_payment: boolean;
+  can_start_monthly_billing: boolean;
+  can_restore_subscription: boolean;
+  monthly_billing_start_at?: string | null;
+  catch_up_charge_now?: boolean;
 };
 
 export type PaymentMethodUpdateResponse = {
   razorpay_key_id: string;
   subscription_id: string;
   customer_id?: string;
+};
+
+export type ContinueBillingResponse = {
+  razorpay_key_id?: string;
+  razorpay_subscription_id?: string;
+  monthly_billing_start_at: string;
+  catch_up_charge_now: boolean;
+  mock?: boolean;
 };

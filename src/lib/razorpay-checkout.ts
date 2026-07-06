@@ -260,6 +260,31 @@ export async function openRazorpayPaymentMethodUpdate({
   });
 }
 
+export async function openRazorpayContinueBilling({
+  key,
+  subscriptionId,
+  description,
+  onSuccess,
+  onDismiss,
+}: {
+  key: string;
+  subscriptionId: string;
+  description: string;
+  onSuccess: () => void;
+  onDismiss?: () => void;
+}): Promise<void> {
+  await openRazorpaySubscriptionCheckout({
+    key,
+    subscriptionId,
+    description,
+    returnDestination: '/subscription',
+    returnFlow: 'subscription-continue',
+    abandonOnDismiss: false,
+    onSuccess,
+    onDismiss,
+  });
+}
+
 type OpenEnrollmentCheckoutOptions = {
   start: CheckoutStartResponse;
   returnDestination?: string;
