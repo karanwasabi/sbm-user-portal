@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Calendar, CreditCard, Loader2, Receipt } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
+import { usePortalProfile } from '@/components/layout/portal/portal-profile-context';
 import { SubscriptionPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -16,6 +17,7 @@ import { openRazorpayContinueBilling, openRazorpayPaymentMethodUpdate } from '@/
 import { formatInrFromPaise } from '@/lib/money';
 import { invoicesNavEnabled } from '@/lib/portal-features';
 import type { Subscription } from '@/types/subscription';
+import { getFullName } from '@/types/profile';
 import { cancelSubscription, continueBilling, startPaymentMethodUpdate } from '@/utils/client-api';
 
 type SubscriptionViewProps = {
@@ -122,6 +124,7 @@ function billingProfileRequirementButtonLabel(missingPhone: boolean, missingCoun
 
 export function SubscriptionView({ subscription, error }: SubscriptionViewProps) {
   const router = useRouter();
+  const { profile } = usePortalProfile();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelPending, setCancelPending] = useState(false);
   const [updatePending, setUpdatePending] = useState(false);
@@ -255,6 +258,13 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
         key: payload.razorpay_key_id,
         subscriptionId: payload.razorpay_subscription_id,
         description: subscription.plan_label,
+        prefill: profile
+          ? {
+              name: getFullName(profile),
+              email: profile.email,
+              contact: profile.whatsapp ?? undefined,
+            }
+          : undefined,
         onSuccess: () => {
           setContinuePending(false);
           setPageRefreshing(true);

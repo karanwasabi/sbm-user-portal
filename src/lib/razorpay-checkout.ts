@@ -52,6 +52,12 @@ function razorpayOptionsForRegion(pricingRegion?: RazorpayPricingRegion): Record
   return { method: INTERNATIONAL_CARD_ONLY_METHODS };
 }
 
+type RazorpayPrefill = {
+  name?: string;
+  email?: string;
+  contact?: string;
+};
+
 type OpenRazorpaySubscriptionOptions = {
   key: string;
   subscriptionId: string;
@@ -62,6 +68,7 @@ type OpenRazorpaySubscriptionOptions = {
   checkoutSessionId?: string;
   returnDestination?: string;
   returnFlow?: PaymentReturnFlow;
+  prefill?: RazorpayPrefill;
   onSuccess: () => void;
   onDismiss?: () => void;
   abandonOnDismiss?: boolean;
@@ -149,6 +156,7 @@ export async function openRazorpaySubscriptionCheckout({
   checkoutSessionId,
   returnDestination = PORTAL_HOME_PATH,
   returnFlow = 'enrollment',
+  prefill,
   onSuccess,
   onDismiss,
   abandonOnDismiss = false,
@@ -227,6 +235,14 @@ export async function openRazorpaySubscriptionCheckout({
     options.order_id = orderId;
   }
 
+  if (prefill?.name || prefill?.email || prefill?.contact) {
+    options.prefill = {
+      ...(prefill.name ? { name: prefill.name } : {}),
+      ...(prefill.email ? { email: prefill.email } : {}),
+      ...(prefill.contact ? { contact: prefill.contact } : {}),
+    };
+  }
+
   if (subscriptionCardChange) {
     options.subscription_card_change = 1;
     options.recurring = '1';
@@ -264,12 +280,14 @@ export async function openRazorpayContinueBilling({
   key,
   subscriptionId,
   description,
+  prefill,
   onSuccess,
   onDismiss,
 }: {
   key: string;
   subscriptionId: string;
   description: string;
+  prefill?: RazorpayPrefill;
   onSuccess: () => void;
   onDismiss?: () => void;
 }): Promise<void> {
@@ -277,6 +295,7 @@ export async function openRazorpayContinueBilling({
     key,
     subscriptionId,
     description,
+    prefill,
     returnDestination: '/subscription',
     returnFlow: 'subscription-continue',
     abandonOnDismiss: false,
