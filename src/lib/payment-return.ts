@@ -1,4 +1,4 @@
-export type PaymentReturnFlow = 'enrollment' | 'subscription-update' | 'subscription-continue';
+export type PaymentReturnFlow = 'enrollment' | 'subscription-update' | 'subscription-continue' | 'trial-enroll';
 
 export type PendingCheckoutState = {
   checkoutSessionId: string;

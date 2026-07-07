@@ -7,6 +7,8 @@ import { ASSISTED_REGISTER_COOKIE } from '@/types/register';
 const PUBLIC_ROUTES = [
   '/login',
   '/register',
+  '/enroll',
+  '/welcome',
   '/forgot-password',
   '/reset-password',
   '/auth/confirm',
@@ -115,6 +117,9 @@ export async function updateSession(request: NextRequest) {
       pathname === '/register' ||
       pathname.startsWith('/register/') ||
       pathname === '/payment/return' ||
+      pathname === '/enroll' ||
+      pathname.startsWith('/enroll/') ||
+      pathname.startsWith('/welcome/') ||
       pathname === '/unsubscribe' ||
       pathname.startsWith('/unsubscribe/') ||
       isPaymentCallbackRoute(pathname);

@@ -1,4 +1,5 @@
 import { PaymentRetryCard } from '@/components/dashboard/payment-retry-card';
+import { TrialPaymentCard } from '@/components/dashboard/trial-payment-card';
 import { PasswordSetBanner } from '@/components/dashboard/password-set-banner';
 import { EnrollmentStatusCard } from '@/components/dashboard/enrollment-status-card';
 import { PreStartDashboardPanel } from '@/components/dashboard/pre-start-dashboard-panel';
@@ -57,6 +58,7 @@ export function DashboardHero({
         </header>
 
         {pendingPayment ? <PaymentRetryCard legalName={paymentRetryLegalName} /> : null}
+        <TrialPaymentCard />
         {showPasswordBanner ? <PasswordSetBanner /> : null}
 
         {showPreStartPanel && upcoming ? (

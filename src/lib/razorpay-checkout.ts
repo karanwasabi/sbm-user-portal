@@ -3,6 +3,7 @@ import type { Enrollment } from '@/types/enrollment';
 import {
   abandonCheckout,
   confirmCheckoutPaymentReturn,
+  confirmTrialPaymentReturn,
   getMyEnrollments,
   syncCheckoutPayment,
 } from '@/utils/client-api';
@@ -334,6 +335,102 @@ export async function openRazorpayEnrollmentCheckout({
     onSuccess,
     onDismiss,
   });
+}
+
+type OpenOrderCheckoutOptions = {
+  key: string;
+  orderId: string;
+  description: string;
+  pricingRegion?: RazorpayPricingRegion;
+  checkoutSessionId: string;
+  returnDestination: string;
+  returnFlow?: 'trial-enroll' | 'enrollment';
+  prefill?: RazorpayPrefill;
+  onSuccess: () => void;
+  onDismiss?: () => void;
+};
+
+export async function openRazorpayOrderCheckout({
+  key,
+  orderId,
+  description,
+  pricingRegion,
+  checkoutSessionId,
+  returnDestination,
+  returnFlow = 'trial-enroll',
+  prefill,
+  onSuccess,
+  onDismiss,
+}: OpenOrderCheckoutOptions): Promise<void> {
+  await loadRazorpayScript();
+  if (!window.Razorpay) {
+    throw new Error('Razorpay checkout failed to load.');
+  }
+
+  const complete = runOnce(onSuccess);
+
+  savePendingCheckout({
+    checkoutSessionId,
+    destination: returnDestination,
+    flow: returnFlow,
+    startedAt: Date.now(),
+  });
+
+  const callbackUrl = buildPaymentReturnUrl({
+    checkoutSessionId,
+    destination: returnDestination,
+    flow: returnFlow,
+  });
+
+  const options: Record<string, unknown> = {
+    key,
+    order_id: orderId,
+    name: 'Slow Burn Method',
+    description,
+    callback_url: callbackUrl,
+    ...razorpayOptionsForRegion(pricingRegion),
+    handler: (response: { razorpay_payment_id: string; razorpay_order_id?: string; razorpay_signature: string }) => {
+      void (async () => {
+        try {
+          if (returnFlow === 'trial-enroll') {
+            await confirmTrialPaymentReturn({
+              checkout_session_id: checkoutSessionId,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id ?? orderId,
+              razorpay_signature: response.razorpay_signature,
+            });
+          } else {
+            await confirmCheckoutPaymentReturn({
+              checkout_session_id: checkoutSessionId,
+              flow: returnFlow,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id ?? orderId,
+              razorpay_signature: response.razorpay_signature,
+            });
+          }
+        } catch {
+          // Webhook may still fulfill; welcome page polls status.
+        }
+        complete();
+      })();
+    },
+    modal: {
+      ondismiss: () => {
+        onDismiss?.();
+      },
+    },
+  };
+
+  if (prefill?.name || prefill?.email || prefill?.contact) {
+    options.prefill = {
+      ...(prefill.name ? { name: prefill.name } : {}),
+      ...(prefill.email ? { email: prefill.email } : {}),
+      ...(prefill.contact ? { contact: prefill.contact } : {}),
+    };
+  }
+
+  const rzp = new window.Razorpay(options);
+  rzp.open();
 }
 
 export function isEnrolledStatus(status: Enrollment['status']): boolean {

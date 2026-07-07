@@ -5,6 +5,14 @@ import type { BillingProfile } from '@/types/billing';
 import type { CheckoutPreview, CheckoutQuote, CheckoutQuoteRequest, CheckoutStartResponse } from '@/types/checkout';
 import type { Country, CountryCity, CountryState } from '@/types/reference';
 import type { PaymentMethodUpdateResponse, Subscription } from '@/types/subscription';
+import type {
+  TrialCheckoutPreview,
+  TrialCheckoutStartRequest,
+  TrialCheckoutStartResponse,
+  TrialPaymentStatus,
+  TrialProduct,
+  TrialStatus,
+} from '@/types/trial';
 import { createClient } from '@/utils/supabase/client';
 
 async function publicApiFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -298,4 +306,44 @@ export async function postRegistrationPaymentLink(): Promise<PaymentLinkResponse
     throw new Error(payload?.error ?? 'Failed to generate payment link.');
   }
   return response.json() as Promise<PaymentLinkResponse>;
+}
+
+export async function getTrialCheckoutPreview(product: TrialProduct): Promise<TrialCheckoutPreview> {
+  const response = await publicApiFetch(`/public/trial/checkout-preview?product=${encodeURIComponent(product)}`);
+  return response.json() as Promise<TrialCheckoutPreview>;
+}
+
+export async function startTrialCheckout(body: TrialCheckoutStartRequest): Promise<TrialCheckoutStartResponse> {
+  const response = await publicApiFetch('/public/trial/checkout/start', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return response.json() as Promise<TrialCheckoutStartResponse>;
+}
+
+export async function getTrialPaymentStatus(sessionId: string): Promise<TrialPaymentStatus> {
+  const response = await publicApiFetch(`/public/trial/payment-status?session_id=${encodeURIComponent(sessionId)}`);
+  return response.json() as Promise<TrialPaymentStatus>;
+}
+
+export async function confirmTrialPaymentReturn(body: {
+  checkout_session_id: string;
+  razorpay_payment_id: string;
+  razorpay_order_id?: string;
+  razorpay_signature: string;
+}): Promise<void> {
+  await publicApiFetch('/public/trial/checkout/payment-return', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function getMyTrialStatus(): Promise<TrialStatus> {
+  const response = await clientApiFetch('/me/trial/status');
+  return response.json() as Promise<TrialStatus>;
+}
+
+export async function continueTrialCheckout(): Promise<TrialCheckoutStartResponse> {
+  const response = await clientApiFetch('/me/trial/checkout/continue', { method: 'POST' });
+  return response.json() as Promise<TrialCheckoutStartResponse>;
 }

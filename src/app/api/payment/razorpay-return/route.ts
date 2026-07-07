@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseRazorpayReturnRequest } from '@/lib/razorpay-return-fields';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
+import { getBackendUrl } from '@/types/profile';
 import { apiFetch } from '@/utils/api';
 
 function safeDestination(value: string | null): string {
@@ -56,6 +57,40 @@ export async function POST(request: NextRequest) {
   }
 
   const fields = parsed.fields;
+
+  if (flow === 'trial-enroll') {
+    const response = await fetch(`${getBackendUrl()}/public/trial/checkout/payment-return`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        checkout_session_id: sessionId || undefined,
+        razorpay_payment_id: fields.razorpay_payment_id,
+        razorpay_order_id: fields.razorpay_order_id,
+        razorpay_signature: fields.razorpay_signature,
+      }),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      console.warn('[razorpay-return] trial payment-return failed', {
+        status: response.status,
+        sessionId: sessionId || undefined,
+      });
+      return redirectToPaymentReturn(url.origin, {
+        destination,
+        flow,
+        sessionId,
+        confirmFailed: true,
+      });
+    }
+
+    return redirectToPaymentReturn(url.origin, {
+      destination,
+      flow,
+      sessionId,
+    });
+  }
+
   const response = await apiFetch('/me/checkout/payment-return', {
     method: 'POST',
     body: JSON.stringify({
