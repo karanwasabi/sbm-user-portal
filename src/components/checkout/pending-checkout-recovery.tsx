@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { clearPendingCheckout, readPendingCheckout } from '@/lib/payment-return';
 import { pollUntilEnrolled } from '@/lib/razorpay-checkout';
+import { pollUntilTrialPaymentConfirmed } from '@/utils/client-api';
 
 export function PendingCheckoutRecovery() {
   const router = useRouter();
@@ -18,9 +19,14 @@ export function PendingCheckoutRecovery() {
       return;
     }
 
+    const pollEnrolled = () =>
+      pending.flow === 'trial-enroll'
+        ? pollUntilTrialPaymentConfirmed(pending.checkoutSessionId, { intervalMs: 2000, timeoutMs: 15000 })
+        : pollUntilEnrolled({ intervalMs: 2000, timeoutMs: 15000 });
+
     let cancelled = false;
     void (async () => {
-      const enrolled = await pollUntilEnrolled({ intervalMs: 2000, timeoutMs: 15000 });
+      const enrolled = await pollEnrolled();
       if (cancelled || !enrolled) return;
       clearPendingCheckout();
       router.replace(pending.destination);
@@ -30,7 +36,7 @@ export function PendingCheckoutRecovery() {
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
       void (async () => {
-        const enrolled = await pollUntilEnrolled({ intervalMs: 1000, timeoutMs: 10000 });
+        const enrolled = await pollEnrolled();
         if (cancelled || !enrolled) return;
         clearPendingCheckout();
         router.replace(pending.destination);

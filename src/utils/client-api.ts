@@ -326,6 +326,37 @@ export async function getTrialPaymentStatus(sessionId: string): Promise<TrialPay
   return response.json() as Promise<TrialPaymentStatus>;
 }
 
+export async function pollUntilTrialPaymentConfirmed(
+  sessionId: string,
+  options?: { intervalMs?: number; timeoutMs?: number }
+): Promise<boolean> {
+  const intervalMs = options?.intervalMs ?? 1500;
+  const timeoutMs = options?.timeoutMs ?? 120000;
+  const started = Date.now();
+
+  const check = async (): Promise<boolean> => {
+    try {
+      const result = await getTrialPaymentStatus(sessionId);
+      return result.enrolled;
+    } catch {
+      return false;
+    }
+  };
+
+  if (await check()) {
+    return true;
+  }
+
+  while (Date.now() - started < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    if (await check()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function confirmTrialPaymentReturn(body: {
   checkout_session_id: string;
   razorpay_payment_id: string;
