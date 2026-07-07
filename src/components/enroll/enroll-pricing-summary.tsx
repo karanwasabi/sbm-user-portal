@@ -1,6 +1,7 @@
 'use client';
 
 import { CalendarDays } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
 import type { TrialProduct, TrialQuote } from '@/types/trial';
 
@@ -28,6 +29,7 @@ export function EnrollPricingSummary({ product, quote, startsOn }: EnrollPricing
   const isDomestic = quote.pricing_region === 'domestic';
   const showGst = isDomestic;
   const hasDiscount = (quote.discount_paise ?? 0) > 0;
+  const discountedBasePaise = quote.base_paise - (quote.discount_paise ?? 0);
   const showBreakdown = showGst || hasDiscount;
   const detailLineClass = 'text-sm font-medium text-slate-500';
 
@@ -46,10 +48,23 @@ export function EnrollPricingSummary({ product, quote, startsOn }: EnrollPricing
             <p className={`mt-0.5 pl-6 ${detailLineClass}`}>{formatStartDate(startsOn)}</p>
           </div>
           <div className="min-w-0 shrink text-right">
-            <p className="text-xl font-extrabold tracking-tight text-slate-900">
-              {formatInrFromPaise(hasDiscount ? quote.total_paise : quote.base_paise)}
-              {showGst && !hasDiscount ? <span className="text-base font-bold text-slate-600"> + GST</span> : null}
+            <p
+              className={cn(
+                'text-xl font-extrabold tracking-tight text-slate-900',
+                hasDiscount && 'text-sm font-semibold text-slate-400 line-through'
+              )}
+            >
+              {formatInrFromPaise(quote.base_paise)}
+              {showGst ? (
+                <span className={cn('font-bold', hasDiscount ? 'text-xs' : 'text-base text-slate-600')}> + GST</span>
+              ) : null}
             </p>
+            {hasDiscount ? (
+              <p className="text-lg font-extrabold tracking-tight text-success">
+                {formatInrFromPaise(discountedBasePaise)}
+                {showGst ? <span className="text-sm font-bold"> + GST</span> : null}
+              </p>
+            ) : null}
             <p className={`mt-0.5 ${detailLineClass}`}>for {priceDurationLabel(product)}</p>
           </div>
         </div>
