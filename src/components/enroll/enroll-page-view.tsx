@@ -13,6 +13,7 @@ import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
 import { getCountryDialCode } from '@/lib/country-dial-codes';
+import { clearEnrollDraft, readEnrollDraft, saveEnrollDraft } from '@/lib/enroll-draft';
 import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
 import { openRazorpayOrderCheckout } from '@/lib/razorpay-checkout';
 import { toTitleCase } from '@/lib/title-case';
@@ -44,6 +45,19 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
   const [formError, setFormError] = useState<string | null>(null);
   const [whatsappDialIso, setWhatsappDialIso] = useState(suggestedCountryIso ?? 'IN');
   const whatsappDialIsoRef = useRef(suggestedCountryIso);
+
+  useEffect(() => {
+    const draft = readEnrollDraft(product);
+    if (!draft) return;
+    setFirstName(draft.firstName);
+    setLastName(draft.lastName);
+    setEmail(draft.email);
+    setWhatsapp(draft.whatsapp);
+    setCountryIso(draft.countryIso);
+    setCountryManuallySet(draft.countryManuallySet);
+    setWhatsappDialIso(draft.whatsappDialIso);
+    whatsappDialIsoRef.current = draft.whatsappDialIso;
+  }, [product]);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,6 +115,17 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
       dialIso
     );
 
+    saveEnrollDraft({
+      product,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim().toLowerCase(),
+      whatsapp,
+      countryIso,
+      whatsappDialIso: dialIso,
+      countryManuallySet,
+    });
+
     setSubmitting(true);
     try {
       const start = await startTrialCheckout({
@@ -116,6 +141,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
       const welcomeUrl = `/welcome/take-control?product=${encodeURIComponent(welcomeProductParam)}&session=${encodeURIComponent(start.checkout_session_id)}`;
 
       if (start.mock || !start.razorpay_key_id || !start.razorpay_order_id) {
+        clearEnrollDraft();
         window.location.href = welcomeUrl;
         return;
       }
@@ -135,6 +161,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
           contactCountryIso: dialIso,
         },
         onSuccess: () => {
+          clearEnrollDraft();
           window.location.href = welcomeUrl;
         },
         onDismiss: () => setSubmitting(false),

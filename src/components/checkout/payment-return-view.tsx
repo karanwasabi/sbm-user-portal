@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { trackMetaPurchase } from '@/lib/meta-pixel';
+import { clearEnrollDraft } from '@/lib/enroll-draft';
 import { clearPendingCheckout, readPendingCheckout, trialEnrollRetryPath } from '@/lib/payment-return';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { pollUntilEnrolled } from '@/lib/razorpay-checkout';
@@ -45,6 +46,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
 
     const finish = () => {
       clearPendingCheckout();
+      clearEnrollDraft();
       router.replace(destination);
       router.refresh();
     };
@@ -99,7 +101,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
           }
 
           showRecovery({
-            message: 'Payment was not completed. You were not charged — please enroll again to continue.',
+            message: 'Payment was not completed. You were not charged — please try again.',
             retryHref: trialEnrollRetryPath(destination),
             showRetry: true,
           });
@@ -138,7 +140,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
       if (flow === 'trial-enroll') {
         showRecovery({
           message:
-            'We could not confirm enrollment yet. If you received a payment confirmation email, you are all set. Otherwise enroll again — you will not be charged twice for the same successful payment.',
+            'We could not confirm enrollment yet. If you received a payment confirmation email, you are all set. Otherwise please try again.',
           retryHref: trialEnrollRetryPath(destination),
           showRetry: true,
         });
@@ -163,7 +165,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
       <p className="max-w-md text-sm font-medium text-slate-700">{message}</p>
       {recovery?.showRetry && recovery.retryHref ? (
         <Button href={recovery.retryHref} variant="primary" size="md" className="min-w-[180px]">
-          Enroll again
+          Try again
         </Button>
       ) : null}
     </div>
