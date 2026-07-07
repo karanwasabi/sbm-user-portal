@@ -13,6 +13,7 @@ import {
   savePendingCheckout,
   type PaymentReturnFlow,
 } from '@/lib/payment-return';
+import { formatPhoneE164 } from '@/lib/phone-number';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
 
 declare global {
@@ -57,7 +58,22 @@ type RazorpayPrefill = {
   name?: string;
   email?: string;
   contact?: string;
+  contactCountryIso?: string;
 };
+
+function razorpayPrefillOptions(prefill?: RazorpayPrefill): Record<string, string> | undefined {
+  if (!prefill?.name && !prefill?.email && !prefill?.contact) {
+    return undefined;
+  }
+
+  const contact = prefill.contact ? formatPhoneE164(prefill.contact, prefill.contactCountryIso) : '';
+
+  return {
+    ...(prefill.name ? { name: prefill.name } : {}),
+    ...(prefill.email ? { email: prefill.email } : {}),
+    ...(contact ? { contact } : {}),
+  };
+}
 
 type OpenRazorpaySubscriptionOptions = {
   key: string;
@@ -236,12 +252,9 @@ export async function openRazorpaySubscriptionCheckout({
     options.order_id = orderId;
   }
 
-  if (prefill?.name || prefill?.email || prefill?.contact) {
-    options.prefill = {
-      ...(prefill.name ? { name: prefill.name } : {}),
-      ...(prefill.email ? { email: prefill.email } : {}),
-      ...(prefill.contact ? { contact: prefill.contact } : {}),
-    };
+  const prefillOptions = razorpayPrefillOptions(prefill);
+  if (prefillOptions) {
+    options.prefill = prefillOptions;
   }
 
   if (subscriptionCardChange) {
@@ -340,6 +353,7 @@ export async function openRazorpayEnrollmentCheckout({
 type OpenOrderCheckoutOptions = {
   key: string;
   orderId: string;
+  customerId?: string;
   description: string;
   pricingRegion?: RazorpayPricingRegion;
   checkoutSessionId: string;
@@ -353,6 +367,7 @@ type OpenOrderCheckoutOptions = {
 export async function openRazorpayOrderCheckout({
   key,
   orderId,
+  customerId,
   description,
   pricingRegion,
   checkoutSessionId,
@@ -421,12 +436,13 @@ export async function openRazorpayOrderCheckout({
     },
   };
 
-  if (prefill?.name || prefill?.email || prefill?.contact) {
-    options.prefill = {
-      ...(prefill.name ? { name: prefill.name } : {}),
-      ...(prefill.email ? { email: prefill.email } : {}),
-      ...(prefill.contact ? { contact: prefill.contact } : {}),
-    };
+  const prefillOptions = razorpayPrefillOptions(prefill);
+  if (prefillOptions) {
+    options.prefill = prefillOptions;
+  }
+
+  if (customerId) {
+    options.customer_id = customerId;
   }
 
   const rzp = new window.Razorpay(options);

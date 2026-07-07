@@ -3,13 +3,12 @@
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
+import { EnrollWelcomeIllustration } from '@/components/enroll/enroll-welcome-illustration';
 import { AuthLayout } from '@/components/layout/auth-layout';
-import { Button } from '@/components/ui/button';
 import { getTrialPaymentStatus } from '@/utils/client-api';
 
 type WelcomeTakeControlViewProps = {
   sessionId?: string;
-  productLabel: string;
 };
 
 function formatDateLabel(iso?: string): string | null {
@@ -19,9 +18,8 @@ function formatDateLabel(iso?: string): string | null {
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export function WelcomeTakeControlView({ sessionId, productLabel }: WelcomeTakeControlViewProps) {
+export function WelcomeTakeControlView({ sessionId }: WelcomeTakeControlViewProps) {
   const [status, setStatus] = useState<'loading' | 'success' | 'pending'>('loading');
-  const [cohortName, setCohortName] = useState<string | null>(null);
   const [startsOn, setStartsOn] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,12 +35,10 @@ export function WelcomeTakeControlView({ sessionId, productLabel }: WelcomeTakeC
         if (cancelled) return;
         if (result.enrolled) {
           setStatus('success');
-          setCohortName(result.cohort_name ?? null);
           setStartsOn(result.starts_on ?? null);
           return;
         }
         setStatus('pending');
-        setCohortName(result.cohort_name ?? null);
         setStartsOn(result.starts_on ?? null);
       } catch {
         if (!cancelled) setStatus('pending');
@@ -67,31 +63,38 @@ export function WelcomeTakeControlView({ sessionId, productLabel }: WelcomeTakeC
 
   return (
     <AuthLayout variant="account">
-      <div className="mx-auto flex w-full max-w-[420px] flex-col items-center gap-5 py-4 text-center">
-        <SbmWordmark className="h-7 w-auto" />
-        <h1 className="text-xl font-bold text-slate-900">Welcome to Take Control</h1>
+      <div className="mx-auto flex w-full max-w-[420px] flex-col items-center gap-4 py-2 text-center">
+        <SbmWordmark size="lg" showSubtitle={false} />
 
         {status === 'loading' ? (
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 py-8 text-sm text-slate-600">
             <Loader2 className="h-4 w-4 animate-spin text-brand" />
             Confirming your payment…
           </div>
         ) : (
           <>
-            <p className="text-sm leading-relaxed text-slate-600">
-              {status === 'success'
-                ? `Your ${productLabel} enrollment is confirmed.`
-                : `We received your payment. If this page does not update shortly, check your email — your enrollment may already be processing.`}
-            </p>
-            {cohortName && startLabel ? (
-              <p className="text-sm font-medium text-slate-800">
-                {cohortName} starts {startLabel}
-              </p>
+            <EnrollWelcomeIllustration className="my-1 h-auto w-full max-w-[280px] sm:max-w-[300px]" />
+
+            <div className="flex flex-col items-center gap-2">
+              <h1 className="text-xl font-bold text-slate-900">Welcome to Take Control</h1>
+              {status === 'success' ? (
+                <p className="text-sm font-medium text-slate-600">Your enrollment is confirmed!</p>
+              ) : (
+                <p className="max-w-[320px] text-sm leading-relaxed text-slate-600">
+                  We received your payment. If this page does not update shortly, check your email — your enrollment may
+                  already be processing.
+                </p>
+              )}
+            </div>
+
+            {startLabel ? (
+              <div className="mt-1 flex flex-col items-center gap-1">
+                <p className="text-base font-semibold text-slate-800">Program starts</p>
+                <p className="text-2xl font-bold text-brand">{startLabel}</p>
+              </div>
             ) : null}
-            <p className="text-sm text-slate-600">Check your email to sign in and set your password.</p>
-            <Button href="/login" variant="primary" size="md" className="mt-2 w-full max-w-xs">
-              Go to sign in
-            </Button>
+
+            <p className="text-sm leading-relaxed text-slate-600">Check your inbox for an email with next steps.</p>
           </>
         )}
       </div>

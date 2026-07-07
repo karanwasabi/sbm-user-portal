@@ -13,8 +13,10 @@ import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
 import { getCountryDialCode } from '@/lib/country-dial-codes';
+import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
 import { openRazorpayOrderCheckout } from '@/lib/razorpay-checkout';
 import { toTitleCase } from '@/lib/title-case';
+import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
 import { getTrialCheckoutPreview, startTrialCheckout } from '@/utils/client-api';
 import type { Country } from '@/types/reference';
 import type { TrialCheckoutPreview, TrialProduct } from '@/types/trial';
@@ -40,6 +42,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
   const [consentError, setConsentError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [whatsappDialIso, setWhatsappDialIso] = useState(suggestedCountryIso ?? 'IN');
   const whatsappDialIsoRef = useRef(suggestedCountryIso);
 
   useEffect(() => {
@@ -66,6 +69,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
 
   const handleDialIsoChange = (iso: string) => {
     whatsappDialIsoRef.current = iso;
+    setWhatsappDialIso(iso);
     if (!countryManuallySet && iso) {
       setCountryIso(iso);
     }
@@ -84,6 +88,19 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
       return;
     }
 
+    const dialIso = whatsappDialIso || countryIso;
+    const parsed = parseWhatsapp(whatsapp, dialIso);
+    const whatsappError = validateWhatsappNumber(whatsapp, dialIso);
+    if (whatsappError) {
+      setFormError(whatsappError);
+      return;
+    }
+
+    const whatsappE164 = formatPhoneE164(
+      combineWhatsapp(parsed.dialCode, parsed.nationalNumber, parsed.dialIso || dialIso),
+      dialIso
+    );
+
     setSubmitting(true);
     try {
       const start = await startTrialCheckout({
@@ -91,7 +108,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
         first_name: toTitleCase(firstName.trim()),
         last_name: toTitleCase(lastName.trim()),
         email: email.trim().toLowerCase(),
-        whatsapp: whatsapp.trim(),
+        whatsapp: whatsappE164,
         country_code: countryIso,
         dpdp_consent: true,
       });
@@ -106,6 +123,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
       await openRazorpayOrderCheckout({
         key: start.razorpay_key_id,
         orderId: start.razorpay_order_id,
+        customerId: start.razorpay_customer_id,
         checkoutSessionId: start.checkout_session_id,
         description: `Take Control · ${start.cohort_name}`,
         pricingRegion: countryIso === 'IN' ? 'domestic' : 'international',
@@ -113,7 +131,8 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
         prefill: {
           name: `${firstName.trim()} ${lastName.trim()}`.trim(),
           email: email.trim(),
-          contact: whatsapp.trim(),
+          contact: whatsappE164,
+          contactCountryIso: dialIso,
         },
         onSuccess: () => {
           window.location.href = welcomeUrl;
@@ -162,7 +181,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
                   onChange={setWhatsapp}
                   countries={countries}
                   suggestedCountryIso={suggestedCountryIso}
-                  preferredDialIso={whatsappDialIsoRef.current}
+                  preferredDialIso={whatsappDialIso}
                   onDialIsoChange={handleDialIsoChange}
                   className="flex-col sm:flex-row sm:items-start"
                   dialCodeClassName="w-full sm:w-35 sm:shrink-0"
@@ -211,7 +230,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
               onClick={() => void handleSubmit()}
               rightIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
             >
-              {submitting ? 'Opening payment…' : 'Enroll'}
+              {submitting ? 'Initiating payment…' : 'Enroll'}
             </Button>
           </>
         )}

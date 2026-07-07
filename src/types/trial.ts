@@ -30,6 +30,7 @@ export type TrialCheckoutStartResponse = {
   checkout_session_id: string;
   razorpay_key_id?: string;
   razorpay_order_id?: string;
+  razorpay_customer_id?: string;
   amount_paise: number;
   currency: string;
   mock?: boolean;

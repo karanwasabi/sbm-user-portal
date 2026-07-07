@@ -74,6 +74,37 @@ export function combineWhatsapp(dialCode: string, nationalNumber: string, dialIs
   return `${dial}${national}`;
 }
 
+/** E.164 for APIs and profile storage. */
+export function formatPhoneE164(phone: string, preferredDialIso?: string): string {
+  const trimmed = phone.trim();
+  if (!trimmed) return '';
+
+  const parsed = parseWhatsapp(trimmed, preferredDialIso);
+  if (parsed.dialCode && parsed.nationalNumber) {
+    const combined = combineWhatsapp(parsed.dialCode, parsed.nationalNumber, parsed.dialIso || preferredDialIso);
+    if (combined.startsWith('+')) {
+      return combined;
+    }
+    const digits = combined.replace(/\D/g, '');
+    return digits ? `+${digits}` : '';
+  }
+
+  if (trimmed.startsWith('+')) {
+    const digits = trimmed.replace(/\D/g, '');
+    return digits ? `+${digits}` : '';
+  }
+
+  const digits = trimmed.replace(/\D/g, '');
+  if (!digits) return '';
+
+  const iso = (preferredDialIso ?? '').toUpperCase();
+  if (digits.length === 10 && (iso === 'IN' || !iso)) {
+    return `+91${digits}`;
+  }
+
+  return `+${digits}`;
+}
+
 export function getDialCodeForCountry(isoCode: string): string {
   return getCountryDialCode(isoCode);
 }
