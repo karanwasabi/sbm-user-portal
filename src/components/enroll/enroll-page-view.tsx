@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { EnrollConsentCheckbox } from '@/components/enroll/enroll-consent-checkbox';
-import { EnrollPricingSummary } from '@/components/enroll/enroll-pricing-summary';
+import { EnrollPricingSummary, enrollProgramLabel } from '@/components/enroll/enroll-pricing-summary';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
+import { CountryCombobox } from '@/components/profile/country-combobox';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { SearchableSelect } from '@/components/ui/searchable-select';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
 import { getCountryDialCode } from '@/lib/country-dial-codes';
@@ -21,19 +21,12 @@ import type { TrialCheckoutPreview, TrialProduct } from '@/types/trial';
 
 type EnrollPageViewProps = {
   product: TrialProduct;
-  pageTitle: string;
   welcomeProductParam: string;
   countries: Country[];
   suggestedCountryIso?: string;
 };
 
-export function EnrollPageView({
-  product,
-  pageTitle,
-  welcomeProductParam,
-  countries,
-  suggestedCountryIso,
-}: EnrollPageViewProps) {
+export function EnrollPageView({ product, welcomeProductParam, countries, suggestedCountryIso }: EnrollPageViewProps) {
   const { toast } = useToast();
   const [preview, setPreview] = useState<TrialCheckoutPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
@@ -70,15 +63,6 @@ export function EnrollPageView({
     if (!preview) return null;
     return countryIso === 'IN' ? preview.domestic : preview.international;
   }, [preview, countryIso]);
-
-  const countryOptions = useMemo(
-    () =>
-      countries.map((c) => ({
-        value: c.iso_code,
-        label: c.name,
-      })),
-    [countries]
-  );
 
   const handleDialIsoChange = (iso: string) => {
     whatsappDialIsoRef.current = iso;
@@ -144,10 +128,14 @@ export function EnrollPageView({
 
   return (
     <AuthLayout variant="account">
-      <div className="mx-auto flex w-full max-w-[420px] flex-col gap-5 pb-28">
-        <div className="flex flex-col items-center gap-2 pt-2 text-center">
-          <SbmWordmark className="h-7 w-auto" />
-          <h1 className="text-lg font-bold text-slate-900">{pageTitle}</h1>
+      <div className="mx-auto flex w-full max-w-[420px] flex-col gap-5">
+        <div className="text-center">
+          <div className="mb-5 flex justify-center overflow-x-auto">
+            <SbmWordmark size="lg" showSubtitle={false} />
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            Take Control: <span className="text-brand">{enrollProgramLabel(product)}</span>
+          </h1>
         </div>
 
         {loadingPreview || !preview || !activeQuote ? (
@@ -156,8 +144,6 @@ export function EnrollPageView({
           </div>
         ) : (
           <>
-            <EnrollPricingSummary quote={activeQuote} cohortName={preview.cohort_name} startsOn={preview.starts_on} />
-
             <div className="space-y-3.5">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="First name">
@@ -178,10 +164,13 @@ export function EnrollPageView({
                   suggestedCountryIso={suggestedCountryIso}
                   preferredDialIso={whatsappDialIsoRef.current}
                   onDialIsoChange={handleDialIsoChange}
+                  className="flex-col sm:flex-row sm:items-start"
+                  dialCodeClassName="w-full sm:w-35 sm:shrink-0"
+                  mobileClassName="w-full sm:flex-1"
                 />
               </Field>
               <Field label="Country">
-                <SearchableSelect
+                <CountryCombobox
                   value={countryIso}
                   onChange={(value) => {
                     setCountryManuallySet(true);
@@ -191,8 +180,7 @@ export function EnrollPageView({
                       whatsappDialIsoRef.current = value;
                     }
                   }}
-                  options={countryOptions}
-                  placeholder="Select country"
+                  countries={countries}
                 />
               </Field>
 
@@ -211,13 +199,9 @@ export function EnrollPageView({
                 </p>
               ) : null}
             </div>
-          </>
-        )}
-      </div>
 
-      {!loadingPreview && preview && activeQuote ? (
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
-          <div className="mx-auto max-w-[420px]">
+            <EnrollPricingSummary product={product} quote={activeQuote} startsOn={preview.starts_on} />
+
             <Button
               type="button"
               variant="primary"
@@ -227,11 +211,11 @@ export function EnrollPageView({
               onClick={() => void handleSubmit()}
               rightIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
             >
-              {submitting ? 'Opening payment…' : 'Enroll & pay'}
+              {submitting ? 'Opening payment…' : 'Enroll'}
             </Button>
-          </div>
-        </div>
-      ) : null}
+          </>
+        )}
+      </div>
     </AuthLayout>
   );
 }

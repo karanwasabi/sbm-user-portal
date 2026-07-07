@@ -11,7 +11,6 @@ export default async function EnrollTrialPage() {
   return (
     <EnrollPageView
       product="trial_1m"
-      pageTitle="Start Take Control"
       welcomeProductParam="trial_1m"
       countries={countries}
       suggestedCountryIso={suggestedCountryIso}

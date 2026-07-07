@@ -18,7 +18,7 @@ export function SbmWordmark({ size = 'md', tone = 'dark', showSubtitle = true, c
   const config = sizeConfig[size];
 
   return (
-    <div className={cn('flex items-center', size === 'lg' ? 'gap-3.5' : 'gap-2.5', className)}>
+    <div className={cn('flex shrink-0 items-center', size === 'lg' ? 'gap-3.5' : 'gap-2.5', className)}>
       <Image
         src="/images/sbm-logo-circle.png"
         alt="Slow Burn Method"
@@ -29,7 +29,11 @@ export function SbmWordmark({ size = 'md', tone = 'dark', showSubtitle = true, c
       />
       <div className="leading-tight">
         <div
-          className={cn('font-extrabold tracking-wide', config.title, tone === 'light' ? 'text-white' : 'text-brand')}
+          className={cn(
+            'font-extrabold tracking-wide whitespace-nowrap',
+            config.title,
+            tone === 'light' ? 'text-white' : 'text-brand'
+          )}
         >
           SLOW BURN METHOD
         </div>
