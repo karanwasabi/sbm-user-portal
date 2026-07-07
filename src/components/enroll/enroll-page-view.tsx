@@ -14,6 +14,9 @@ import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
 import { getCountryDialCode } from '@/lib/country-dial-codes';
 import { clearEnrollDraft, readEnrollDraft, saveEnrollDraft } from '@/lib/enroll-draft';
+import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
+import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalSignUp } from '@/lib/gtag';
+import { trackMetaBeginCheckout, trackMetaLead } from '@/lib/meta-pixel';
 import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
 import { openRazorpayOrderCheckout } from '@/lib/razorpay-checkout';
 import { toTitleCase } from '@/lib/title-case';
@@ -45,6 +48,12 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
   const [formError, setFormError] = useState<string | null>(null);
   const [whatsappDialIso, setWhatsappDialIso] = useState(suggestedCountryIso ?? 'IN');
   const whatsappDialIsoRef = useRef(suggestedCountryIso);
+  const lastCheckoutRef = useRef<{
+    sessionId: string;
+    valuePaise: number;
+    cohortName: string;
+    pricingRegion: string;
+  } | null>(null);
 
   useEffect(() => {
     const draft = readEnrollDraft(product);
@@ -139,8 +148,33 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
       });
 
       const welcomeUrl = `/welcome/take-control?product=${encodeURIComponent(welcomeProductParam)}&session=${encodeURIComponent(start.checkout_session_id)}`;
+      const pricingRegion = countryIso === 'IN' ? 'domestic' : 'international';
+
+      trackPortalSignUp('trial_enroll');
+      trackMetaLead();
+      trackPortalBeginCheckout({
+        valuePaise: start.amount_paise,
+        cohortName: start.cohort_name,
+        pricingRegion,
+        trialProduct: product,
+      });
+      trackMetaBeginCheckout({ valuePaise: start.amount_paise });
+
+      lastCheckoutRef.current = {
+        sessionId: start.checkout_session_id,
+        valuePaise: start.amount_paise,
+        cohortName: start.cohort_name,
+        pricingRegion,
+      };
 
       if (start.mock || !start.razorpay_key_id || !start.razorpay_order_id) {
+        trackCheckoutPurchaseOnce({
+          transactionId: start.checkout_session_id,
+          valuePaise: start.amount_paise,
+          cohortName: start.cohort_name,
+          pricingRegion,
+          trialProduct: product,
+        });
         clearEnrollDraft();
         window.location.href = welcomeUrl;
         return;
@@ -154,6 +188,12 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
         description: `Take Control · ${start.cohort_name}`,
         pricingRegion: countryIso === 'IN' ? 'domestic' : 'international',
         returnDestination: welcomeUrl,
+        pendingCheckout: {
+          valuePaise: start.amount_paise,
+          cohortName: start.cohort_name,
+          pricingRegion,
+          trialProduct: product,
+        },
         prefill: {
           name: `${firstName.trim()} ${lastName.trim()}`.trim(),
           email: email.trim(),
@@ -161,10 +201,30 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
           contactCountryIso: dialIso,
         },
         onSuccess: () => {
+          const checkout = lastCheckoutRef.current;
+          if (checkout) {
+            trackCheckoutPurchaseOnce({
+              transactionId: checkout.sessionId,
+              valuePaise: checkout.valuePaise,
+              cohortName: checkout.cohortName,
+              pricingRegion: checkout.pricingRegion,
+              trialProduct: product,
+            });
+          }
           clearEnrollDraft();
           window.location.href = welcomeUrl;
         },
-        onDismiss: () => setSubmitting(false),
+        onDismiss: () => {
+          setSubmitting(false);
+          if (preview) {
+            trackPortalCheckoutAbandoned({
+              valuePaise: start.amount_paise,
+              cohortName: start.cohort_name,
+              pricingRegion,
+              trialProduct: product,
+            });
+          }
+        },
       });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');

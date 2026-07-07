@@ -35,32 +35,34 @@ export function trackPortalEvent(action: string, params?: Record<string, unknown
   trackEvent(action, { app_name: PORTAL_APP_NAME, ...params });
 }
 
-type CheckoutItemParams = {
+export type CheckoutItemParams = {
   valuePaise: number;
   cohortName: string;
   pricingRegion?: string;
   promoCode?: string | null;
+  trialProduct?: string;
 };
 
-function checkoutEventParams({ valuePaise, cohortName, pricingRegion, promoCode }: CheckoutItemParams) {
+function checkoutEventParams({ valuePaise, cohortName, pricingRegion, promoCode, trialProduct }: CheckoutItemParams) {
   return {
     app_name: PORTAL_APP_NAME,
     currency: 'INR',
     value: paiseToRupees(valuePaise),
     pricing_region: pricingRegion,
     coupon: promoCode || undefined,
+    trial_product: trialProduct,
     items: [
       {
         item_name: cohortName,
-        item_category: 'take-control',
+        item_category: trialProduct ?? 'take-control',
         price: paiseToRupees(valuePaise),
       },
     ],
   };
 }
 
-export function trackPortalSignUp() {
-  trackPortalEvent('sign_up', { method: 'email_otp' });
+export function trackPortalSignUp(method: 'email_otp' | 'trial_enroll' = 'email_otp') {
+  trackPortalEvent('sign_up', { method });
 }
 
 export function trackPortalBeginCheckout(params: CheckoutItemParams) {

@@ -4,9 +4,15 @@ import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { trackMetaPurchase } from '@/lib/meta-pixel';
+import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
 import { clearEnrollDraft } from '@/lib/enroll-draft';
-import { clearPendingCheckout, readPendingCheckout, trialEnrollRetryPath } from '@/lib/payment-return';
+import { trackMetaPurchase } from '@/lib/meta-pixel';
+import {
+  clearPendingCheckout,
+  readPendingCheckout,
+  trialEnrollRetryPath,
+  type PendingCheckoutState,
+} from '@/lib/payment-return';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { pollUntilEnrolled } from '@/lib/razorpay-checkout';
 import { getTrialPaymentStatus, pollUntilTrialPaymentConfirmed } from '@/utils/client-api';
@@ -28,6 +34,20 @@ const NORMAL_RETRY_POLL_MS = 60_000;
 function isConfirmFailed(error: string | null | undefined, searchParams: URLSearchParams): boolean {
   const value = (error ?? searchParams.get('error') ?? '').trim();
   return value === 'confirm_failed';
+}
+
+function trackTrialPurchaseFromPending(sessionId: string, pending: PendingCheckoutState | null) {
+  if (pending?.valuePaise && pending.cohortName) {
+    trackCheckoutPurchaseOnce({
+      transactionId: sessionId,
+      valuePaise: pending.valuePaise,
+      cohortName: pending.cohortName,
+      pricingRegion: pending.pricingRegion,
+      trialProduct: pending.trialProduct,
+    });
+    return;
+  }
+  trackMetaPurchase({ eventID: `purchase:${sessionId}` });
 }
 
 export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnViewProps) {
@@ -81,7 +101,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
         if (cancelled) return;
         if (enrolled) {
           if (sessionId) {
-            trackMetaPurchase({ eventID: `purchase:${sessionId}` });
+            trackTrialPurchaseFromPending(sessionId, pending);
           }
           finish();
           return;
@@ -120,7 +140,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
       if (cancelled) return;
       if (enrolled) {
         if (sessionId) {
-          trackMetaPurchase({ eventID: `purchase:${sessionId}` });
+          trackTrialPurchaseFromPending(sessionId, pending);
         }
         finish();
         return;
@@ -131,7 +151,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
       if (cancelled) return;
       if (retry) {
         if (sessionId) {
-          trackMetaPurchase({ eventID: `purchase:${sessionId}` });
+          trackTrialPurchaseFromPending(sessionId, pending);
         }
         finish();
         return;

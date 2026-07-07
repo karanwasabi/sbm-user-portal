@@ -360,6 +360,10 @@ type OpenOrderCheckoutOptions = {
   returnDestination: string;
   returnFlow?: 'trial-enroll' | 'enrollment';
   prefill?: RazorpayPrefill;
+  pendingCheckout?: Pick<
+    import('@/lib/payment-return').PendingCheckoutState,
+    'valuePaise' | 'cohortName' | 'pricingRegion' | 'trialProduct'
+  >;
   onSuccess: () => void;
   onDismiss?: () => void;
 };
@@ -374,6 +378,7 @@ export async function openRazorpayOrderCheckout({
   returnDestination,
   returnFlow = 'trial-enroll',
   prefill,
+  pendingCheckout,
   onSuccess,
   onDismiss,
 }: OpenOrderCheckoutOptions): Promise<void> {
@@ -389,6 +394,7 @@ export async function openRazorpayOrderCheckout({
     destination: returnDestination,
     flow: returnFlow,
     startedAt: Date.now(),
+    ...pendingCheckout,
   });
 
   const callbackUrl = buildPaymentReturnUrl({

@@ -5,6 +5,10 @@ export type PendingCheckoutState = {
   destination: string;
   flow: PaymentReturnFlow;
   startedAt: number;
+  valuePaise?: number;
+  cohortName?: string;
+  pricingRegion?: string;
+  trialProduct?: string;
 };
 
 export const PENDING_CHECKOUT_STORAGE_KEY = 'sbm_pending_checkout';
