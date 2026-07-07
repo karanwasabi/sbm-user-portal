@@ -11,6 +11,7 @@ import type {
   TrialCheckoutStartResponse,
   TrialPaymentStatus,
   TrialProduct,
+  TrialQuote,
   TrialStatus,
 } from '@/types/trial';
 import { createClient } from '@/utils/supabase/client';
@@ -311,6 +312,19 @@ export async function postRegistrationPaymentLink(): Promise<PaymentLinkResponse
 export async function getTrialCheckoutPreview(product: TrialProduct): Promise<TrialCheckoutPreview> {
   const response = await publicApiFetch(`/public/trial/checkout-preview?product=${encodeURIComponent(product)}`);
   return response.json() as Promise<TrialCheckoutPreview>;
+}
+
+export async function postTrialCheckoutQuote(body: {
+  product: TrialProduct;
+  country_code: string;
+  promo_code?: string;
+}): Promise<TrialQuote> {
+  const response = await publicApiFetch('/public/trial/checkout-quote', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json()) as { quote: TrialQuote };
+  return payload.quote;
 }
 
 export async function startTrialCheckout(body: TrialCheckoutStartRequest): Promise<TrialCheckoutStartResponse> {

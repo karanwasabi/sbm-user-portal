@@ -18,12 +18,13 @@ import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
 import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalSignUp } from '@/lib/gtag';
 import { trackMetaBeginCheckout, trackMetaLead } from '@/lib/meta-pixel';
 import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
+import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { openRazorpayOrderCheckout } from '@/lib/razorpay-checkout';
 import { toTitleCase } from '@/lib/title-case';
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
-import { getTrialCheckoutPreview, startTrialCheckout } from '@/utils/client-api';
+import { getTrialCheckoutPreview, postTrialCheckoutQuote, startTrialCheckout } from '@/utils/client-api';
 import type { Country } from '@/types/reference';
-import type { TrialCheckoutPreview, TrialProduct } from '@/types/trial';
+import type { TrialCheckoutPreview, TrialProduct, TrialQuote } from '@/types/trial';
 
 type EnrollPageViewProps = {
   product: TrialProduct;
@@ -33,6 +34,7 @@ type EnrollPageViewProps = {
 };
 
 export function EnrollPageView({ product, welcomeProductParam, countries, suggestedCountryIso }: EnrollPageViewProps) {
+  const discountCodeEnabled = product === 'trial_3m';
   const { toast } = useToast();
   const [preview, setPreview] = useState<TrialCheckoutPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
@@ -46,6 +48,11 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
   const [consentError, setConsentError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState('');
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [quotePending, setQuotePending] = useState(false);
+  const [quotedQuote, setQuotedQuote] = useState<TrialQuote | null>(null);
   const [whatsappDialIso, setWhatsappDialIso] = useState(suggestedCountryIso ?? 'IN');
   const whatsappDialIsoRef = useRef(suggestedCountryIso);
   const lastCheckoutRef = useRef<{
@@ -85,10 +92,53 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
     };
   }, [product, toast]);
 
-  const activeQuote = useMemo(() => {
+  const baseQuote = useMemo(() => {
     if (!preview) return null;
     return countryIso === 'IN' ? preview.domestic : preview.international;
   }, [preview, countryIso]);
+
+  const displayQuote = discountCodeEnabled ? (quotedQuote ?? baseQuote) : baseQuote;
+
+  useEffect(() => {
+    setAppliedPromo('');
+    setPromoCode('');
+    setQuotedQuote(null);
+    setPromoError(null);
+  }, [countryIso]);
+
+  const handleApplyPromo = async () => {
+    const normalized = normalizePromoCode(promoCode);
+    if (!normalized) {
+      setPromoError('Enter a discount code.');
+      return;
+    }
+
+    setPromoCode(normalized);
+    setPromoError(null);
+    setQuotePending(true);
+    try {
+      const quote = await postTrialCheckoutQuote({
+        product,
+        country_code: countryIso,
+        promo_code: normalized,
+      });
+      setAppliedPromo(normalized);
+      setQuotedQuote(quote);
+    } catch (err) {
+      setPromoError(err instanceof Error ? err.message : 'Failed to apply discount code.');
+      setAppliedPromo('');
+      setQuotedQuote(null);
+    } finally {
+      setQuotePending(false);
+    }
+  };
+
+  const handleClearPromo = () => {
+    setAppliedPromo('');
+    setPromoCode('');
+    setPromoError(null);
+    setQuotedQuote(null);
+  };
 
   const handleDialIsoChange = (iso: string) => {
     whatsappDialIsoRef.current = iso;
@@ -145,20 +195,22 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
         whatsapp: whatsappE164,
         country_code: countryIso,
         dpdp_consent: true,
+        ...(discountCodeEnabled && appliedPromo ? { promo_code: appliedPromo } : {}),
       });
 
       const welcomeUrl = `/welcome/take-control?product=${encodeURIComponent(welcomeProductParam)}&session=${encodeURIComponent(start.checkout_session_id)}`;
       const pricingRegion = countryIso === 'IN' ? 'domestic' : 'international';
+      const checkoutValuePaise = displayQuote?.total_paise ?? start.amount_paise;
 
       trackPortalSignUp('trial_enroll');
       trackMetaLead();
       trackPortalBeginCheckout({
-        valuePaise: start.amount_paise,
+        valuePaise: checkoutValuePaise,
         cohortName: start.cohort_name,
         pricingRegion,
         trialProduct: product,
       });
-      trackMetaBeginCheckout({ valuePaise: start.amount_paise });
+      trackMetaBeginCheckout({ valuePaise: checkoutValuePaise });
 
       lastCheckoutRef.current = {
         sessionId: start.checkout_session_id,
@@ -244,7 +296,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
           </h1>
         </div>
 
-        {loadingPreview || !preview || !activeQuote ? (
+        {loadingPreview || !preview || !displayQuote ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-brand" />
           </div>
@@ -304,9 +356,50 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
                   {formError}
                 </p>
               ) : null}
+
+              {discountCodeEnabled ? (
+                <Field label="Discount code">
+                  <div className="flex gap-2">
+                    <TextInput
+                      value={promoCode}
+                      onChange={(value) => setPromoCode(normalizePromoCodeInput(value))}
+                      placeholder="Enter code"
+                      className={promoCodeInputProps.className}
+                      autoCapitalize={promoCodeInputProps.autoCapitalize}
+                      autoCorrect={promoCodeInputProps.autoCorrect}
+                      spellCheck={promoCodeInputProps.spellCheck}
+                    />
+                    <Button
+                      type="button"
+                      variant="light"
+                      size="md"
+                      onClick={() => void handleApplyPromo()}
+                      disabled={quotePending || submitting}
+                    >
+                      Apply
+                    </Button>
+                    {appliedPromo ? (
+                      <Button
+                        type="button"
+                        variant="light"
+                        size="md"
+                        onClick={handleClearPromo}
+                        disabled={quotePending || submitting}
+                      >
+                        Clear
+                      </Button>
+                    ) : null}
+                  </div>
+                  {promoError ? (
+                    <p className="mt-1.5 text-[12.5px] font-semibold text-danger-press" role="alert">
+                      {promoError}
+                    </p>
+                  ) : null}
+                </Field>
+              ) : null}
             </div>
 
-            <EnrollPricingSummary product={product} quote={activeQuote} startsOn={preview.starts_on} />
+            <EnrollPricingSummary product={product} quote={displayQuote} startsOn={preview.starts_on} />
 
             <Button
               type="button"

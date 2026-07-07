@@ -5,12 +5,14 @@ export type TrialQuote = {
   pricing_region: 'domestic' | 'international';
   base_paise: number;
   conversion_paise?: number;
+  discount_paise?: number;
   gst_paise: number;
   total_paise: number;
   currency: string;
   monthly_base_paise: number;
   monthly_gst_paise: number;
   monthly_total_paise: number;
+  promo_code?: string;
 };
 
 export type TrialCheckoutPreview = {
@@ -64,4 +66,5 @@ export type TrialCheckoutStartRequest = {
   whatsapp: string;
   country_code: string;
   dpdp_consent: boolean;
+  promo_code?: string;
 };

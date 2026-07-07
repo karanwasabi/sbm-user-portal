@@ -27,6 +27,8 @@ export function enrollProgramLabel(product: TrialProduct): string {
 export function EnrollPricingSummary({ product, quote, startsOn }: EnrollPricingSummaryProps) {
   const isDomestic = quote.pricing_region === 'domestic';
   const showGst = isDomestic;
+  const hasDiscount = (quote.discount_paise ?? 0) > 0;
+  const showBreakdown = showGst || hasDiscount;
   const detailLineClass = 'text-sm font-medium text-slate-500';
 
   return (
@@ -45,23 +47,31 @@ export function EnrollPricingSummary({ product, quote, startsOn }: EnrollPricing
           </div>
           <div className="min-w-0 shrink text-right">
             <p className="text-xl font-extrabold tracking-tight text-slate-900">
-              {formatInrFromPaise(quote.base_paise)}
-              {showGst ? <span className="text-base font-bold text-slate-600"> + GST</span> : null}
+              {formatInrFromPaise(hasDiscount ? quote.total_paise : quote.base_paise)}
+              {showGst && !hasDiscount ? <span className="text-base font-bold text-slate-600"> + GST</span> : null}
             </p>
             <p className={`mt-0.5 ${detailLineClass}`}>for {priceDurationLabel(product)}</p>
           </div>
         </div>
 
-        {showGst ? (
+        {showBreakdown ? (
           <dl className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-[13px]">
             <div className="flex items-baseline justify-between gap-4">
               <dt className="text-slate-500">Program fee</dt>
               <dd className="font-semibold text-slate-800">{formatInrFromPaise(quote.base_paise)}</dd>
             </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-slate-500">GST (18%)</dt>
-              <dd className="font-semibold text-slate-800">{formatInrFromPaise(quote.gst_paise)}</dd>
-            </div>
+            {hasDiscount ? (
+              <div className="flex items-baseline justify-between gap-4 text-success">
+                <dt>{quote.promo_code ? `Discount (${quote.promo_code})` : 'Discount'}</dt>
+                <dd className="font-semibold">−{formatInrFromPaise(quote.discount_paise ?? 0)}</dd>
+              </div>
+            ) : null}
+            {showGst ? (
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-slate-500">GST (18%)</dt>
+                <dd className="font-semibold text-slate-800">{formatInrFromPaise(quote.gst_paise)}</dd>
+              </div>
+            ) : null}
             <div className="flex items-baseline justify-between gap-4 border-t border-dashed border-slate-200 pt-3">
               <dt className="text-sm font-semibold text-slate-700">Due today</dt>
               <dd className="text-base font-extrabold tracking-tight text-slate-900">
