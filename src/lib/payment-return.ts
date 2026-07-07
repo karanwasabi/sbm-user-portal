@@ -51,3 +51,16 @@ export function clearPendingCheckout(): void {
   if (typeof window === 'undefined') return;
   sessionStorage.removeItem(PENDING_CHECKOUT_STORAGE_KEY);
 }
+
+/** Map welcome destination product param back to the public enroll page. */
+export function trialEnrollRetryPath(destination: string): string {
+  try {
+    const url = new URL(destination, 'http://local');
+    const product = url.searchParams.get('product')?.trim();
+    if (product === 'trial_1m') return '/enroll/trial';
+    if (product === 'trial_3m') return '/enroll';
+  } catch {
+    // Fall through to default enroll path.
+  }
+  return '/enroll';
+}
