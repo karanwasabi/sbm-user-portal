@@ -46,14 +46,29 @@ export function trackMetaBeginCheckout(params?: { valuePaise?: number }): void {
   });
 }
 
-export function trackMetaPurchase(params: { eventID: string; valuePaise?: number }): void {
-  const payload =
+export function trackMetaPurchase(params: {
+  eventID: string;
+  valuePaise?: number;
+  trialProduct?: string;
+  cohortName?: string;
+}): void {
+  const payload: Record<string, unknown> =
     params.valuePaise == null
       ? { currency: 'INR' }
       : {
           currency: 'INR',
           value: Math.round(params.valuePaise) / 100,
         };
+
+  if (params.trialProduct) {
+    payload.content_category = 'take-control';
+    payload.content_name = params.trialProduct;
+    payload.trial_product = params.trialProduct;
+  }
+  if (params.cohortName) {
+    payload.content_ids = [params.cohortName];
+  }
+
   runWhenMetaReady(() => {
     window.fbq?.('track', 'Purchase', payload, { eventID: params.eventID });
   });

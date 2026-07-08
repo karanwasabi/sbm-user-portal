@@ -17,5 +17,7 @@ export function trackCheckoutPurchaseOnce(
   trackMetaPurchase({
     eventID: `purchase:${params.transactionId}`,
     valuePaise: params.valuePaise,
+    trialProduct: params.trialProduct,
+    cohortName: params.cohortName,
   });
 }
