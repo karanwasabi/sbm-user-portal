@@ -18,6 +18,7 @@ import { getMyEnrollments, patchProfile, ProfileFetchError, recordDpdpConsent, r
 import { hasPaidTakeControlEnrollment } from '@/types/enrollment';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
 import { ASSISTED_REGISTER_COOKIE, REGISTER_DRAFT_COOKIE, REGISTER_EMAIL_COOKIE } from '@/types/register';
+import { UTM_ATTRIBUTION_COOKIE, type UtmAttribution } from '@/lib/utm-attribution';
 import { createClient } from '@/utils/supabase/server';
 
 const REGISTER_FLOW_COOKIE = 'sbm_register_flow';
@@ -58,6 +59,22 @@ function validateRegisterFormValues(values: ReturnType<typeof parseRegisterForm>
   return validateRegisterForm(values);
 }
 
+function parseUtmAttributionCookie(value?: string): UtmAttribution | null {
+  if (!value?.trim()) return null;
+  try {
+    const decoded = decodeURIComponent(value);
+    const parsed = JSON.parse(decoded) as UtmAttribution;
+    return {
+      utm_source: parsed.utm_source?.trim() || undefined,
+      utm_medium: parsed.utm_medium?.trim() || undefined,
+      utm_campaign: parsed.utm_campaign?.trim() || undefined,
+      utm_content: parsed.utm_content?.trim() || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function startRegister(_prev: RegisterStartState, formData: FormData): Promise<RegisterStartState> {
   const values = parseRegisterForm(formData);
   const fieldErrors = validateRegisterFormValues(values);
@@ -73,6 +90,7 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
 
   try {
     const cookieStore = await cookies();
+    const utmAttribution = parseUtmAttributionCookie(cookieStore.get(UTM_ATTRIBUTION_COOKIE)?.value);
     const assistedFromForm = formData.get('assisted') === '1';
     const assisted = assistedFromForm || cookieStore.get(ASSISTED_REGISTER_COOKIE)?.value === '1';
 
@@ -96,6 +114,7 @@ export async function startRegister(_prev: RegisterStartState, formData: FormDat
         parental_consent: values.parentalConsent,
         dpdp_consent: values.dpdpConsent,
         assisted,
+        ...utmAttribution,
       },
       await getForwardedHeaders()
     );

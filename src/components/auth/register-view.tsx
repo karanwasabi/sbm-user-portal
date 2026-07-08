@@ -57,6 +57,7 @@ import { clearRegisterCheckoutDraft, suppressRegisterCheckoutDraftPersist } from
 import { trackPortalSignUp } from '@/lib/gtag';
 import { trackMetaLead } from '@/lib/meta-pixel';
 import { buildLoginUrl } from '@/lib/login-url';
+import { captureUtmAttributionFromLocation } from '@/lib/utm-attribution';
 import { cn } from '@/lib/cn';
 import type { RegisterStartState, RegisterVerifyState } from '@/types/register';
 import { getBillingProfileOrNull, getMyProfile } from '@/utils/client-api';
@@ -182,6 +183,10 @@ export function RegisterView({
     () => buildLoginUrl(startState.status === 'already_registered' ? (startState.email ?? email) : undefined),
     [startState.status, startState.email, email]
   );
+
+  useEffect(() => {
+    captureUtmAttributionFromLocation();
+  }, []);
 
   useEffect(() => {
     setPhoneSuggestedCountryIso(suggestedCountryIso);

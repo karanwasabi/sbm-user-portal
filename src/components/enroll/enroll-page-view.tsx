@@ -21,6 +21,7 @@ import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-num
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { openRazorpayOrderCheckout } from '@/lib/razorpay-checkout';
 import { toTitleCase } from '@/lib/title-case';
+import { captureUtmAttributionFromLocation, readUtmAttributionFromCookie } from '@/lib/utm-attribution';
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
 import { getTrialCheckoutPreview, postTrialCheckoutQuote, startTrialCheckout } from '@/utils/client-api';
 import type { Country } from '@/types/reference';
@@ -74,6 +75,10 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
     setWhatsappDialIso(draft.whatsappDialIso);
     whatsappDialIsoRef.current = draft.whatsappDialIso;
   }, [product]);
+
+  useEffect(() => {
+    captureUtmAttributionFromLocation();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +200,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
         whatsapp: whatsappE164,
         country_code: countryIso,
         dpdp_consent: true,
+        ...readUtmAttributionFromCookie(),
         ...(discountCodeEnabled && appliedPromo ? { promo_code: appliedPromo } : {}),
       });
 
