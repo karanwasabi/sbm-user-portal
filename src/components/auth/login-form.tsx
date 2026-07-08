@@ -343,7 +343,7 @@ export function LoginForm({ initialEmail = '', linkError = null }: LoginFormProp
 
       <p className="mt-5.5 text-center text-[13px] font-medium text-slate-500">
         New to Slow Burn Method?{' '}
-        <Link href="/register" className="font-bold text-brand no-underline">
+        <Link href="/subscribe" className="font-bold text-brand no-underline">
           Create an account
         </Link>
       </p>

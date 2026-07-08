@@ -209,7 +209,7 @@ export async function restartRegisterEditing(formData: FormData): Promise<void> 
   const supabase = await createClient();
   await supabase.auth.signOut();
 
-  redirect(assisted ? '/register/assisted' : '/register');
+  redirect(assisted ? '/register/assisted' : '/subscribe');
 }
 
 async function completeRegisterProfile(formData: FormData): Promise<void> {

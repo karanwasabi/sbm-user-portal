@@ -19,9 +19,10 @@ import { createClient } from '@/utils/supabase/server';
 type LoadRegisterPageOptions = {
   assisted: boolean;
   searchParams: { verified?: string };
+  registerPath?: string;
 };
 
-export async function loadRegisterPage({ assisted, searchParams }: LoadRegisterPageOptions) {
+export async function loadRegisterPage({ assisted, searchParams, registerPath }: LoadRegisterPageOptions) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -96,7 +97,7 @@ export async function loadRegisterPage({ assisted, searchParams }: LoadRegisterP
       initialWhatsappDialIso={draft?.whatsappDialIso}
       assistedMode={assisted}
       initialBillingProfile={initialBillingProfile}
-      registerPath={assisted ? '/register/assisted' : '/register'}
+      registerPath={assisted ? '/register/assisted' : (registerPath ?? '/subscribe')}
     />
   );
 }

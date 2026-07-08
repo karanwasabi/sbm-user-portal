@@ -74,7 +74,7 @@ async function redirectAfterAuthenticatedLogin(): Promise<never> {
     enrollments = await getMyEnrollments();
   } catch (loadError) {
     if (!(loadError instanceof ProfileFetchError && loadError.status === 404)) {
-      redirect('/register');
+      redirect('/subscribe');
     }
   }
 
@@ -112,7 +112,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   }
 
   if (!data.user?.email_confirmed_at) {
-    redirect('/register');
+    redirect('/subscribe');
   }
 
   const denied = await ensureMemberPortalLoginAccess(supabase, 'password');

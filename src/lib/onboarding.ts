@@ -48,8 +48,8 @@ export function getOnboardingStep(profile: Profile | null, enrollments: Enrollme
 export function getPostAuthRedirectPath(
   profile: Profile | null,
   enrollments: Enrollment[] = []
-): '/register' | typeof PORTAL_HOME_PATH {
+): '/subscribe' | typeof PORTAL_HOME_PATH {
   return hasPortalAccess(profile, enrollments) || isOnboardingComplete(profile, enrollments)
     ? PORTAL_HOME_PATH
-    : '/register';
+    : '/subscribe';
 }

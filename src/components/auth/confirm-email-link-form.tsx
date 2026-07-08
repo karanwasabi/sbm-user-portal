@@ -16,7 +16,7 @@ export function ConfirmEmailLinkForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(true);
-  const [continuePaymentPath, setContinuePaymentPath] = useState('/register');
+  const [continuePaymentPath, setContinuePaymentPath] = useState('/subscribe');
   const [isPaymentHandoff, setIsPaymentHandoff] = useState(false);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function ConfirmEmailLinkForm() {
       const handoffEmail = resolveContinuePaymentEmail(authParams?.searchParams ?? null);
       const paymentRecoveryPath = buildOpenPaymentLinkRecoveryPath(handoffEmail);
       setIsPaymentHandoff(Boolean(handoffEmail));
-      setContinuePaymentPath(handoffEmail ? paymentRecoveryPath : '/register');
+      setContinuePaymentPath(handoffEmail ? paymentRecoveryPath : '/subscribe');
 
       if (authParams && isExpiredLinkAuthError(authParams.hashParams)) {
         clearAuthParamsFromUrl();

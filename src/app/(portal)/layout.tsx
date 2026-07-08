@@ -18,7 +18,7 @@ export default async function PortalLayout({ children }: { children: React.React
   }
 
   if (!user.email_confirmed_at) {
-    redirect('/register');
+    redirect('/subscribe');
   }
 
   try {
@@ -35,7 +35,7 @@ export default async function PortalLayout({ children }: { children: React.React
       profile = await getLatestProfile();
     } catch (error) {
       if (error instanceof ProfileFetchError && (error.status === 404 || error.status === 403)) {
-        redirect('/register');
+        redirect('/subscribe');
       }
       profileError = error instanceof ProfileFetchError ? error.message : 'Failed to load profile.';
     }
@@ -48,7 +48,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
     const isStaff = access.roles.includes('staff');
     if (profile && !hasPortalAccess(profile, enrollments) && !isStaff) {
-      redirect('/register');
+      redirect('/subscribe');
     }
 
     const showPasswordBanner = userNeedsPassword(user);

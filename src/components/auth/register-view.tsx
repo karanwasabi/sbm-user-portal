@@ -94,7 +94,7 @@ export function RegisterView({
   initialWhatsappDialIso,
   assistedMode = false,
   initialBillingProfile = null,
-  registerPath = '/register',
+  registerPath = '/subscribe',
 }: RegisterViewProps) {
   const { toast } = useToast();
   const [firstName, setFirstName] = useState(initialValues?.firstName ?? '');

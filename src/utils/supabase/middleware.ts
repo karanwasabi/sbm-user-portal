@@ -7,6 +7,7 @@ import { ASSISTED_REGISTER_COOKIE } from '@/types/register';
 const PUBLIC_ROUTES = [
   '/login',
   '/register',
+  '/subscribe',
   '/enroll',
   '/welcome',
   '/forgot-password',
@@ -82,20 +83,20 @@ export async function updateSession(request: NextRequest) {
 
   if (pathname === '/signup' || pathname.startsWith('/signup/')) {
     const url = request.nextUrl.clone();
-    url.pathname = '/register';
+    url.pathname = '/subscribe';
     url.search = '';
     return NextResponse.redirect(url);
   }
 
   if (pathname === '/onboarding' || pathname.startsWith('/onboarding/')) {
     const url = request.nextUrl.clone();
-    url.pathname = '/register';
+    url.pathname = '/subscribe';
     return NextResponse.redirect(url);
   }
 
   if (pathname === '/') {
     const url = request.nextUrl.clone();
-    url.pathname = user ? (isEmailVerified(user) ? PORTAL_HOME_PATH : '/register') : '/login';
+    url.pathname = user ? (isEmailVerified(user) ? PORTAL_HOME_PATH : '/subscribe') : '/login';
     return NextResponse.redirect(url);
   }
 
@@ -107,13 +108,15 @@ export async function updateSession(request: NextRequest) {
 
   if (user && pathname === '/login') {
     const url = request.nextUrl.clone();
-    url.pathname = isEmailVerified(user) ? PORTAL_HOME_PATH : '/register';
+    url.pathname = isEmailVerified(user) ? PORTAL_HOME_PATH : '/subscribe';
     return NextResponse.redirect(url);
   }
 
   if (user && !isEmailVerified(user)) {
     const allowed =
       isConfirmRoute ||
+      pathname === '/subscribe' ||
+      pathname.startsWith('/subscribe/') ||
       pathname === '/register' ||
       pathname.startsWith('/register/') ||
       pathname === '/payment/return' ||
@@ -125,7 +128,7 @@ export async function updateSession(request: NextRequest) {
       isPaymentCallbackRoute(pathname);
     if (!allowed) {
       const url = request.nextUrl.clone();
-      url.pathname = '/register';
+      url.pathname = '/subscribe';
       return NextResponse.redirect(url);
     }
   }

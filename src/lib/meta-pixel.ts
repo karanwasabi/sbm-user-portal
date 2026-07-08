@@ -58,3 +58,9 @@ export function trackMetaPurchase(params: { eventID: string; valuePaise?: number
     window.fbq?.('track', 'Purchase', payload, { eventID: params.eventID });
   });
 }
+
+export function trackMetaCustom(eventName: string, params?: Record<string, unknown>): void {
+  runWhenMetaReady(() => {
+    window.fbq?.('trackCustom', eventName, params);
+  });
+}
