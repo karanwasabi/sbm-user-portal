@@ -48,7 +48,22 @@ function readCookieValue(name: string): string | null {
 function writeUtmCookie(value: UtmAttribution): void {
   if (typeof document === 'undefined') return;
   const serialized = encodeURIComponent(JSON.stringify(value));
-  document.cookie = `${UTM_ATTRIBUTION_COOKIE}=${serialized}; Max-Age=${UTM_COOKIE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax`;
+  const domain = utmCookieDomain();
+  const domainAttr = domain ? `; Domain=${domain}` : '';
+  document.cookie = `${UTM_ATTRIBUTION_COOKIE}=${serialized}; Max-Age=${UTM_COOKIE_MAX_AGE_SECONDS}; Path=/; SameSite=Lax${domainAttr}`;
+}
+
+/** Share first-touch UTMs across *.slowburnmethod.in (portal, forms, marketing). */
+function utmCookieDomain(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const host = window.location.hostname;
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) {
+    return undefined;
+  }
+  if (host === 'slowburnmethod.in' || host.endsWith('.slowburnmethod.in')) {
+    return '.slowburnmethod.in';
+  }
+  return undefined;
 }
 
 export function readUtmAttributionFromCookie(): UtmAttribution | null {
