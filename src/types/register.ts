@@ -23,6 +23,9 @@ export type RegisterStartInput = {
   utm_medium?: string;
   utm_campaign?: string;
   utm_content?: string;
+  gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
 };
 
 export type RegisterVerifyState = {

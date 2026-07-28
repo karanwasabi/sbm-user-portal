@@ -200,7 +200,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
         whatsapp: whatsappE164,
         country_code: countryIso,
         dpdp_consent: true,
-        ...readUtmAttributionFromCookie(),
+        ...(readUtmAttributionFromCookie() ?? {}),
         ...(discountCodeEnabled && appliedPromo ? { promo_code: appliedPromo } : {}),
       });
 

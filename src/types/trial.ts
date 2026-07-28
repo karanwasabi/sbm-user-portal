@@ -71,4 +71,7 @@ export type TrialCheckoutStartRequest = {
   utm_medium?: string;
   utm_campaign?: string;
   utm_content?: string;
+  gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
 };

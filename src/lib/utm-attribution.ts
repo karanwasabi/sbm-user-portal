@@ -6,9 +6,12 @@ export type UtmAttribution = {
   utm_medium?: string;
   utm_campaign?: string;
   utm_content?: string;
+  gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
 };
 
-function normalizeUtmValue(value: string | null): string | undefined {
+function normalizeAttributionValue(value: string | null): string | undefined {
   if (!value) return undefined;
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
@@ -18,19 +21,32 @@ function parseUtmCookie(value?: string): UtmAttribution | null {
   if (!value?.trim()) return null;
   try {
     const parsed = JSON.parse(value) as UtmAttribution;
-    return {
-      utm_source: normalizeUtmValue(parsed.utm_source ?? null),
-      utm_medium: normalizeUtmValue(parsed.utm_medium ?? null),
-      utm_campaign: normalizeUtmValue(parsed.utm_campaign ?? null),
-      utm_content: normalizeUtmValue(parsed.utm_content ?? null),
+    const merged: UtmAttribution = {
+      utm_source: normalizeAttributionValue(parsed.utm_source ?? null),
+      utm_medium: normalizeAttributionValue(parsed.utm_medium ?? null),
+      utm_campaign: normalizeAttributionValue(parsed.utm_campaign ?? null),
+      utm_content: normalizeAttributionValue(parsed.utm_content ?? null),
+      gclid: normalizeAttributionValue(parsed.gclid ?? null),
+      gbraid: normalizeAttributionValue(parsed.gbraid ?? null),
+      wbraid: normalizeAttributionValue(parsed.wbraid ?? null),
     };
+    return hasAnyAttribution(merged) ? merged : null;
   } catch {
     return null;
   }
 }
 
-function hasAnyUtm(value: UtmAttribution | null): value is UtmAttribution {
-  return Boolean(value && (value.utm_source || value.utm_medium || value.utm_campaign || value.utm_content));
+function hasAnyAttribution(value: UtmAttribution | null): value is UtmAttribution {
+  return Boolean(
+    value &&
+    (value.utm_source ||
+      value.utm_medium ||
+      value.utm_campaign ||
+      value.utm_content ||
+      value.gclid ||
+      value.gbraid ||
+      value.wbraid)
+  );
 }
 
 function readCookieValue(name: string): string | null {
@@ -75,10 +91,13 @@ export function captureUtmAttributionFromLocation(): UtmAttribution | null {
 
   const url = new URL(window.location.href);
   const fromUrl: UtmAttribution = {
-    utm_source: normalizeUtmValue(url.searchParams.get('utm_source')),
-    utm_medium: normalizeUtmValue(url.searchParams.get('utm_medium')),
-    utm_campaign: normalizeUtmValue(url.searchParams.get('utm_campaign')),
-    utm_content: normalizeUtmValue(url.searchParams.get('utm_content')),
+    utm_source: normalizeAttributionValue(url.searchParams.get('utm_source')),
+    utm_medium: normalizeAttributionValue(url.searchParams.get('utm_medium')),
+    utm_campaign: normalizeAttributionValue(url.searchParams.get('utm_campaign')),
+    utm_content: normalizeAttributionValue(url.searchParams.get('utm_content')),
+    gclid: normalizeAttributionValue(url.searchParams.get('gclid')),
+    gbraid: normalizeAttributionValue(url.searchParams.get('gbraid')),
+    wbraid: normalizeAttributionValue(url.searchParams.get('wbraid')),
   };
 
   const existing = readUtmAttributionFromCookie();
@@ -87,9 +106,12 @@ export function captureUtmAttributionFromLocation(): UtmAttribution | null {
     utm_medium: existing?.utm_medium ?? fromUrl.utm_medium,
     utm_campaign: existing?.utm_campaign ?? fromUrl.utm_campaign,
     utm_content: existing?.utm_content ?? fromUrl.utm_content,
+    gclid: existing?.gclid ?? fromUrl.gclid,
+    gbraid: existing?.gbraid ?? fromUrl.gbraid,
+    wbraid: existing?.wbraid ?? fromUrl.wbraid,
   };
 
-  if (!hasAnyUtm(merged)) {
+  if (!hasAnyAttribution(merged)) {
     return null;
   }
   writeUtmCookie(merged);
