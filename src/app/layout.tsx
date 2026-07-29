@@ -6,6 +6,7 @@ import { siteMetadata } from '@/lib/site-metadata';
 import { GoogleAnalytics } from '@/components/analytics/google-analytics';
 import { MetaPixelPageViews } from '@/components/analytics/meta-pixel-pageviews';
 import { MetaPixel } from '@/components/analytics/meta-pixel';
+import { UtmCapture } from '@/components/analytics/utm-capture';
 import { cn } from '@/lib/utils';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
@@ -30,6 +31,7 @@ export default function RootLayout({
         <MetaPixel />
         <Suspense fallback={null}>
           <MetaPixelPageViews />
+          <UtmCapture />
         </Suspense>
         {children}
       </body>

@@ -19,6 +19,7 @@ import { cn } from '@/lib/cn';
 import { trackMetaBeginCheckout, trackMetaPurchase } from '@/lib/meta-pixel';
 import { formatInrFromPaise } from '@/lib/money';
 import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalPurchase } from '@/lib/gtag';
+import { readUtmAttributionFromCookie } from '@/lib/utm-attribution';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
 import {
@@ -416,6 +417,7 @@ export function RegisterCheckoutSection({
         country: billingCountry,
       },
       promo_code: appliedPromo || undefined,
+      ...(readUtmAttributionFromCookie() ?? {}),
     };
   }, [
     addressLine1,

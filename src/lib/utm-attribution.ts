@@ -10,6 +10,7 @@ export type UtmAttribution = {
   gclid?: string;
   gbraid?: string;
   wbraid?: string;
+  fbclid?: string;
 };
 
 function normalizeAttributionValue(value: string | null): string | undefined {
@@ -31,6 +32,7 @@ function parseUtmCookie(value?: string): UtmAttribution | null {
       gclid: normalizeAttributionValue(parsed.gclid ?? null),
       gbraid: normalizeAttributionValue(parsed.gbraid ?? null),
       wbraid: normalizeAttributionValue(parsed.wbraid ?? null),
+      fbclid: normalizeAttributionValue(parsed.fbclid ?? null),
     };
     return hasAnyAttribution(merged) ? merged : null;
   } catch {
@@ -48,7 +50,8 @@ function hasAnyAttribution(value: UtmAttribution | null): value is UtmAttributio
       value.utm_term ||
       value.gclid ||
       value.gbraid ||
-      value.wbraid)
+      value.wbraid ||
+      value.fbclid)
   );
 }
 
@@ -102,6 +105,7 @@ export function captureUtmAttributionFromLocation(): UtmAttribution | null {
     gclid: normalizeAttributionValue(url.searchParams.get('gclid')),
     gbraid: normalizeAttributionValue(url.searchParams.get('gbraid')),
     wbraid: normalizeAttributionValue(url.searchParams.get('wbraid')),
+    fbclid: normalizeAttributionValue(url.searchParams.get('fbclid')),
   };
 
   const existing = readUtmAttributionFromCookie();
@@ -114,6 +118,7 @@ export function captureUtmAttributionFromLocation(): UtmAttribution | null {
     gclid: existing?.gclid ?? fromUrl.gclid,
     gbraid: existing?.gbraid ?? fromUrl.gbraid,
     wbraid: existing?.wbraid ?? fromUrl.wbraid,
+    fbclid: existing?.fbclid ?? fromUrl.fbclid,
   };
 
   if (!hasAnyAttribution(merged)) {

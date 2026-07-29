@@ -69,9 +69,11 @@ function parseUtmAttributionCookie(value?: string): UtmAttribution | null {
       utm_medium: parsed.utm_medium?.trim() || undefined,
       utm_campaign: parsed.utm_campaign?.trim() || undefined,
       utm_content: parsed.utm_content?.trim() || undefined,
+      utm_term: parsed.utm_term?.trim() || undefined,
       gclid: parsed.gclid?.trim() || undefined,
       gbraid: parsed.gbraid?.trim() || undefined,
       wbraid: parsed.wbraid?.trim() || undefined,
+      fbclid: parsed.fbclid?.trim() || undefined,
     };
   } catch {
     return null;

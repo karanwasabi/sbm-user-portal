@@ -10,8 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/cn';
+import { trackMetaBeginCheckout, trackMetaPurchase } from '@/lib/meta-pixel';
 import { formatInrFromPaise } from '@/lib/money';
 import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalPurchase } from '@/lib/gtag';
+import { readUtmAttributionFromCookie } from '@/lib/utm-attribution';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { openRazorpayEnrollmentCheckout } from '@/lib/razorpay-checkout';
@@ -270,6 +272,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
       pricingRegion,
       promoCode: activeQuote.promo_code,
     });
+    trackMetaBeginCheckout({ valuePaise: activeQuote.total_paise });
 
     try {
       const start = await startCheckout({
@@ -289,6 +292,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
           country: billingCountry,
         },
         promo_code: appliedPromo || undefined,
+        ...(readUtmAttributionFromCookie() ?? {}),
       });
 
       lastCheckoutRef.current = {
@@ -306,6 +310,11 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
           cohortName: start.cohort_name || preview.cohort_name,
           pricingRegion,
           promoCode: activeQuote.promo_code,
+        });
+        trackMetaPurchase({
+          eventID: start.checkout_session_id,
+          valuePaise: start.amount_paise,
+          cohortName: start.cohort_name || preview.cohort_name,
         });
         onPaid?.();
         router.push(PORTAL_HOME_PATH);
@@ -328,6 +337,11 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
               cohortName: checkout.cohortName,
               pricingRegion,
               promoCode: checkout.promoCode,
+            });
+            trackMetaPurchase({
+              eventID: checkout.sessionId,
+              valuePaise: checkout.valuePaise,
+              cohortName: checkout.cohortName,
             });
           }
           onPaid?.();
