@@ -6,6 +6,7 @@ export type UtmAttribution = {
   utm_medium?: string;
   utm_campaign?: string;
   utm_content?: string;
+  utm_term?: string;
   gclid?: string;
   gbraid?: string;
   wbraid?: string;
@@ -26,6 +27,7 @@ function parseUtmCookie(value?: string): UtmAttribution | null {
       utm_medium: normalizeAttributionValue(parsed.utm_medium ?? null),
       utm_campaign: normalizeAttributionValue(parsed.utm_campaign ?? null),
       utm_content: normalizeAttributionValue(parsed.utm_content ?? null),
+      utm_term: normalizeAttributionValue(parsed.utm_term ?? null),
       gclid: normalizeAttributionValue(parsed.gclid ?? null),
       gbraid: normalizeAttributionValue(parsed.gbraid ?? null),
       wbraid: normalizeAttributionValue(parsed.wbraid ?? null),
@@ -43,6 +45,7 @@ function hasAnyAttribution(value: UtmAttribution | null): value is UtmAttributio
       value.utm_medium ||
       value.utm_campaign ||
       value.utm_content ||
+      value.utm_term ||
       value.gclid ||
       value.gbraid ||
       value.wbraid)
@@ -95,6 +98,7 @@ export function captureUtmAttributionFromLocation(): UtmAttribution | null {
     utm_medium: normalizeAttributionValue(url.searchParams.get('utm_medium')),
     utm_campaign: normalizeAttributionValue(url.searchParams.get('utm_campaign')),
     utm_content: normalizeAttributionValue(url.searchParams.get('utm_content')),
+    utm_term: normalizeAttributionValue(url.searchParams.get('utm_term')),
     gclid: normalizeAttributionValue(url.searchParams.get('gclid')),
     gbraid: normalizeAttributionValue(url.searchParams.get('gbraid')),
     wbraid: normalizeAttributionValue(url.searchParams.get('wbraid')),
@@ -106,6 +110,7 @@ export function captureUtmAttributionFromLocation(): UtmAttribution | null {
     utm_medium: existing?.utm_medium ?? fromUrl.utm_medium,
     utm_campaign: existing?.utm_campaign ?? fromUrl.utm_campaign,
     utm_content: existing?.utm_content ?? fromUrl.utm_content,
+    utm_term: existing?.utm_term ?? fromUrl.utm_term,
     gclid: existing?.gclid ?? fromUrl.gclid,
     gbraid: existing?.gbraid ?? fromUrl.gbraid,
     wbraid: existing?.wbraid ?? fromUrl.wbraid,
