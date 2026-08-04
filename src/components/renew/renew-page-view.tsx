@@ -265,6 +265,53 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     }
   }, [selectedPlan]);
 
+  const refreshTrialPromoQuote = useCallback(
+    async (promo: string) => {
+      if (!category || !isNewUserCategory(category)) return;
+      setQuotePending(true);
+      setPromoError(null);
+      try {
+        const quote = await postRenewCheckoutQuote({
+          category,
+          plan_key: 'trial_3m',
+          country_code: countryIso,
+          promo_code: promo,
+        });
+        setAppliedPromo(promo);
+        setQuotedTrialQuote(quote as TrialQuote);
+      } catch (err) {
+        setPromoError(err instanceof Error ? err.message : 'Failed to apply discount code.');
+        setAppliedPromo('');
+        setQuotedTrialQuote(null);
+        throw err;
+      } finally {
+        setQuotePending(false);
+      }
+    },
+    [category, countryIso]
+  );
+
+  useEffect(() => {
+    if (!isNewUserCategory(category) || selectedPlan !== 'trial_3m' || !appliedPromo) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        await refreshTrialPromoQuote(appliedPromo);
+      } catch {
+        // refreshTrialPromoQuote sets promoError / clears promo on failure
+      }
+      if (cancelled) return;
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // Re-quote promo when billing country changes; initial apply is handled by handleApplyPromo.
+  }, [countryIso]);
+
   const trialPreviewQuote = selectedPlan ? trialQuotesByProduct[selectedPlan] : null;
 
   const planPickerOptions = useMemo((): RenewPlanPickerOption[] => {
@@ -315,6 +362,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   const displayTrialQuote = selectedPlan === 'trial_3m' && appliedPromo ? quotedTrialQuote : trialPreviewQuote;
   const displayQuote = isNewUserCategory(category) ? displayTrialQuote : renewalQuote;
   const displayTotalPaise = displayQuote?.total_paise;
+  const newUserPricingLoading =
+    isNewUserCategory(category) && (loadingTrialQuotes || quotePending || planOptionsLoading);
   const isNewUser = isNewUserCategory(category);
   const primaryCtaLabel = submitting ? 'Initiating payment…' : isNewUser ? 'Enroll' : 'Renew';
 
@@ -347,23 +396,10 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
       return;
     }
     setPromoCode(normalized);
-    setPromoError(null);
-    setQuotePending(true);
     try {
-      const quote = await postRenewCheckoutQuote({
-        category: category!,
-        plan_key: 'trial_3m',
-        country_code: countryIso,
-        promo_code: normalized,
-      });
-      setAppliedPromo(normalized);
-      setQuotedTrialQuote(quote as TrialQuote);
-    } catch (err) {
-      setPromoError(err instanceof Error ? err.message : 'Failed to apply discount code.');
-      setAppliedPromo('');
-      setQuotedTrialQuote(null);
-    } finally {
-      setQuotePending(false);
+      await refreshTrialPromoQuote(normalized);
+    } catch {
+      // refreshTrialPromoQuote sets error state
     }
   };
 
@@ -703,7 +739,11 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                   </Field>
                 ) : null}
 
-                {displayQuote && preview.starts_on ? (
+                {newUserPricingLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-brand" />
+                  </div>
+                ) : displayQuote && preview.starts_on ? (
                   isNewUserCategory(category) && displayTrialQuote ? (
                     <EnrollPricingSummary
                       product={selectedPlan as TrialProduct}
@@ -721,7 +761,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                   variant="primary"
                   size="lg"
                   className="w-full"
-                  disabled={submitting || !displayQuote}
+                  disabled={submitting || !displayQuote || newUserPricingLoading}
                   onClick={() => void handleSubmit()}
                   rightIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
                 >
