@@ -225,6 +225,14 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     }
   };
 
+  const handleDialIsoChange = (iso: string) => {
+    whatsappDialIsoRef.current = iso;
+    setWhatsappDialIso(iso);
+    if (!countryManuallySet && iso) {
+      setCountryIso(iso);
+    }
+  };
+
   const handleSubmit = async () => {
     setFormError(null);
     if (!classification || !category) {
@@ -448,7 +456,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                           {...promoCodeInputProps}
                         />
                         <Button
-                          variant="secondary"
+                          type="button"
+                          variant="light"
                           size="md"
                           onClick={() => void handleApplyPromo()}
                           disabled={quotePending}
@@ -480,28 +489,40 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                 <PhoneInput
                   value={whatsapp}
                   onChange={setWhatsapp}
-                  dialIso={whatsappDialIso}
-                  onDialIsoChange={(iso) => {
-                    whatsappDialIsoRef.current = iso;
-                    setWhatsappDialIso(iso);
-                    if (!countryManuallySet && iso) setCountryIso(iso);
-                  }}
-                  defaultDialCode={getCountryDialCode(countryIso)}
+                  countries={countries}
+                  suggestedCountryIso={suggestedCountryIso}
+                  preferredDialIso={whatsappDialIso}
+                  onDialIsoChange={handleDialIsoChange}
+                  className="flex-col sm:flex-row sm:items-start"
+                  dialCodeClassName="w-full sm:w-35 sm:shrink-0"
+                  mobileClassName="w-full sm:flex-1"
                 />
               </Field>
               <Field label="Country">
                 <CountryCombobox
                   countries={countries}
                   value={countryIso}
-                  onChange={(iso) => {
-                    setCountryIso(iso);
+                  onChange={(value) => {
                     setCountryManuallySet(true);
+                    setCountryIso(value);
+                    const dial = getCountryDialCode(value);
+                    if (dial && !whatsapp.trim()) {
+                      whatsappDialIsoRef.current = value;
+                      setWhatsappDialIso(value);
+                    }
                   }}
                 />
               </Field>
             </div>
 
-            <EnrollConsentCheckbox checked={dpdpConsent} onChange={setDpdpConsent} error={consentError} />
+            <EnrollConsentCheckbox
+              checked={dpdpConsent}
+              onChange={(checked) => {
+                setDpdpConsent(checked);
+                if (checked) setConsentError(false);
+              }}
+              error={consentError}
+            />
 
             {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
 
