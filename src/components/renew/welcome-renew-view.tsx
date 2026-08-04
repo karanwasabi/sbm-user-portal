@@ -15,7 +15,7 @@ type WelcomeRenewViewProps = {
 };
 
 function isNewSignupRenewCategory(category?: RenewCategory | string | null) {
-  return category === 'new_user' || category === 'new_lead_no_sub' || category === 'returnee_no_sub';
+  return category === 'new_user' || category === 'new_lead_no_sub';
 }
 
 function formatAccessUntilLabel(iso?: string | null): string | null {
@@ -34,7 +34,7 @@ export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
   useEffect(() => {
     clearRenewDraft();
     if (!sessionId) {
-      setStatus('success');
+      setStatus('pending');
       return;
     }
 

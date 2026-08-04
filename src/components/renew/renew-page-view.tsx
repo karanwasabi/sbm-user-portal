@@ -20,12 +20,13 @@ import { isValidEmailFormat } from '@/lib/email-validation';
 import { trackPortalCheckoutAbandoned } from '@/lib/gtag';
 import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
-import { readRenewDraft, saveRenewDraft } from '@/lib/renew-draft';
+import { readRenewDraft, saveRenewDraft, clearRenewDraft } from '@/lib/renew-draft';
 import { openRazorpayOrderCheckout } from '@/lib/razorpay-checkout';
 import { toTitleCase } from '@/lib/title-case';
 import { captureUtmAttributionFromLocation, readUtmAttributionFromCookie } from '@/lib/utm-attribution';
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
 import { trackPortalBeginCheckout } from '@/lib/gtag';
+import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
 import { trackMetaBeginCheckout } from '@/lib/meta-pixel';
 import {
   getRenewCheckoutPreview,
@@ -73,6 +74,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   const [classification, setClassification] = useState<RenewCheckEmailResponse | null>(null);
   const [preview, setPreview] = useState<RenewCheckoutPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const classifiedEmailRef = useRef('');
@@ -105,17 +107,30 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     pricingRegion: string;
   } | null>(null);
 
-  const clearClassification = useCallback(() => {
-    classifiedEmailRef.current = '';
-    setClassification(null);
-    setPreview(null);
-    setSelectedPlan('');
-    setAppliedPromo('');
-    setQuotedTrialQuote(null);
-    setTrialQuotesByProduct({});
-    setPromoCode('');
-    setPromoError(null);
-  }, []);
+  const clearClassification = useCallback(
+    (resetProfile = false) => {
+      classifiedEmailRef.current = '';
+      setClassification(null);
+      setPreview(null);
+      setPreviewError(false);
+      setSelectedPlan('');
+      setAppliedPromo('');
+      setQuotedTrialQuote(null);
+      setTrialQuotesByProduct({});
+      setPromoCode('');
+      setPromoError(null);
+      if (resetProfile) {
+        setFirstName('');
+        setLastName('');
+        setWhatsapp('');
+        setCountryIso(suggestedCountryIso ?? 'IN');
+        setCountryManuallySet(false);
+        setWhatsappDialIso(suggestedCountryIso ?? 'IN');
+        whatsappDialIsoRef.current = suggestedCountryIso ?? 'IN';
+      }
+    },
+    [suggestedCountryIso]
+  );
 
   const classifyEmail = useCallback(
     async (trimmed: string): Promise<RenewCheckEmailResponse | null> => {
@@ -179,6 +194,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
 
     let cancelled = false;
     setLoadingPreview(true);
+    setPreviewError(false);
     void (async () => {
       try {
         const data = await getRenewCheckoutPreview(category, countryIso);
@@ -191,7 +207,10 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
           }
         }
       } catch {
-        if (!cancelled) toast({ message: 'Could not load pricing. Please refresh.', variant: 'error' });
+        if (!cancelled) {
+          setPreviewError(true);
+          toast({ message: 'Could not load pricing. Please refresh.', variant: 'error' });
+        }
       } finally {
         if (!cancelled) setLoadingPreview(false);
       }
@@ -229,6 +248,15 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
       cancelled = true;
     };
   }, [category, preview?.trial_products, countryIso]);
+
+  useEffect(() => {
+    if (selectedPlan !== 'trial_3m') {
+      setAppliedPromo('');
+      setQuotedTrialQuote(null);
+      setPromoCode('');
+      setPromoError(null);
+    }
+  }, [selectedPlan]);
 
   const trialPreviewQuote = selectedPlan ? trialQuotesByProduct[selectedPlan] : null;
 
@@ -286,7 +314,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) {
       setEmailError(null);
-      clearClassification();
+      clearClassification(true);
       return;
     }
     await classifyEmail(trimmed);
@@ -296,7 +324,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     setEmail(value);
     const normalized = value.trim().toLowerCase();
     if (classifiedEmailRef.current && normalized !== classifiedEmailRef.current) {
-      clearClassification();
+      clearClassification(true);
     }
     if (!normalized) {
       setEmailError(null);
@@ -425,11 +453,20 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
       };
 
       if (start.mock || !start.razorpay_key_id || !start.razorpay_order_id) {
+        trackCheckoutPurchaseOnce({
+          transactionId: start.checkout_session_id,
+          valuePaise: start.amount_paise,
+          cohortName: start.cohort_name,
+          pricingRegion,
+          trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
+        });
+        clearRenewDraft();
         const ok = await pollUntilRenewPaymentConfirmed(start.checkout_session_id);
         if (ok) {
           window.location.href = welcomeUrl;
         } else {
           setFormError('Payment could not be confirmed. Please try again.');
+          setSubmitting(false);
         }
         return;
       }
@@ -456,6 +493,17 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
           renewPlanKey: start.plan_key,
         },
         onSuccess: () => {
+          const checkout = lastCheckoutRef.current;
+          if (checkout) {
+            trackCheckoutPurchaseOnce({
+              transactionId: checkout.sessionId,
+              valuePaise: checkout.valuePaise,
+              cohortName: checkout.cohortName,
+              pricingRegion: checkout.pricingRegion,
+              trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
+            });
+          }
+          clearRenewDraft();
           window.location.href = welcomeUrl;
         },
         onDismiss: () => {
@@ -587,10 +635,14 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
               </div>
             ) : null}
 
-            {loadingPreview || !preview ? (
+            {loadingPreview ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-brand" />
               </div>
+            ) : previewError || !preview ? (
+              <p className="text-center text-sm text-slate-600">
+                Could not load plan options. Please refresh the page or try again later.
+              </p>
             ) : (
               <>
                 {planOptionsLoading ? (
