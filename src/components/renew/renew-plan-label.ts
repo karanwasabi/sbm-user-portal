@@ -3,7 +3,7 @@ export function renewPlanLabel(planKey: string): string {
     case 'trial_1m':
       return '1 month trial';
     case 'trial_3m':
-      return '3 months prepaid';
+      return '3 months program';
     case 'renewal_1m':
       return '1 month';
     case 'renewal_3m':
