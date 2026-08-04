@@ -90,7 +90,9 @@ export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
   return (
     <AuthLayout variant="account">
       <div className="mx-auto flex w-full max-w-[420px] flex-col items-center gap-4 py-2 text-center">
-        <SbmWordmark size="lg" showSubtitle={false} />
+        <div className="flex w-full justify-center overflow-x-auto">
+          <SbmWordmark size="lg" showSubtitle={false} />
+        </div>
 
         {status === 'loading' ? (
           <div className="flex items-center gap-2 py-8 text-sm text-slate-600">

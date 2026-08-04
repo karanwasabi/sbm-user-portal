@@ -9,7 +9,7 @@ type AuthLayoutProps = {
 };
 
 const shellClassName: Record<AuthLayoutVariant, string> = {
-  account: 'items-center justify-center p-6',
+  account: 'items-start justify-center px-6 pt-6 pb-10 sm:pt-8',
   onboarding: 'items-center justify-center p-6',
   register: 'items-start justify-center px-3 py-4 sm:px-6 sm:py-8',
 };

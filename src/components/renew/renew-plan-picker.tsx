@@ -8,6 +8,7 @@ import { formatInrFromPaise } from '@/lib/money';
 export type RenewPlanPickerOption = {
   planKey: string;
   basePaise: number;
+  discountPaise?: number;
   discountLabel?: string;
   pricingRegion?: 'domestic' | 'international';
   months?: number;
@@ -37,8 +38,13 @@ export function RenewPlanPicker({ options, selectedPlanKey, onSelect }: RenewPla
         {options.map((option) => {
           const selected = selectedPlanKey === option.planKey;
           const isDomestic = option.pricingRegion === 'domestic';
+          const discountPaise = option.discountPaise ?? 0;
+          const hasDiscount = discountPaise > 0;
+          const discountedBasePaise = option.basePaise - discountPaise;
           const perMonthPaise =
-            option.months && option.months > 1 ? Math.round(option.basePaise / option.months) : null;
+            option.months && option.months > 1
+              ? Math.round((hasDiscount ? discountedBasePaise : option.basePaise) / option.months)
+              : null;
 
           return (
             <button
@@ -75,9 +81,21 @@ export function RenewPlanPicker({ options, selectedPlanKey, onSelect }: RenewPla
               </div>
 
               <div className="mt-4 flex flex-col gap-0.5">
-                <p className="text-[1.65rem] leading-none font-extrabold tracking-tight text-slate-900">
-                  {formatInrFromPaise(option.basePaise)}
-                </p>
+                {hasDiscount ? (
+                  <>
+                    <p className="text-sm leading-none font-semibold text-slate-400 line-through">
+                      {formatInrFromPaise(option.basePaise)}
+                      {isDomestic ? <span className="text-xs font-medium"> + GST</span> : null}
+                    </p>
+                    <p className="text-[1.65rem] leading-none font-extrabold tracking-tight text-success">
+                      {formatInrFromPaise(discountedBasePaise)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-[1.65rem] leading-none font-extrabold tracking-tight text-slate-900">
+                    {formatInrFromPaise(option.basePaise)}
+                  </p>
+                )}
                 {isDomestic ? <p className="text-sm font-semibold text-slate-500">+ GST</p> : null}
                 {perMonthPaise ? (
                   <p className="text-xs font-medium text-slate-500">{formatInrFromPaise(perMonthPaise)}/month</p>

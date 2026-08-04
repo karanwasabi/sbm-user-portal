@@ -240,9 +240,12 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
       for (const planKey of preview.trial_products ?? []) {
         const quote = trialQuotesByProduct[planKey];
         if (!quote) continue;
+        const discountPaise = quote.discount_paise ?? 0;
         options.push({
           planKey,
           basePaise: quote.base_paise,
+          discountPaise: discountPaise > 0 ? discountPaise : undefined,
+          discountLabel: planKey === 'trial_3m' && discountPaise > 0 ? '15% off' : undefined,
           pricingRegion: quote.pricing_region,
         });
       }
@@ -276,6 +279,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   const displayTrialQuote = selectedPlan === 'trial_3m' && appliedPromo ? quotedTrialQuote : trialPreviewQuote;
   const displayQuote = isNewUserCategory(category) ? displayTrialQuote : renewalQuote;
   const displayTotalPaise = displayQuote?.total_paise;
+  const isNewUser = isNewUserCategory(category);
+  const primaryCtaLabel = submitting ? 'Initiating payment…' : isNewUser ? 'Enroll' : 'Renew';
 
   const handleEmailBlur = async () => {
     const trimmed = email.trim().toLowerCase();
@@ -471,8 +476,10 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   return (
     <AuthLayout variant="account">
       <div className="mx-auto flex w-full max-w-[420px] flex-col gap-5 py-2">
-        <div className="flex flex-col gap-1 text-center">
-          <SbmWordmark size="lg" showSubtitle={false} className="mx-auto" />
+        <div className="text-center">
+          <div className="mb-5 flex justify-center overflow-x-auto">
+            <SbmWordmark size="lg" showSubtitle={false} />
+          </div>
           <h1 className="text-xl font-bold text-slate-900">Renew Take Control</h1>
           <p className="text-sm text-slate-600">Enter your details below to renew your membership.</p>
         </div>
@@ -650,7 +657,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                   onClick={() => void handleSubmit()}
                   rightIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
                 >
-                  {submitting ? 'Initiating payment…' : 'Renew'}
+                  {primaryCtaLabel}
                 </Button>
               </>
             )}
