@@ -10,8 +10,9 @@ import { clearRenewDraft } from '@/lib/renew-draft';
 import { trackMetaPurchase } from '@/lib/meta-pixel';
 import {
   clearPendingCheckout,
+  checkoutRetryPath,
   readPendingCheckout,
-  trialEnrollRetryPath,
+  type PaymentReturnFlow,
   type PendingCheckoutState,
 } from '@/lib/payment-return';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
@@ -148,7 +149,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
 
           showRecovery({
             message: 'Payment was not completed. You were not charged — please try again.',
-            retryHref: flow === 'renew' ? '/renew' : trialEnrollRetryPath(destination),
+            retryHref: checkoutRetryPath(destination, flow as PaymentReturnFlow),
             showRetry: true,
           });
           return;
@@ -191,7 +192,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
         showRecovery({
           message:
             'We could not confirm your payment yet. If you received a payment confirmation email, you are all set. Otherwise please try again.',
-          retryHref: flow === 'renew' ? '/renew' : trialEnrollRetryPath(destination),
+          retryHref: checkoutRetryPath(destination, flow as PaymentReturnFlow),
           showRetry: true,
         });
         return;

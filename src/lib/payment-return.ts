@@ -74,3 +74,11 @@ export function trialEnrollRetryPath(destination: string): string {
   }
   return '/enroll';
 }
+
+/** Retry path after a failed public checkout payment return. */
+export function checkoutRetryPath(destination: string, flow?: PaymentReturnFlow): string {
+  if (flow === 'renew' || destination.includes('/welcome/renew')) {
+    return '/renew';
+  }
+  return trialEnrollRetryPath(destination);
+}
