@@ -7,6 +7,13 @@ import { EnrollPricingSummary } from '@/components/enroll/enroll-pricing-summary
 import { renewPlanLabel } from '@/components/renew/renew-plan-label';
 import { RenewPlanPicker, type RenewPlanPickerOption } from '@/components/renew/renew-plan-picker';
 import { RenewPricingSummary } from '@/components/renew/renew-pricing-summary';
+import {
+  isBlockedCategory,
+  isNewUserCategory,
+  isSubscribedProfileFieldLocked,
+  isTrialPlanOptionsLoading,
+  shouldClearPromoForPlan,
+} from '@/components/renew/renew-page-helpers';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { CountryCombobox } from '@/components/profile/country-combobox';
@@ -25,9 +32,9 @@ import { openRazorpayOrderCheckout } from '@/lib/razorpay-checkout';
 import { toTitleCase } from '@/lib/title-case';
 import { captureUtmAttributionFromLocation, readUtmAttributionFromCookie } from '@/lib/utm-attribution';
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
-import { trackPortalBeginCheckout } from '@/lib/gtag';
+import { trackPortalBeginCheckout, trackPortalSignUp } from '@/lib/gtag';
 import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
-import { trackMetaBeginCheckout } from '@/lib/meta-pixel';
+import { trackMetaBeginCheckout, trackMetaLead } from '@/lib/meta-pixel';
 import {
   getRenewCheckoutPreview,
   getTrialCheckoutPreview,
@@ -50,23 +57,6 @@ function formatAccessDate(iso?: string): string | null {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function isNewUserCategory(category: RenewCategory | null) {
-  return category === 'new_user' || category === 'new_lead_no_sub';
-}
-
-function isBlockedCategory(category: RenewCategory | null) {
-  return category === 'newbie_auto_renew' || category === 'member_auto_renew';
-}
-
-function isSubscribedLeadCategory(category: RenewCategory | null) {
-  if (!category) return false;
-  return !isNewUserCategory(category) && category !== 'returnee_no_sub';
-}
-
-function isSubscribedProfileFieldLocked(category: RenewCategory | null, prefilledValue?: string) {
-  return isSubscribedLeadCategory(category) && Boolean(prefilledValue?.trim());
 }
 
 export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewProps) {
@@ -97,6 +87,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   const [quotePending, setQuotePending] = useState(false);
   const [quotedTrialQuote, setQuotedTrialQuote] = useState<TrialQuote | null>(null);
   const [trialQuotesByProduct, setTrialQuotesByProduct] = useState<Record<string, TrialQuote>>({});
+  const [trialQuotesError, setTrialQuotesError] = useState(false);
+  const [loadingTrialQuotes, setLoadingTrialQuotes] = useState(false);
 
   const [whatsappDialIso, setWhatsappDialIso] = useState(suggestedCountryIso ?? 'IN');
   const whatsappDialIsoRef = useRef(suggestedCountryIso);
@@ -117,6 +109,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
       setAppliedPromo('');
       setQuotedTrialQuote(null);
       setTrialQuotesByProduct({});
+      setTrialQuotesError(false);
+      setLoadingTrialQuotes(false);
       setPromoCode('');
       setPromoError(null);
       if (resetProfile) {
@@ -224,11 +218,15 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   useEffect(() => {
     if (!isNewUserCategory(category) || !preview?.trial_products?.length) {
       setTrialQuotesByProduct({});
+      setTrialQuotesError(false);
+      setLoadingTrialQuotes(false);
       return;
     }
 
     const products = preview.trial_products;
     let cancelled = false;
+    setLoadingTrialQuotes(true);
+    setTrialQuotesError(false);
     void (async () => {
       try {
         const pairs = await Promise.all(
@@ -238,19 +236,28 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
             return [planKey, quote] as const;
           })
         );
-        if (!cancelled) setTrialQuotesByProduct(Object.fromEntries(pairs));
+        if (!cancelled) {
+          setTrialQuotesByProduct(Object.fromEntries(pairs));
+          setTrialQuotesError(false);
+        }
       } catch {
-        if (!cancelled) setTrialQuotesByProduct({});
+        if (!cancelled) {
+          setTrialQuotesByProduct({});
+          setTrialQuotesError(true);
+          toast({ message: 'Could not load trial pricing. Please refresh.', variant: 'error' });
+        }
+      } finally {
+        if (!cancelled) setLoadingTrialQuotes(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [category, preview?.trial_products, countryIso]);
+  }, [category, preview?.trial_products, countryIso, toast]);
 
   useEffect(() => {
-    if (selectedPlan !== 'trial_3m') {
+    if (shouldClearPromoForPlan(selectedPlan)) {
       setAppliedPromo('');
       setQuotedTrialQuote(null);
       setPromoCode('');
@@ -292,10 +299,11 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     });
   }, [preview, category, trialQuotesByProduct, countryIso]);
 
-  const planOptionsLoading =
-    isNewUserCategory(category) &&
-    preview?.trial_products?.length &&
-    planPickerOptions.length < preview.trial_products.length;
+  const planOptionsLoading = isTrialPlanOptionsLoading(
+    category,
+    preview?.trial_products?.length ?? 0,
+    planPickerOptions.length
+  );
 
   const renewalQuote: RenewQuote | null = useMemo(() => {
     if (!preview?.plans || !selectedPlan) return null;
@@ -438,6 +446,10 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
       const pricingRegion = start.pricing_region === 'international' ? 'international' : 'domestic';
       const checkoutValuePaise = displayTotalPaise ?? start.amount_paise;
 
+      if (isNewUserCategory(activeCategory)) {
+        trackPortalSignUp('trial_enroll');
+        trackMetaLead();
+      }
       trackPortalBeginCheckout({
         valuePaise: checkoutValuePaise,
         cohortName: start.cohort_name,
@@ -645,7 +657,11 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
               </p>
             ) : (
               <>
-                {planOptionsLoading ? (
+                {trialQuotesError ? (
+                  <p className="text-center text-sm text-slate-600">
+                    Could not load trial plan pricing. Please refresh the page or try again later.
+                  </p>
+                ) : planOptionsLoading || loadingTrialQuotes ? (
                   <div className="flex justify-center py-6">
                     <Loader2 className="h-6 w-6 animate-spin text-brand" />
                   </div>
