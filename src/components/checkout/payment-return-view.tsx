@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
 import { clearEnrollDraft } from '@/lib/enroll-draft';
+import { clearRenewDraft } from '@/lib/renew-draft';
 import { trackMetaPurchase } from '@/lib/meta-pixel';
 import {
   clearPendingCheckout,
@@ -15,7 +16,12 @@ import {
 } from '@/lib/payment-return';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { pollUntilEnrolled } from '@/lib/razorpay-checkout';
-import { getTrialPaymentStatus, pollUntilTrialPaymentConfirmed } from '@/utils/client-api';
+import {
+  getRenewPaymentStatus,
+  getTrialPaymentStatus,
+  pollUntilRenewPaymentConfirmed,
+  pollUntilTrialPaymentConfirmed,
+} from '@/utils/client-api';
 
 type PaymentReturnViewProps = {
   error?: string | null;
@@ -67,6 +73,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
     const finish = () => {
       clearPendingCheckout();
       clearEnrollDraft();
+      clearRenewDraft();
       router.replace(destination);
       router.refresh();
     };
@@ -87,19 +94,32 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
       return;
     }
 
+    if (flow === 'renew' && !sessionId) {
+      finish();
+      return;
+    }
+
     let cancelled = false;
     void (async () => {
       const pollTrial = (timeoutMs: number) =>
         pollUntilTrialPaymentConfirmed(sessionId, { intervalMs: 1500, timeoutMs });
+      const pollRenew = (timeoutMs: number) =>
+        pollUntilRenewPaymentConfirmed(sessionId, { intervalMs: 1500, timeoutMs });
       const pollAuth = (timeoutMs: number) => pollUntilEnrolled({ intervalMs: 1500, timeoutMs });
-      const pollEnrolled = () => (flow === 'trial-enroll' ? pollTrial(NORMAL_POLL_MS) : pollAuth(NORMAL_POLL_MS));
+      const pollFulfilled = () => {
+        if (flow === 'trial-enroll') return pollTrial(NORMAL_POLL_MS);
+        if (flow === 'renew') return pollRenew(NORMAL_POLL_MS);
+        return pollAuth(NORMAL_POLL_MS);
+      };
 
       if (confirmFailed) {
-        const enrolled = await (flow === 'trial-enroll'
+        const fulfilled = await (flow === 'trial-enroll'
           ? pollTrial(CONFIRM_FAILED_POLL_MS)
-          : pollAuth(CONFIRM_FAILED_POLL_MS));
+          : flow === 'renew'
+            ? pollRenew(CONFIRM_FAILED_POLL_MS)
+            : pollAuth(CONFIRM_FAILED_POLL_MS));
         if (cancelled) return;
-        if (enrolled) {
+        if (fulfilled) {
           if (sessionId) {
             trackTrialPurchaseFromPending(sessionId, pending);
           }
@@ -107,11 +127,16 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
           return;
         }
 
-        if (flow === 'trial-enroll') {
+        if (flow === 'trial-enroll' || flow === 'renew') {
           let paid = false;
           try {
-            const status = await getTrialPaymentStatus(sessionId);
-            paid = status.enrolled;
+            if (flow === 'renew') {
+              const status = await getRenewPaymentStatus(sessionId);
+              paid = status.fulfilled;
+            } else {
+              const status = await getTrialPaymentStatus(sessionId);
+              paid = status.enrolled;
+            }
           } catch {
             // Treat as unpaid when status cannot be loaded.
           }
@@ -122,7 +147,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
 
           showRecovery({
             message: 'Payment was not completed. You were not charged — please try again.',
-            retryHref: trialEnrollRetryPath(destination),
+            retryHref: flow === 'renew' ? '/renew' : trialEnrollRetryPath(destination),
             showRetry: true,
           });
           return;
@@ -136,9 +161,9 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
         return;
       }
 
-      const enrolled = await pollEnrolled();
+      const fulfilled = await pollFulfilled();
       if (cancelled) return;
-      if (enrolled) {
+      if (fulfilled) {
         if (sessionId) {
           trackTrialPurchaseFromPending(sessionId, pending);
         }
@@ -147,7 +172,11 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
       }
 
       setMessage('Payment received. This is taking longer than usual — still confirming…');
-      const retry = await (flow === 'trial-enroll' ? pollTrial(NORMAL_RETRY_POLL_MS) : pollAuth(NORMAL_RETRY_POLL_MS));
+      const retry = await (flow === 'trial-enroll'
+        ? pollTrial(NORMAL_RETRY_POLL_MS)
+        : flow === 'renew'
+          ? pollRenew(NORMAL_RETRY_POLL_MS)
+          : pollAuth(NORMAL_RETRY_POLL_MS));
       if (cancelled) return;
       if (retry) {
         if (sessionId) {
@@ -157,11 +186,11 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
         return;
       }
 
-      if (flow === 'trial-enroll') {
+      if (flow === 'trial-enroll' || flow === 'renew') {
         showRecovery({
           message:
-            'We could not confirm enrollment yet. If you received a payment confirmation email, you are all set. Otherwise please try again.',
-          retryHref: trialEnrollRetryPath(destination),
+            'We could not confirm your payment yet. If you received a payment confirmation email, you are all set. Otherwise please try again.',
+          retryHref: flow === 'renew' ? '/renew' : trialEnrollRetryPath(destination),
           showRetry: true,
         });
         return;

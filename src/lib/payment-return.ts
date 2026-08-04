@@ -1,4 +1,9 @@
-export type PaymentReturnFlow = 'enrollment' | 'subscription-update' | 'subscription-continue' | 'trial-enroll';
+export type PaymentReturnFlow =
+  | 'enrollment'
+  | 'subscription-update'
+  | 'subscription-continue'
+  | 'trial-enroll'
+  | 'renew';
 
 export type PendingCheckoutState = {
   checkoutSessionId: string;
@@ -9,6 +14,7 @@ export type PendingCheckoutState = {
   cohortName?: string;
   pricingRegion?: string;
   trialProduct?: string;
+  renewPlanKey?: string;
 };
 
 export const PENDING_CHECKOUT_STORAGE_KEY = 'sbm_pending_checkout';

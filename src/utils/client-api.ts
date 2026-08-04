@@ -392,3 +392,88 @@ export async function continueTrialCheckout(): Promise<TrialCheckoutStartRespons
   const response = await clientApiFetch('/me/trial/checkout/continue', { method: 'POST' });
   return response.json() as Promise<TrialCheckoutStartResponse>;
 }
+
+export async function postRenewCheckEmail(email: string): Promise<import('@/types/renew').RenewCheckEmailResponse> {
+  const response = await publicApiFetch('/public/renew/check-email', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  return response.json() as Promise<import('@/types/renew').RenewCheckEmailResponse>;
+}
+
+export async function getRenewCheckoutPreview(
+  category: string,
+  countryIso: string
+): Promise<import('@/types/renew').RenewCheckoutPreview> {
+  const params = new URLSearchParams({ category, country_iso: countryIso });
+  const response = await publicApiFetch(`/public/renew/checkout-preview?${params.toString()}`);
+  return response.json() as Promise<import('@/types/renew').RenewCheckoutPreview>;
+}
+
+export async function postRenewCheckoutQuote(body: {
+  category: string;
+  plan_key: string;
+  country_code: string;
+  promo_code?: string;
+}): Promise<import('@/types/trial').TrialQuote> {
+  const response = await publicApiFetch('/public/renew/checkout-quote', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json()) as { quote: import('@/types/trial').TrialQuote };
+  return payload.quote;
+}
+
+export async function startRenewCheckout(
+  body: import('@/types/renew').RenewCheckoutStartRequest
+): Promise<import('@/types/renew').RenewCheckoutStartResponse> {
+  const response = await publicApiFetch('/public/renew/checkout/start', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return response.json() as Promise<import('@/types/renew').RenewCheckoutStartResponse>;
+}
+
+export async function getRenewPaymentStatus(sessionId: string): Promise<import('@/types/renew').RenewPaymentStatus> {
+  const response = await publicApiFetch(`/public/renew/payment-status?session_id=${encodeURIComponent(sessionId)}`);
+  return response.json() as Promise<import('@/types/renew').RenewPaymentStatus>;
+}
+
+export async function pollUntilRenewPaymentConfirmed(
+  sessionId: string,
+  options?: { intervalMs?: number; timeoutMs?: number }
+): Promise<boolean> {
+  const intervalMs = options?.intervalMs ?? 1500;
+  const timeoutMs = options?.timeoutMs ?? 120000;
+  const started = Date.now();
+
+  const check = async (): Promise<boolean> => {
+    try {
+      const result = await getRenewPaymentStatus(sessionId);
+      return result.fulfilled;
+    } catch {
+      return false;
+    }
+  };
+
+  if (await check()) return true;
+
+  while (Date.now() - started < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    if (await check()) return true;
+  }
+
+  return false;
+}
+
+export async function confirmRenewPaymentReturn(body: {
+  checkout_session_id: string;
+  razorpay_payment_id: string;
+  razorpay_order_id?: string;
+  razorpay_signature: string;
+}): Promise<void> {
+  await publicApiFetch('/public/renew/checkout/payment-return', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}

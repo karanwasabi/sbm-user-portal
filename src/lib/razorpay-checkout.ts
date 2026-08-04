@@ -3,6 +3,7 @@ import type { Enrollment } from '@/types/enrollment';
 import {
   abandonCheckout,
   confirmCheckoutPaymentReturn,
+  confirmRenewPaymentReturn,
   confirmTrialPaymentReturn,
   getMyEnrollments,
   syncCheckoutPayment,
@@ -358,11 +359,11 @@ type OpenOrderCheckoutOptions = {
   pricingRegion?: RazorpayPricingRegion;
   checkoutSessionId: string;
   returnDestination: string;
-  returnFlow?: 'trial-enroll' | 'enrollment';
+  returnFlow?: 'trial-enroll' | 'enrollment' | 'renew';
   prefill?: RazorpayPrefill;
   pendingCheckout?: Pick<
     import('@/lib/payment-return').PendingCheckoutState,
-    'valuePaise' | 'cohortName' | 'pricingRegion' | 'trialProduct'
+    'valuePaise' | 'cohortName' | 'pricingRegion' | 'trialProduct' | 'renewPlanKey'
   >;
   onSuccess: () => void;
   onDismiss?: () => void;
@@ -415,6 +416,13 @@ export async function openRazorpayOrderCheckout({
         try {
           if (returnFlow === 'trial-enroll') {
             await confirmTrialPaymentReturn({
+              checkout_session_id: checkoutSessionId,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id ?? orderId,
+              razorpay_signature: response.razorpay_signature,
+            });
+          } else if (returnFlow === 'renew') {
+            await confirmRenewPaymentReturn({
               checkout_session_id: checkoutSessionId,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id ?? orderId,
