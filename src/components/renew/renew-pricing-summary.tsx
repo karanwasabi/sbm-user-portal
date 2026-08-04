@@ -11,15 +11,21 @@ type RenewPricingSummaryProps = {
   planKey: string;
   quote: RenewQuote;
   startsOn: string;
+  /** When set, show extension from this date instead of cohort start (active renewers). */
+  renewFromDate?: string;
 };
 
-export function RenewPricingSummary({ planKey, quote, startsOn }: RenewPricingSummaryProps) {
+export function RenewPricingSummary({ planKey, quote, startsOn, renewFromDate }: RenewPricingSummaryProps) {
   const isDomestic = quote.pricing_region === 'domestic';
   const showGst = isDomestic;
   const hasDiscount = (quote.discount_paise ?? 0) > 0;
   const discountedBasePaise = quote.base_paise - (quote.discount_paise ?? 0);
   const showBreakdown = true;
   const detailLineClass = 'text-sm font-medium text-slate-500';
+  const renewFromLabel = renewFromDate ? formatShortStartDate(renewFromDate) : null;
+  const startsLabel = formatShortStartDate(startsOn);
+  const dateHeading = renewFromLabel ? 'Renews from' : 'Starts';
+  const dateLabel = renewFromLabel ?? startsLabel;
 
   return (
     <section
@@ -31,9 +37,9 @@ export function RenewPricingSummary({ planKey, quote, startsOn }: RenewPricingSu
           <div className="shrink-0 text-left">
             <div className="flex items-center gap-2">
               <CalendarDays className="h-4 w-4 shrink-0 text-brand" aria-hidden />
-              <p className={detailLineClass}>Starts</p>
+              <p className={detailLineClass}>{dateHeading}</p>
             </div>
-            <p className={`mt-0.5 pl-6 ${detailLineClass}`}>{formatShortStartDate(startsOn)}</p>
+            <p className={`mt-0.5 pl-6 ${detailLineClass}`}>{dateLabel}</p>
           </div>
           <div className="min-w-0 shrink text-right">
             <p

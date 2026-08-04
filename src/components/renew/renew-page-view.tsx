@@ -51,6 +51,14 @@ type RenewPageViewProps = {
   suggestedCountryIso?: string;
 };
 
+function buildRenewWelcomeUrl(sessionId: string, category?: RenewCategory): string {
+  const params = new URLSearchParams({ session: sessionId });
+  if (category) {
+    params.set('category', category);
+  }
+  return `/welcome/renew?${params.toString()}`;
+}
+
 function formatAccessDate(iso?: string): string | null {
   if (!iso) return null;
   const date = new Date(iso);
@@ -317,8 +325,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     return () => {
       cancelled = true;
     };
-    // Re-quote promo when billing country changes; initial apply is handled by handleApplyPromo.
-  }, [countryIso]);
+  }, [category, selectedPlan, appliedPromo, countryIso, refreshTrialPromoQuote]);
 
   const trialPreviewQuote = selectedPlan ? trialQuotesByProduct[selectedPlan] : null;
 
@@ -413,11 +420,15 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
       return;
     }
     setPromoCode(normalized);
-    try {
-      await refreshTrialPromoQuote(normalized);
-    } catch {
-      // refreshTrialPromoQuote sets error state
+    if (normalized === appliedPromo) {
+      try {
+        await refreshTrialPromoQuote(normalized);
+      } catch {
+        // refreshTrialPromoQuote sets error state
+      }
+      return;
     }
+    setAppliedPromo(normalized);
   };
 
   const handleDialIsoChange = (iso: string) => {
@@ -503,11 +514,13 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
         ...(appliedPromo ? { promo_code: appliedPromo } : {}),
       });
 
-      const welcomeUrl = `/welcome/renew?session=${encodeURIComponent(start.checkout_session_id)}`;
+      const checkoutIsNewUser = isNewUserCategory(activeCategory);
+      const welcomeUrl = buildRenewWelcomeUrl(start.checkout_session_id, start.category);
       const pricingRegion = start.pricing_region === 'international' ? 'international' : 'domestic';
       const checkoutValuePaise = start.amount_paise ?? displayTotalPaise;
+      const razorpayReturnFlow = checkoutIsNewUser ? 'trial-enroll' : 'renew';
 
-      if (isNewUserCategory(activeCategory)) {
+      if (checkoutIsNewUser) {
         trackPortalSignUp('trial_enroll');
         trackMetaLead();
       }
@@ -515,8 +528,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
         valuePaise: checkoutValuePaise,
         cohortName: start.cohort_name,
         pricingRegion,
-        trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
-        renewPlanKey: !isNewUser ? start.plan_key : undefined,
+        trialProduct: checkoutIsNewUser ? (selectedPlan as TrialProduct) : undefined,
+        renewPlanKey: !checkoutIsNewUser ? start.plan_key : undefined,
       });
       trackMetaBeginCheckout({ valuePaise: checkoutValuePaise });
 
@@ -533,8 +546,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
           valuePaise: start.amount_paise,
           cohortName: start.cohort_name,
           pricingRegion,
-          trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
-          renewPlanKey: !isNewUser ? start.plan_key : undefined,
+          trialProduct: checkoutIsNewUser ? (selectedPlan as TrialProduct) : undefined,
+          renewPlanKey: !checkoutIsNewUser ? start.plan_key : undefined,
         });
         clearRenewDraft();
         window.location.href = welcomeUrl;
@@ -549,7 +562,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
         pricingRegion: pricingRegion as 'domestic' | 'international',
         checkoutSessionId: start.checkout_session_id,
         returnDestination: welcomeUrl,
-        returnFlow: 'renew',
+        returnFlow: razorpayReturnFlow,
         prefill: {
           name: `${firstName} ${lastName}`.trim(),
           email: email.trim(),
@@ -560,8 +573,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
           valuePaise: start.amount_paise,
           cohortName: start.cohort_name,
           pricingRegion,
-          trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
-          renewPlanKey: !isNewUser ? start.plan_key : undefined,
+          trialProduct: checkoutIsNewUser ? (selectedPlan as TrialProduct) : undefined,
+          renewPlanKey: !checkoutIsNewUser ? start.plan_key : undefined,
         },
         onSuccess: () => {
           const checkout = lastCheckoutRef.current;
@@ -571,8 +584,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
               valuePaise: checkout.valuePaise,
               cohortName: checkout.cohortName,
               pricingRegion: checkout.pricingRegion,
-              trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
-              renewPlanKey: !isNewUser ? start.plan_key : undefined,
+              trialProduct: checkoutIsNewUser ? (selectedPlan as TrialProduct) : undefined,
+              renewPlanKey: !checkoutIsNewUser ? start.plan_key : undefined,
             });
           }
           clearRenewDraft();
@@ -584,8 +597,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
             valuePaise: start.amount_paise,
             cohortName: start.cohort_name,
             pricingRegion,
-            trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
-            renewPlanKey: !isNewUser ? start.plan_key : undefined,
+            trialProduct: checkoutIsNewUser ? (selectedPlan as TrialProduct) : undefined,
+            renewPlanKey: !checkoutIsNewUser ? start.plan_key : undefined,
           });
         },
       });
@@ -603,6 +616,11 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
       setSubmitting(false);
     }
   };
+
+  const renewFromDateIso =
+    category && !isNewUserCategory(category) && category !== 'returnee_no_sub' && classification?.access_until
+      ? classification.access_until.slice(0, 10)
+      : undefined;
 
   return (
     <AuthLayout variant="account">
@@ -817,7 +835,12 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                       shortStartDate
                     />
                   ) : renewalQuote ? (
-                    <RenewPricingSummary planKey={selectedPlan} quote={renewalQuote} startsOn={preview.starts_on} />
+                    <RenewPricingSummary
+                      planKey={selectedPlan}
+                      quote={renewalQuote}
+                      startsOn={preview.starts_on}
+                      renewFromDate={renewFromDateIso}
+                    />
                   ) : null
                 ) : null}
 

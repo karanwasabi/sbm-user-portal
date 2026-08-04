@@ -13,6 +13,7 @@ import type { RenewCategory } from '@/types/renew';
 
 type WelcomeRenewViewProps = {
   sessionId?: string;
+  categoryHint?: RenewCategory;
 };
 
 function isNewSignupRenewCategory(category?: RenewCategory | string | null) {
@@ -26,11 +27,11 @@ function formatAccessUntilLabel(iso?: string | null): string | null {
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
+export function WelcomeRenewView({ sessionId, categoryHint }: WelcomeRenewViewProps) {
   const [status, setStatus] = useState<'loading' | 'success' | 'pending'>('loading');
   const [startsOn, setStartsOn] = useState<string | null>(null);
   const [accessUntil, setAccessUntil] = useState<string | null>(null);
-  const [category, setCategory] = useState<RenewCategory | null>(null);
+  const [category, setCategory] = useState<RenewCategory | null>(categoryHint ?? null);
   const pollIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -57,13 +58,13 @@ export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
           setStatus('success');
           setStartsOn(result.starts_on ?? null);
           setAccessUntil(result.access_until ?? null);
-          setCategory((result.category as RenewCategory) ?? null);
+          setCategory((result.category as RenewCategory) || categoryHint || null);
           return;
         }
         setStatus('pending');
         setStartsOn(result.starts_on ?? null);
         setAccessUntil(result.access_until ?? null);
-        setCategory((result.category as RenewCategory) ?? null);
+        setCategory((result.category as RenewCategory) || categoryHint || null);
       } catch {
         if (!cancelled) setStatus('pending');
       }
@@ -81,7 +82,7 @@ export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
       stopPolling();
       window.clearTimeout(timeout);
     };
-  }, [sessionId]);
+  }, [sessionId, categoryHint]);
 
   const startLabel = startsOn ? formatShortStartDate(startsOn) : null;
   const accessUntilLabel = formatAccessUntilLabel(accessUntil);
