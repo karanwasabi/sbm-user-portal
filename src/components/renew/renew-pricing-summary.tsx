@@ -3,6 +3,7 @@
 import { CalendarDays } from 'lucide-react';
 import { renewPlanLabel } from '@/components/renew/renew-plan-label';
 import { cn } from '@/lib/cn';
+import { formatShortStartDate } from '@/lib/format-display-date';
 import { formatInrFromPaise } from '@/lib/money';
 import type { RenewQuote } from '@/types/renew';
 
@@ -11,12 +12,6 @@ type RenewPricingSummaryProps = {
   quote: RenewQuote;
   startsOn: string;
 };
-
-function formatStartDate(iso: string): string {
-  const date = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-}
 
 export function RenewPricingSummary({ planKey, quote, startsOn }: RenewPricingSummaryProps) {
   const isDomestic = quote.pricing_region === 'domestic';
@@ -38,7 +33,7 @@ export function RenewPricingSummary({ planKey, quote, startsOn }: RenewPricingSu
               <CalendarDays className="h-4 w-4 shrink-0 text-brand" aria-hidden />
               <p className={detailLineClass}>Starts</p>
             </div>
-            <p className={`mt-0.5 pl-6 ${detailLineClass}`}>{formatStartDate(startsOn)}</p>
+            <p className={`mt-0.5 pl-6 ${detailLineClass}`}>{formatShortStartDate(startsOn)}</p>
           </div>
           <div className="min-w-0 shrink text-right">
             <p

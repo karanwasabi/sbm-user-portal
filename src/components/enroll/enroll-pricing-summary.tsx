@@ -2,6 +2,7 @@
 
 import { CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { formatShortStartDate } from '@/lib/format-display-date';
 import { formatInrFromPaise } from '@/lib/money';
 import type { TrialProduct, TrialQuote } from '@/types/trial';
 
@@ -9,6 +10,7 @@ type EnrollPricingSummaryProps = {
   product: TrialProduct;
   quote: TrialQuote;
   startsOn: string;
+  shortStartDate?: boolean;
 };
 
 function formatStartDate(iso: string): string {
@@ -25,7 +27,7 @@ export function enrollProgramLabel(product: TrialProduct): string {
   return product === 'trial_1m' ? '1 month trial' : '3 months';
 }
 
-export function EnrollPricingSummary({ product, quote, startsOn }: EnrollPricingSummaryProps) {
+export function EnrollPricingSummary({ product, quote, startsOn, shortStartDate }: EnrollPricingSummaryProps) {
   const isDomestic = quote.pricing_region === 'domestic';
   const showGst = isDomestic;
   const hasDiscount = (quote.discount_paise ?? 0) > 0;
@@ -45,7 +47,9 @@ export function EnrollPricingSummary({ product, quote, startsOn }: EnrollPricing
               <CalendarDays className="h-4 w-4 shrink-0 text-brand" aria-hidden />
               <p className={detailLineClass}>Starts</p>
             </div>
-            <p className={`mt-0.5 pl-6 ${detailLineClass}`}>{formatStartDate(startsOn)}</p>
+            <p className={`mt-0.5 pl-6 ${detailLineClass}`}>
+              {shortStartDate ? formatShortStartDate(startsOn) : formatStartDate(startsOn)}
+            </p>
           </div>
           <div className="min-w-0 shrink text-right">
             <p

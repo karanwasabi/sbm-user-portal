@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { EnrollConsentCheckbox } from '@/components/enroll/enroll-consent-checkbox';
 import { EnrollPricingSummary } from '@/components/enroll/enroll-pricing-summary';
 import { renewPlanLabel } from '@/components/renew/renew-plan-label';
+import { RenewPlanPicker, type RenewPlanPickerOption } from '@/components/renew/renew-plan-picker';
 import { RenewPricingSummary } from '@/components/renew/renew-pricing-summary';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
@@ -16,7 +17,6 @@ import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
 import { getCountryDialCode } from '@/lib/country-dial-codes';
 import { isValidEmailFormat } from '@/lib/email-validation';
-import { formatInrFromPaise } from '@/lib/money';
 import { trackPortalCheckoutAbandoned } from '@/lib/gtag';
 import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
@@ -94,7 +94,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   const [promoError, setPromoError] = useState<string | null>(null);
   const [quotePending, setQuotePending] = useState(false);
   const [quotedTrialQuote, setQuotedTrialQuote] = useState<TrialQuote | null>(null);
-  const [trialPreviewQuote, setTrialPreviewQuote] = useState<TrialQuote | null>(null);
+  const [trialQuotesByProduct, setTrialQuotesByProduct] = useState<Record<string, TrialQuote>>({});
 
   const [whatsappDialIso, setWhatsappDialIso] = useState(suggestedCountryIso ?? 'IN');
   const whatsappDialIsoRef = useRef(suggestedCountryIso);
@@ -112,6 +112,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     setSelectedPlan('');
     setAppliedPromo('');
     setQuotedTrialQuote(null);
+    setTrialQuotesByProduct({});
     setPromoCode('');
     setPromoError(null);
   }, []);
@@ -202,25 +203,68 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   }, [category, countryIso, blocked, toast]);
 
   useEffect(() => {
-    if (!isNewUserCategory(category) || !selectedPlan) {
-      setTrialPreviewQuote(null);
+    if (!isNewUserCategory(category) || !preview?.trial_products?.length) {
+      setTrialQuotesByProduct({});
       return;
     }
-    const product = selectedPlan as TrialProduct;
+
+    const products = preview.trial_products;
     let cancelled = false;
     void (async () => {
       try {
-        const data = await getTrialCheckoutPreview(product);
-        const quote = countryIso === 'IN' ? data.domestic : data.international;
-        if (!cancelled) setTrialPreviewQuote(quote);
+        const pairs = await Promise.all(
+          products.map(async (planKey) => {
+            const data = await getTrialCheckoutPreview(planKey as TrialProduct);
+            const quote = countryIso === 'IN' ? data.domestic : data.international;
+            return [planKey, quote] as const;
+          })
+        );
+        if (!cancelled) setTrialQuotesByProduct(Object.fromEntries(pairs));
       } catch {
-        if (!cancelled) setTrialPreviewQuote(null);
+        if (!cancelled) setTrialQuotesByProduct({});
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [category, selectedPlan, countryIso]);
+  }, [category, preview?.trial_products, countryIso]);
+
+  const trialPreviewQuote = selectedPlan ? trialQuotesByProduct[selectedPlan] : null;
+
+  const planPickerOptions = useMemo((): RenewPlanPickerOption[] => {
+    if (!preview) return [];
+
+    if (isNewUserCategory(category)) {
+      const options: RenewPlanPickerOption[] = [];
+      for (const planKey of preview.trial_products ?? []) {
+        const quote = trialQuotesByProduct[planKey];
+        if (!quote) continue;
+        options.push({
+          planKey,
+          basePaise: quote.base_paise,
+          pricingRegion: quote.pricing_region,
+        });
+      }
+      return options;
+    }
+
+    return (preview.plans ?? []).map((plan) => {
+      const quote = countryIso === 'IN' ? plan.domestic : plan.international;
+      return {
+        planKey: plan.plan_key,
+        basePaise: quote.base_paise,
+        discountLabel: plan.discount_label,
+        pricingRegion: quote.pricing_region,
+        months: quote.months ?? quote.renewal_months,
+      };
+    });
+  }, [preview, category, trialQuotesByProduct, countryIso]);
+
+  const planOptionsLoading =
+    isNewUserCategory(category) &&
+    preview?.trial_products?.length &&
+    planPickerOptions.length < preview.trial_products.length;
 
   const renewalQuote: RenewQuote | null = useMemo(() => {
     if (!preview?.plans || !selectedPlan) return null;
@@ -542,51 +586,17 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
               </div>
             ) : (
               <>
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm font-semibold text-slate-900">Choose a plan</p>
-                  <div className="flex flex-col gap-2">
-                    {isNewUserCategory(category)
-                      ? (preview.trial_products ?? []).map((planKey) => (
-                          <button
-                            key={planKey}
-                            type="button"
-                            onClick={() => setSelectedPlan(planKey)}
-                            className={`rounded-xl border px-4 py-3 text-left transition ${
-                              selectedPlan === planKey
-                                ? 'border-brand bg-brand/5 ring-1 ring-brand'
-                                : 'border-slate-200 bg-white hover:border-slate-300'
-                            }`}
-                          >
-                            <span className="font-semibold text-slate-900">{renewPlanLabel(planKey)}</span>
-                          </button>
-                        ))
-                      : (preview.plans ?? []).map((plan) => {
-                          const quote = countryIso === 'IN' ? plan.domestic : plan.international;
-                          return (
-                            <button
-                              key={plan.plan_key}
-                              type="button"
-                              onClick={() => setSelectedPlan(plan.plan_key)}
-                              className={`rounded-xl border px-4 py-3 text-left transition ${
-                                selectedPlan === plan.plan_key
-                                  ? 'border-brand bg-brand/5 ring-1 ring-brand'
-                                  : 'border-slate-200 bg-white hover:border-slate-300'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <span className="font-semibold text-slate-900">{renewPlanLabel(plan.plan_key)}</span>
-                                <span className="text-sm font-bold text-slate-900">
-                                  {formatInrFromPaise(quote.total_paise)}
-                                </span>
-                              </div>
-                              {plan.discount_label ? (
-                                <p className="mt-0.5 text-xs text-brand">{plan.discount_label}</p>
-                              ) : null}
-                            </button>
-                          );
-                        })}
+                {planOptionsLoading ? (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-6 w-6 animate-spin text-brand" />
                   </div>
-                </div>
+                ) : planPickerOptions.length > 0 ? (
+                  <RenewPlanPicker
+                    options={planPickerOptions}
+                    selectedPlanKey={selectedPlan}
+                    onSelect={setSelectedPlan}
+                  />
+                ) : null}
 
                 {selectedPlan === 'trial_3m' && isNewUserCategory(category) ? (
                   <Field label="Discount code">
@@ -624,6 +634,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                       product={selectedPlan as TrialProduct}
                       quote={displayTrialQuote}
                       startsOn={preview.starts_on}
+                      shortStartDate
                     />
                   ) : renewalQuote ? (
                     <RenewPricingSummary planKey={selectedPlan} quote={renewalQuote} startsOn={preview.starts_on} />
