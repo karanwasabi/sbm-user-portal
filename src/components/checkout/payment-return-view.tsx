@@ -42,7 +42,7 @@ function isConfirmFailed(error: string | null | undefined, searchParams: URLSear
   return value === 'confirm_failed';
 }
 
-function trackTrialPurchaseFromPending(sessionId: string, pending: PendingCheckoutState | null) {
+function trackCheckoutPurchaseFromPending(sessionId: string, pending: PendingCheckoutState | null) {
   if (pending?.valuePaise && pending.cohortName) {
     trackCheckoutPurchaseOnce({
       transactionId: sessionId,
@@ -50,6 +50,7 @@ function trackTrialPurchaseFromPending(sessionId: string, pending: PendingChecko
       cohortName: pending.cohortName,
       pricingRegion: pending.pricingRegion,
       trialProduct: pending.trialProduct,
+      renewPlanKey: pending.renewPlanKey,
     });
     return;
   }
@@ -121,7 +122,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
         if (cancelled) return;
         if (fulfilled) {
           if (sessionId) {
-            trackTrialPurchaseFromPending(sessionId, pending);
+            trackCheckoutPurchaseFromPending(sessionId, pending);
           }
           finish();
           return;
@@ -165,7 +166,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
       if (cancelled) return;
       if (fulfilled) {
         if (sessionId) {
-          trackTrialPurchaseFromPending(sessionId, pending);
+          trackCheckoutPurchaseFromPending(sessionId, pending);
         }
         finish();
         return;
@@ -180,7 +181,7 @@ export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnV
       if (cancelled) return;
       if (retry) {
         if (sessionId) {
-          trackTrialPurchaseFromPending(sessionId, pending);
+          trackCheckoutPurchaseFromPending(sessionId, pending);
         }
         finish();
         return;

@@ -41,9 +41,18 @@ export type CheckoutItemParams = {
   pricingRegion?: string;
   promoCode?: string | null;
   trialProduct?: string;
+  renewPlanKey?: string;
 };
 
-function checkoutEventParams({ valuePaise, cohortName, pricingRegion, promoCode, trialProduct }: CheckoutItemParams) {
+function checkoutEventParams({
+  valuePaise,
+  cohortName,
+  pricingRegion,
+  promoCode,
+  trialProduct,
+  renewPlanKey,
+}: CheckoutItemParams) {
+  const itemCategory = trialProduct ?? renewPlanKey ?? 'take-control';
   return {
     app_name: PORTAL_APP_NAME,
     currency: 'INR',
@@ -51,10 +60,11 @@ function checkoutEventParams({ valuePaise, cohortName, pricingRegion, promoCode,
     pricing_region: pricingRegion,
     coupon: promoCode || undefined,
     trial_product: trialProduct,
+    renew_plan_key: renewPlanKey,
     items: [
       {
         item_name: cohortName,
-        item_category: trialProduct ?? 'take-control',
+        item_category: itemCategory,
         price: paiseToRupees(valuePaise),
       },
     ],

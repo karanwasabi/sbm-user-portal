@@ -6,6 +6,9 @@ export type RenewFormDraft = {
   countryIso: string;
   whatsappDialIso: string;
   countryManuallySet: boolean;
+  selectedPlan?: string;
+  promoCode?: string;
+  appliedPromo?: string;
   savedAt: number;
 };
 
