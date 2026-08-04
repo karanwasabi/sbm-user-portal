@@ -740,7 +740,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
 
         {showPlans ? (
           <>
-            {classification.subscription_end_label ? (
+            {classification.subscription_end_label && !classification.access_until ? (
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
                 {classification.subscription_end_label}
               </div>
