@@ -99,6 +99,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
 
   const [whatsappDialIso, setWhatsappDialIso] = useState(suggestedCountryIso ?? 'IN');
   const whatsappDialIsoRef = useRef(suggestedCountryIso);
+  const [phoneSyncToken, setPhoneSyncToken] = useState(0);
   const lastCheckoutRef = useRef<{
     sessionId: string;
     valuePaise: number;
@@ -133,6 +134,25 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     [suggestedCountryIso]
   );
 
+  const applyClassificationProfile = useCallback(
+    (result: RenewCheckEmailResponse) => {
+      if (result.first_name) setFirstName(result.first_name);
+      if (result.last_name) setLastName(result.last_name);
+      if (result.country_iso) setCountryIso(result.country_iso);
+      if (result.whatsapp) {
+        const preferredIso = result.country_iso ?? whatsappDialIsoRef.current ?? countryIso;
+        const parsed = parseWhatsapp(result.whatsapp, preferredIso);
+        setWhatsapp(result.whatsapp);
+        if (parsed.dialIso) {
+          setWhatsappDialIso(parsed.dialIso);
+          whatsappDialIsoRef.current = parsed.dialIso;
+        }
+        setPhoneSyncToken((token) => token + 1);
+      }
+    },
+    [countryIso]
+  );
+
   const classifyEmail = useCallback(
     async (trimmed: string): Promise<RenewCheckEmailResponse | null> => {
       if (!isValidEmailFormat(trimmed)) {
@@ -146,10 +166,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
         const result = await postRenewCheckEmail(trimmed);
         classifiedEmailRef.current = trimmed;
         setClassification(result);
-        if (result.first_name) setFirstName(result.first_name);
-        if (result.last_name) setLastName(result.last_name);
-        if (result.whatsapp) setWhatsapp(result.whatsapp);
-        if (result.country_iso) setCountryIso(result.country_iso);
+        applyClassificationProfile(result);
         return result;
       } catch (err) {
         clearClassification();
@@ -159,7 +176,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
         setCheckingEmail(false);
       }
     },
-    [clearClassification, toast]
+    [clearClassification, toast, applyClassificationProfile]
   );
 
   useEffect(() => {
@@ -169,6 +186,9 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     setLastName(draft.lastName);
     setEmail(draft.email);
     setWhatsapp(draft.whatsapp);
+    if (draft.whatsapp.trim()) {
+      setPhoneSyncToken((token) => token + 1);
+    }
     setCountryIso(draft.countryIso);
     setCountryManuallySet(draft.countryManuallySet);
     setWhatsappDialIso(draft.whatsappDialIso);
@@ -674,6 +694,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
               countries={countries}
               suggestedCountryIso={suggestedCountryIso}
               preferredDialIso={whatsappDialIso}
+              syncToken={phoneSyncToken}
               onDialIsoChange={handleDialIsoChange}
               disabled={isSubscribedProfileFieldLocked(category, classification?.whatsapp)}
               className="flex-col sm:flex-row sm:items-start"

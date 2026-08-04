@@ -138,8 +138,16 @@ export function PhoneInput({
       return;
     }
 
-    // Parent has not applied a clear emit yet; avoid restoring a stale saved number.
+    // Parent prefill (classification, draft) before the input has emitted yet.
     if (!lastEmitted.current.trim() && value.trim()) {
+      const next = initialParts(value, preferredIso);
+      if (next.nationalNumber.trim()) {
+        lastEmitted.current = value;
+        lastPreferredIso.current = preferredIso;
+        setDialCode(next.dialCode);
+        setDialIso(next.dialIso);
+        setNationalNumber(next.nationalNumber);
+      }
       return;
     }
 
