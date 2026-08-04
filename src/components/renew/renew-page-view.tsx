@@ -40,7 +40,6 @@ import {
   getTrialCheckoutPreview,
   postRenewCheckEmail,
   postRenewCheckoutQuote,
-  pollUntilRenewPaymentConfirmed,
   startRenewCheckout,
 } from '@/utils/client-api';
 import type { Country } from '@/types/reference';
@@ -166,6 +165,9 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     setCountryManuallySet(draft.countryManuallySet);
     setWhatsappDialIso(draft.whatsappDialIso);
     whatsappDialIsoRef.current = draft.whatsappDialIso;
+    if (draft.selectedPlan) setSelectedPlan(draft.selectedPlan);
+    if (draft.promoCode) setPromoCode(draft.promoCode);
+    if (draft.appliedPromo) setAppliedPromo(draft.appliedPromo);
     const trimmed = draft.email.trim().toLowerCase();
     if (isValidEmailFormat(trimmed)) {
       void classifyEmail(trimmed);
@@ -177,8 +179,14 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   }, []);
 
   const category = classification?.category ?? null;
-  const blocked = isBlockedCategory(category);
+  const blocked = isBlockedCategory(category) || classification?.can_pay === false;
+  const autoRenewBlocked = isBlockedCategory(category);
   const showPlans = classification && !blocked;
+  const isNewUser = isNewUserCategory(category);
+  const pageTitle = isNewUser ? 'Join Take Control' : 'Renew Take Control';
+  const pageSubtitle = isNewUser
+    ? 'Enter your details below to enroll in Take Control.'
+    : 'Enter your details below to renew your membership.';
 
   useEffect(() => {
     if (!category || blocked) {
@@ -364,7 +372,6 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   const displayTotalPaise = displayQuote?.total_paise;
   const newUserPricingLoading =
     isNewUserCategory(category) && (loadingTrialQuotes || quotePending || planOptionsLoading);
-  const isNewUser = isNewUserCategory(category);
   const primaryCtaLabel = submitting ? 'Initiating payment…' : isNewUser ? 'Enroll' : 'Renew';
 
   const handleEmailBlur = async () => {
@@ -374,7 +381,17 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
       clearClassification(true);
       return;
     }
+    if (trimmed === classifiedEmailRef.current) {
+      return;
+    }
     await classifyEmail(trimmed);
+  };
+
+  const handleClearPromo = () => {
+    setAppliedPromo('');
+    setPromoCode('');
+    setPromoError(null);
+    setQuotedTrialQuote(null);
   };
 
   const handleEmailChange = (value: string) => {
@@ -429,7 +446,12 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
     }
 
     const activeCategory = activeClassification.category;
-    if (isBlockedCategory(activeCategory)) return;
+    if (isBlockedCategory(activeCategory) || activeClassification.can_pay === false) return;
+
+    if (!firstName.trim()) {
+      setFormError('Enter your first name.');
+      return;
+    }
     if (!selectedPlan) {
       setFormError('Select a plan to continue.');
       return;
@@ -461,6 +483,9 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
       countryIso,
       whatsappDialIso: dialIso,
       countryManuallySet,
+      selectedPlan,
+      promoCode,
+      appliedPromo,
     });
 
     setSubmitting(true);
@@ -480,7 +505,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
 
       const welcomeUrl = `/welcome/renew?session=${encodeURIComponent(start.checkout_session_id)}`;
       const pricingRegion = start.pricing_region === 'international' ? 'international' : 'domestic';
-      const checkoutValuePaise = displayTotalPaise ?? start.amount_paise;
+      const checkoutValuePaise = start.amount_paise ?? displayTotalPaise;
 
       if (isNewUserCategory(activeCategory)) {
         trackPortalSignUp('trial_enroll');
@@ -490,6 +515,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
         valuePaise: checkoutValuePaise,
         cohortName: start.cohort_name,
         pricingRegion,
+        trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
+        renewPlanKey: !isNewUser ? start.plan_key : undefined,
       });
       trackMetaBeginCheckout({ valuePaise: checkoutValuePaise });
 
@@ -507,15 +534,10 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
           cohortName: start.cohort_name,
           pricingRegion,
           trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
+          renewPlanKey: !isNewUser ? start.plan_key : undefined,
         });
         clearRenewDraft();
-        const ok = await pollUntilRenewPaymentConfirmed(start.checkout_session_id);
-        if (ok) {
-          window.location.href = welcomeUrl;
-        } else {
-          setFormError('Payment could not be confirmed. Please try again.');
-          setSubmitting(false);
-        }
+        window.location.href = welcomeUrl;
         return;
       }
 
@@ -538,7 +560,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
           valuePaise: start.amount_paise,
           cohortName: start.cohort_name,
           pricingRegion,
-          renewPlanKey: start.plan_key,
+          trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
+          renewPlanKey: !isNewUser ? start.plan_key : undefined,
         },
         onSuccess: () => {
           const checkout = lastCheckoutRef.current;
@@ -549,6 +572,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
               cohortName: checkout.cohortName,
               pricingRegion: checkout.pricingRegion,
               trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
+              renewPlanKey: !isNewUser ? start.plan_key : undefined,
             });
           }
           clearRenewDraft();
@@ -560,11 +584,22 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
             valuePaise: start.amount_paise,
             cohortName: start.cohort_name,
             pricingRegion,
+            trialProduct: isNewUser ? (selectedPlan as TrialProduct) : undefined,
+            renewPlanKey: !isNewUser ? start.plan_key : undefined,
           });
         },
       });
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Checkout failed. Please try again.');
+      const message = err instanceof Error ? err.message : 'Checkout failed. Please try again.';
+      if (message.toLowerCase().includes('category changed')) {
+        clearClassification();
+        if (trimmedEmail) {
+          void classifyEmail(trimmedEmail);
+        }
+        setFormError('Your account status changed. Plans were refreshed — review and try again.');
+      } else {
+        setFormError(message);
+      }
       setSubmitting(false);
     }
   };
@@ -576,8 +611,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
           <div className="mb-5 flex justify-center overflow-x-auto">
             <SbmWordmark size="lg" showSubtitle={false} />
           </div>
-          <h1 className="text-xl font-bold text-slate-900">Renew Take Control</h1>
-          <p className="text-sm text-slate-600">Enter your details below to renew your membership.</p>
+          <h1 className="text-xl font-bold text-slate-900">{pageTitle}</h1>
+          <p className="text-sm text-slate-600">{pageSubtitle}</p>
         </div>
 
         <div className="space-y-3.5">
@@ -663,17 +698,36 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
 
         {classification && blocked ? (
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
-            <p className="font-semibold text-slate-900">Auto-renew is already on</p>
-            <p className="mt-1">
-              {classification.next_renewal_at
-                ? `Your next renewal is on ${formatAccessDate(classification.next_renewal_at) ?? classification.next_renewal_at}.`
-                : 'Your membership renews automatically — no payment needed here.'}
-            </p>
+            {autoRenewBlocked ? (
+              <>
+                <p className="font-semibold text-slate-900">Auto-renew is already on</p>
+                <p className="mt-1">
+                  {classification.next_renewal_at
+                    ? `Your next renewal is on ${formatAccessDate(classification.next_renewal_at) ?? classification.next_renewal_at}.`
+                    : 'Your membership renews automatically — no payment needed here.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-slate-900">Renewal not available</p>
+                <p className="mt-1">
+                  {classification.subscription_end_label
+                    ? classification.subscription_end_label
+                    : 'You cannot renew at this time. Contact support if you need help.'}
+                </p>
+              </>
+            )}
           </div>
         ) : null}
 
         {showPlans ? (
           <>
+            {classification.subscription_end_label ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                {classification.subscription_end_label}
+              </div>
+            ) : null}
+
             {classification.access_until ? (
               <div className="rounded-xl border border-brand/20 bg-brand/5 px-4 py-3 text-sm text-slate-700">
                 Access until{' '}
@@ -730,6 +784,17 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                       >
                         Apply
                       </Button>
+                      {appliedPromo ? (
+                        <Button
+                          type="button"
+                          variant="light"
+                          size="md"
+                          onClick={handleClearPromo}
+                          disabled={quotePending || submitting}
+                        >
+                          Clear
+                        </Button>
+                      ) : null}
                     </div>
                     {promoError ? (
                       <p className="mt-1.5 text-[12.5px] font-semibold text-danger-press" role="alert">

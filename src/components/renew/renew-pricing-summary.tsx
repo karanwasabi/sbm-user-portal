@@ -18,7 +18,7 @@ export function RenewPricingSummary({ planKey, quote, startsOn }: RenewPricingSu
   const showGst = isDomestic;
   const hasDiscount = (quote.discount_paise ?? 0) > 0;
   const discountedBasePaise = quote.base_paise - (quote.discount_paise ?? 0);
-  const showBreakdown = showGst || hasDiscount;
+  const showBreakdown = true;
   const detailLineClass = 'text-sm font-medium text-slate-500';
 
   return (

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { EnrollWelcomeIllustration } from '@/components/enroll/enroll-welcome-illustration';
@@ -22,7 +23,7 @@ function formatAccessUntilLabel(iso?: string | null): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return formatShortStartDate(date.toISOString().slice(0, 10));
+  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
@@ -30,6 +31,7 @@ export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
   const [startsOn, setStartsOn] = useState<string | null>(null);
   const [accessUntil, setAccessUntil] = useState<string | null>(null);
   const [category, setCategory] = useState<RenewCategory | null>(null);
+  const pollIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     clearRenewDraft();
@@ -39,11 +41,19 @@ export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
     }
 
     let cancelled = false;
+    const stopPolling = () => {
+      if (pollIntervalRef.current !== null) {
+        window.clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+
     const poll = async () => {
       try {
         const result = await getRenewPaymentStatus(sessionId);
         if (cancelled) return;
         if (result.fulfilled) {
+          stopPolling();
           setStatus('success');
           setStartsOn(result.starts_on ?? null);
           setAccessUntil(result.access_until ?? null);
@@ -60,15 +70,15 @@ export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
     };
 
     void poll();
-    const interval = window.setInterval(() => void poll(), 2500);
+    pollIntervalRef.current = window.setInterval(() => void poll(), 2500);
     const timeout = window.setTimeout(() => {
-      window.clearInterval(interval);
+      stopPolling();
       if (!cancelled) setStatus((s) => (s === 'loading' ? 'pending' : s));
     }, 120000);
 
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      stopPolling();
       window.clearTimeout(timeout);
     };
   }, [sessionId]);
@@ -76,6 +86,9 @@ export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
   const startLabel = startsOn ? formatShortStartDate(startsOn) : null;
   const accessUntilLabel = formatAccessUntilLabel(accessUntil);
   const isNewSignup = isNewSignupRenewCategory(category);
+
+  const heading =
+    status === 'success' ? (isNewSignup ? 'Welcome to Take Control' : "You're all set") : 'Confirming your payment';
 
   const successCopy = (() => {
     if (isNewSignup && startLabel) {
@@ -104,13 +117,23 @@ export function WelcomeRenewView({ sessionId }: WelcomeRenewViewProps) {
             <EnrollWelcomeIllustration className="my-1 h-auto w-full max-w-[280px] sm:max-w-[300px]" />
 
             <div className="flex flex-col items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900">You&apos;re all set</h1>
+              <h1 className="text-xl font-bold text-slate-900">{heading}</h1>
               {status === 'success' ? (
-                <p className="text-sm text-slate-600">{successCopy}</p>
+                <>
+                  <p className="text-sm text-slate-600">{successCopy}</p>
+                  {isNewSignup ? (
+                    <p className="text-sm text-slate-600">Check your inbox for an email with next steps.</p>
+                  ) : null}
+                </>
               ) : (
-                <p className="text-sm text-slate-600">
-                  We&apos;re still confirming your payment. You&apos;ll receive access shortly.
-                </p>
+                <>
+                  <p className="text-sm text-slate-600">
+                    We&apos;re still confirming your payment. You&apos;ll receive access shortly.
+                  </p>
+                  <Link href="/renew" className="text-sm font-semibold text-brand hover:underline">
+                    Return to renew page
+                  </Link>
+                </>
               )}
             </div>
           </>
