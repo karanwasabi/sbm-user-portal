@@ -96,4 +96,5 @@ export type RenewPaymentStatus = {
   starts_on?: string;
   category?: string;
   plan_key?: string;
+  access_until?: string;
 };
