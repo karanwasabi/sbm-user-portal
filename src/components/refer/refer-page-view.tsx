@@ -6,7 +6,6 @@ import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
@@ -15,11 +14,12 @@ import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-num
 import { captureUtmAttributionFromLocation } from '@/lib/utm-attribution';
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
 import {
-  REFER_CONSENT_LABEL,
+  REFER_BLOCKED_DEFAULT,
   REFER_PAGE_SUBTITLE,
   REFER_PAGE_TITLE,
   REFER_REFERRED_SECTION,
   REFER_REFERRER_SECTION,
+  REFER_SECTION_CARD_CLASS,
   isValidReferEmail,
   referSuccessMessage,
 } from '@/components/refer/refer-page-helpers';
@@ -71,8 +71,6 @@ export function ReferPageView({
   const [referredClassification, setReferredClassification] = useState<ReferCheckReferredEmailResponse | null>(null);
   const [referrerEmailError, setReferrerEmailError] = useState<string | null>(null);
   const [referredEmailError, setReferredEmailError] = useState<string | null>(null);
-  const [consent, setConsent] = useState(false);
-  const [consentError, setConsentError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -84,8 +82,10 @@ export function ReferPageView({
     captureUtmAttributionFromLocation();
   }, []);
 
-  const referredEligible =
-    referredClassification?.eligible === true && !referredClassification?.blocked && referredEmail.trim() !== '';
+  const referredBlocked = referredClassification?.blocked === true;
+  const referredEligible = referredClassification?.eligible === true && !referredBlocked && referredEmail.trim() !== '';
+  const showReferredDetails =
+    referredEmail.trim() !== '' && referredClassification !== null && !referredBlocked && !checkingReferred;
 
   const clearReferredState = () => {
     setReferredEmail('');
@@ -152,9 +152,7 @@ export function ReferPageView({
         : await postReferCheckReferredEmail(trimmed);
       lastReferredCheck.current = trimmed;
       setReferredClassification(result);
-      if (result.blocked) {
-        setReferredEmailError(result.blocked_reason ?? null);
-      } else {
+      if (!result.blocked) {
         if (result.first_name && !referredFirstName) setReferredFirstName(result.first_name);
         if (result.last_name && !referredLastName) setReferredLastName(result.last_name);
       }
@@ -226,12 +224,6 @@ export function ReferPageView({
       dialIso
     );
 
-    if (!consent) {
-      setConsentError(true);
-      toast({ message: 'Please confirm your friend is okay with us contacting them.', variant: 'error' });
-      return;
-    }
-
     setSubmitting(true);
     try {
       const payload = {
@@ -287,9 +279,9 @@ export function ReferPageView({
           </Button>
         </div>
       ) : (
-        <div className="space-y-5">
-          <div className="space-y-3.5">
-            <p className="text-sm font-semibold text-slate-900">{REFER_REFERRER_SECTION}</p>
+        <div className="space-y-4">
+          <section className={cn(REFER_SECTION_CARD_CLASS, 'space-y-3.5')}>
+            <h2 className="text-sm font-semibold text-slate-900">{REFER_REFERRER_SECTION}</h2>
             {!hideReferrerEmail ? (
               <Field label="Email" error={referrerEmailError}>
                 <TextInput
@@ -315,10 +307,10 @@ export function ReferPageView({
                 <TextInput value={referrerLastName} onChange={setReferrerLastName} autoComplete="family-name" />
               </Field>
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-3.5">
-            <p className="text-sm font-semibold text-slate-900">{REFER_REFERRED_SECTION}</p>
+          <section className={cn(REFER_SECTION_CARD_CLASS, 'space-y-3.5')}>
+            <h2 className="text-sm font-semibold text-slate-900">{REFER_REFERRED_SECTION}</h2>
             <Field label="Email" error={referredEmailError}>
               <TextInput
                 type="email"
@@ -334,50 +326,37 @@ export function ReferPageView({
                 </p>
               ) : null}
             </Field>
-            {referredClassification?.blocked ? (
-              <div className="rounded-xl border border-brand/20 bg-brand/5 px-3.5 py-3 text-sm text-slate-700">
-                {referredClassification.blocked_reason}
-              </div>
+            {referredBlocked ? (
+              <p className="rounded-xl border border-slate-200 bg-canvas-cool px-3.5 py-3 text-sm text-slate-700">
+                {referredClassification?.blocked_reason ?? REFER_BLOCKED_DEFAULT}
+              </p>
             ) : null}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="First name">
-                <TextInput value={referredFirstName} onChange={setReferredFirstName} autoComplete="off" />
-              </Field>
-              <Field label="Last name">
-                <TextInput value={referredLastName} onChange={setReferredLastName} autoComplete="off" />
-              </Field>
-            </div>
-            <Field label="WhatsApp">
-              <PhoneInput
-                value={referredWhatsapp}
-                onChange={setReferredWhatsapp}
-                countries={countries}
-                suggestedCountryIso={suggestedCountryIso}
-                preferredDialIso={whatsappDialIso}
-                onDialIsoChange={(iso) => {
-                  setWhatsappDialIso(iso);
-                  setCountryIso(iso);
-                }}
-              />
-            </Field>
-          </div>
-
-          <div
-            className={cn(
-              'rounded-xl border px-3.5 py-3',
-              consentError ? 'border-danger/40 bg-danger/5' : 'border-slate-200 bg-canvas-cool'
-            )}
-          >
-            <Checkbox
-              checked={consent}
-              onChange={(checked) => {
-                setConsent(checked);
-                if (checked) setConsentError(false);
-              }}
-              disabled={submitting}
-              label={<span className="text-[13px] leading-snug text-slate-700">{REFER_CONSENT_LABEL}</span>}
-            />
-          </div>
+            {showReferredDetails ? (
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="First name">
+                    <TextInput value={referredFirstName} onChange={setReferredFirstName} autoComplete="off" />
+                  </Field>
+                  <Field label="Last name">
+                    <TextInput value={referredLastName} onChange={setReferredLastName} autoComplete="off" />
+                  </Field>
+                </div>
+                <Field label="WhatsApp">
+                  <PhoneInput
+                    value={referredWhatsapp}
+                    onChange={setReferredWhatsapp}
+                    countries={countries}
+                    suggestedCountryIso={suggestedCountryIso}
+                    preferredDialIso={whatsappDialIso}
+                    onDialIsoChange={(iso) => {
+                      setWhatsappDialIso(iso);
+                      setCountryIso(iso);
+                    }}
+                  />
+                </Field>
+              </>
+            ) : null}
+          </section>
 
           <Button
             type="button"
