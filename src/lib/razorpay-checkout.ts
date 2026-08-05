@@ -87,6 +87,10 @@ type OpenRazorpaySubscriptionOptions = {
   returnDestination?: string;
   returnFlow?: PaymentReturnFlow;
   prefill?: RazorpayPrefill;
+  pendingCheckout?: Pick<
+    import('@/lib/payment-return').PendingCheckoutState,
+    'valuePaise' | 'cohortName' | 'pricingRegion' | 'trialProduct' | 'renewPlanKey'
+  >;
   onSuccess: () => void;
   onDismiss?: () => void;
   abandonOnDismiss?: boolean;
@@ -175,6 +179,7 @@ export async function openRazorpaySubscriptionCheckout({
   returnDestination = PORTAL_HOME_PATH,
   returnFlow = 'enrollment',
   prefill,
+  pendingCheckout,
   onSuccess,
   onDismiss,
   abandonOnDismiss = false,
@@ -196,6 +201,7 @@ export async function openRazorpaySubscriptionCheckout({
       destination: returnDestination,
       flow: returnFlow,
       startedAt: Date.now(),
+      ...pendingCheckout,
     });
   }
 
@@ -334,6 +340,10 @@ export async function openRazorpayContinueBilling({
 type OpenEnrollmentCheckoutOptions = {
   start: CheckoutStartResponse;
   returnDestination?: string;
+  pendingCheckout?: Pick<
+    import('@/lib/payment-return').PendingCheckoutState,
+    'valuePaise' | 'cohortName' | 'pricingRegion' | 'trialProduct' | 'renewPlanKey'
+  >;
   onSuccess: () => void;
   onDismiss?: () => void;
 };
@@ -341,6 +351,7 @@ type OpenEnrollmentCheckoutOptions = {
 export async function openRazorpayEnrollmentCheckout({
   start,
   returnDestination = PORTAL_HOME_PATH,
+  pendingCheckout,
   onSuccess,
   onDismiss,
 }: OpenEnrollmentCheckoutOptions): Promise<void> {
@@ -358,6 +369,11 @@ export async function openRazorpayEnrollmentCheckout({
     returnDestination,
     returnFlow: 'enrollment',
     abandonOnDismiss: false,
+    pendingCheckout: pendingCheckout ?? {
+      valuePaise: start.amount_paise,
+      cohortName: start.cohort_name,
+      pricingRegion: start.pricing_region,
+    },
     onSuccess,
     onDismiss,
   });

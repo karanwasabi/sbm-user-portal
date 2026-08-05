@@ -39,4 +39,6 @@ export type ReferSubmitResponse = {
   success: boolean;
   lead_id: string;
   referral_id: string;
+  is_new_referred_lead: boolean;
+  capi_lead_sent: boolean;
 };

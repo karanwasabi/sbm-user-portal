@@ -16,9 +16,10 @@ import {
   type BillingFormSnapshot,
 } from '@/lib/billing-form';
 import { cn } from '@/lib/cn';
-import { trackMetaBeginCheckout, trackMetaPurchase } from '@/lib/meta-pixel';
+import { trackMetaBeginCheckout } from '@/lib/meta-pixel';
 import { formatInrFromPaise } from '@/lib/money';
-import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalPurchase } from '@/lib/gtag';
+import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
+import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned } from '@/lib/gtag';
 import { readUtmAttributionFromCookie } from '@/lib/utm-attribution';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
@@ -629,16 +630,12 @@ export function RegisterCheckoutSection({
   const finishPayment = async () => {
     const checkout = lastCheckoutRef.current;
     if (checkout) {
-      trackPortalPurchase({
+      trackCheckoutPurchaseOnce({
         transactionId: checkout.sessionId,
         valuePaise: checkout.valuePaise,
         cohortName: checkout.cohortName,
         pricingRegion,
         promoCode: checkout.promoCode,
-      });
-      trackMetaPurchase({
-        eventID: `purchase:${checkout.sessionId}`,
-        valuePaise: checkout.valuePaise,
       });
     }
 

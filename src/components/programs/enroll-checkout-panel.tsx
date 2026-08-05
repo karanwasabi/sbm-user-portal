@@ -10,9 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { cn } from '@/lib/cn';
-import { trackMetaBeginCheckout, trackMetaPurchase } from '@/lib/meta-pixel';
+import { trackMetaBeginCheckout } from '@/lib/meta-pixel';
 import { formatInrFromPaise } from '@/lib/money';
-import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalPurchase } from '@/lib/gtag';
+import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
+import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned } from '@/lib/gtag';
 import { readUtmAttributionFromCookie } from '@/lib/utm-attribution';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
@@ -304,17 +305,12 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
 
       if (start.mock) {
         await mockCompleteCheckout(start.checkout_session_id);
-        trackPortalPurchase({
+        trackCheckoutPurchaseOnce({
           transactionId: start.checkout_session_id,
           valuePaise: start.amount_paise,
           cohortName: start.cohort_name || preview.cohort_name,
           pricingRegion,
           promoCode: activeQuote.promo_code,
-        });
-        trackMetaPurchase({
-          eventID: start.checkout_session_id,
-          valuePaise: start.amount_paise,
-          cohortName: start.cohort_name || preview.cohort_name,
         });
         onPaid?.();
         router.push(PORTAL_HOME_PATH);
@@ -329,21 +325,6 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
       await openRazorpayEnrollmentCheckout({
         start,
         onSuccess: () => {
-          const checkout = lastCheckoutRef.current;
-          if (checkout) {
-            trackPortalPurchase({
-              transactionId: checkout.sessionId,
-              valuePaise: checkout.valuePaise,
-              cohortName: checkout.cohortName,
-              pricingRegion,
-              promoCode: checkout.promoCode,
-            });
-            trackMetaPurchase({
-              eventID: checkout.sessionId,
-              valuePaise: checkout.valuePaise,
-              cohortName: checkout.cohortName,
-            });
-          }
           onPaid?.();
           router.push(PORTAL_HOME_PATH);
           router.refresh();

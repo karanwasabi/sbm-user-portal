@@ -356,7 +356,9 @@ export function ReferPageView({
       };
       trackPortalEvent('portal_refer_submitted', submitParams);
       trackMetaCustom('PortalReferSubmitted', submitParams);
-      trackMetaLead();
+      if (response.is_new_referred_lead && response.capi_lead_sent) {
+        trackMetaLead({ eventID: `lead:${response.lead_id}` });
+      }
 
       setSuccessMessage(referSuccessMessage(referredFirstName, referredLastName));
       setSuccess(true);

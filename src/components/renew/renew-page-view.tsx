@@ -35,7 +35,7 @@ import { captureUtmAttributionFromLocation, readUtmAttributionFromCookie } from 
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
 import { trackPortalBeginCheckout, trackPortalSignUp } from '@/lib/gtag';
 import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
-import { trackMetaBeginCheckout, trackMetaLead } from '@/lib/meta-pixel';
+import { trackMetaBeginCheckout } from '@/lib/meta-pixel';
 import {
   getRenewCheckoutPreview,
   getTrialCheckoutPreview,
@@ -543,7 +543,6 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
 
       if (checkoutIsNewUser) {
         trackPortalSignUp('trial_enroll');
-        trackMetaLead();
       }
       trackPortalBeginCheckout({
         valuePaise: checkoutValuePaise,
@@ -584,6 +583,13 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
           checkoutSessionId: start.checkout_session_id,
           returnDestination: welcomeUrl,
           returnFlow: razorpayReturnFlow,
+          pendingCheckout: {
+            valuePaise: start.amount_paise,
+            cohortName: start.cohort_name,
+            pricingRegion,
+            trialProduct: checkoutIsNewUser ? (selectedPlan as TrialProduct) : undefined,
+            renewPlanKey: !checkoutIsNewUser ? start.plan_key : undefined,
+          },
           prefill: {
             name: `${firstName} ${lastName}`.trim(),
             email: email.trim(),

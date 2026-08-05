@@ -56,13 +56,13 @@ Scripts load only when the env var is set. GA4 tracks page views on client-side 
 
 **Portal events** (all include `app_name: portal`):
 
-| Event                       | When                               |
-| --------------------------- | ---------------------------------- |
-| `sign_up`                   | Email verified on `/register`      |
-| `begin_checkout`            | Enroll tapped                      |
-| `purchase`                  | Payment confirmed                  |
-| `portal_checkout_abandoned` | Razorpay closed without paying     |
-| `portal_login`              | Successful login (password or OTP) |
+| Event                       | When                                                   |
+| --------------------------- | ------------------------------------------------------ |
+| `sign_up`                   | Email verified on `/register`                          |
+| `begin_checkout`            | Enroll tapped                                          |
+| `purchase`                  | Payment confirmed (deduped via `purchase:{sessionId}`) |
+| `portal_checkout_abandoned` | Razorpay closed without paying                         |
+| `portal_login`              | Successful login (password or OTP)                     |
 
 Mark `sign_up`, `begin_checkout`, and `purchase` as conversions in GA4 Admin. Register `app_name` as a custom dimension.
 

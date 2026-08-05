@@ -1,3 +1,5 @@
+// SYNC: keep API identical with sbm-forms/src/lib/meta-pixel.ts
+
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
 declare global {
@@ -21,15 +23,23 @@ function runWhenMetaReady(action: () => void, attemptsLeft = 20): void {
   window.setTimeout(() => runWhenMetaReady(action, attemptsLeft - 1), 100);
 }
 
+/** Ensure Meta dedup keys align with server CAPI (`purchase:{sessionId}`). */
+export function normalizeMetaPurchaseEventID(eventID: string): string {
+  const trimmed = eventID.trim();
+  if (!trimmed) return trimmed;
+  return trimmed.startsWith('purchase:') ? trimmed : `purchase:${trimmed}`;
+}
+
 export function metaPageView(): void {
   runWhenMetaReady(() => {
     window.fbq?.('track', 'PageView');
   });
 }
 
-export function trackMetaLead(): void {
+export function trackMetaLead(params?: { eventID?: string }): void {
+  const options = params?.eventID?.trim() ? { eventID: params.eventID.trim() } : undefined;
   runWhenMetaReady(() => {
-    window.fbq?.('track', 'Lead');
+    window.fbq?.('track', 'Lead', {}, options);
   });
 }
 
@@ -52,6 +62,7 @@ export function trackMetaPurchase(params: {
   trialProduct?: string;
   cohortName?: string;
 }): void {
+  const eventID = normalizeMetaPurchaseEventID(params.eventID);
   const payload: Record<string, unknown> =
     params.valuePaise == null
       ? { currency: 'INR' }
@@ -70,7 +81,15 @@ export function trackMetaPurchase(params: {
   }
 
   runWhenMetaReady(() => {
-    window.fbq?.('track', 'Purchase', payload, { eventID: params.eventID });
+    window.fbq?.('track', 'Purchase', payload, { eventID });
+  });
+}
+
+export function trackMetaCompleteRegistration(params: { eventID: string }): void {
+  const eventID = params.eventID.trim();
+  if (!eventID) return;
+  runWhenMetaReady(() => {
+    window.fbq?.('track', 'CompleteRegistration', { currency: 'INR' }, { eventID });
   });
 }
 

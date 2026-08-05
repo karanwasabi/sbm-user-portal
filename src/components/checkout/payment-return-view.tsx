@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
 import { clearEnrollDraft } from '@/lib/enroll-draft';
 import { clearRenewDraft } from '@/lib/renew-draft';
-import { trackMetaPurchase } from '@/lib/meta-pixel';
 import {
   clearPendingCheckout,
   checkoutRetryPath,
@@ -44,18 +43,14 @@ function isConfirmFailed(error: string | null | undefined, searchParams: URLSear
 }
 
 function trackCheckoutPurchaseFromPending(sessionId: string, pending: PendingCheckoutState | null) {
-  if (pending?.valuePaise && pending.cohortName) {
-    trackCheckoutPurchaseOnce({
-      transactionId: sessionId,
-      valuePaise: pending.valuePaise,
-      cohortName: pending.cohortName,
-      pricingRegion: pending.pricingRegion,
-      trialProduct: pending.trialProduct,
-      renewPlanKey: pending.renewPlanKey,
-    });
-    return;
-  }
-  trackMetaPurchase({ eventID: `purchase:${sessionId}` });
+  trackCheckoutPurchaseOnce({
+    transactionId: sessionId,
+    valuePaise: pending?.valuePaise ?? 0,
+    cohortName: pending?.cohortName ?? 'checkout',
+    pricingRegion: pending?.pricingRegion,
+    trialProduct: pending?.trialProduct,
+    renewPlanKey: pending?.renewPlanKey,
+  });
 }
 
 export function PaymentReturnView({ error: returnConfirmFailed }: PaymentReturnViewProps) {

@@ -16,7 +16,7 @@ import { getCountryDialCode } from '@/lib/country-dial-codes';
 import { clearEnrollDraft, readEnrollDraft, saveEnrollDraft } from '@/lib/enroll-draft';
 import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
 import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalSignUp } from '@/lib/gtag';
-import { trackMetaBeginCheckout, trackMetaLead } from '@/lib/meta-pixel';
+import { trackMetaBeginCheckout } from '@/lib/meta-pixel';
 import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { openRazorpayOrderCheckout } from '@/lib/razorpay-checkout';
@@ -209,7 +209,6 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
       const checkoutValuePaise = displayQuote?.total_paise ?? start.amount_paise;
 
       trackPortalSignUp('trial_enroll');
-      trackMetaLead();
       trackPortalBeginCheckout({
         valuePaise: checkoutValuePaise,
         cohortName: start.cohort_name,
