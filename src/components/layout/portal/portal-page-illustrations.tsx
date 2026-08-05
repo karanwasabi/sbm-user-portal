@@ -182,3 +182,21 @@ export function SettingsQuickLinkIllustration() {
     </svg>
   );
 }
+
+export function ReferPageIllustration() {
+  return (
+    <svg viewBox="0 0 280 180" fill="none" className="h-auto w-full max-w-[260px]" aria-hidden>
+      <circle cx="140" cy="90" r="56" fill="white" fillOpacity="0.18" />
+      <circle cx="104" cy="82" r="22" fill="white" fillOpacity="0.95" />
+      <circle cx="176" cy="82" r="22" fill="white" fillOpacity="0.95" />
+      <path d="M84 108c0-11 9-20 20-20s20 9 20 20" stroke="#5B4FD6" strokeWidth="4" strokeLinecap="round" />
+      <path d="M156 108c0-11 9-20 20-20s20 9 20 20" stroke="#5B4FD6" strokeWidth="4" strokeLinecap="round" />
+      <path d="M128 98h24" stroke="#FFB703" strokeWidth="5" strokeLinecap="round" />
+      <path d="M140 90l8 8-8 8" stroke="#FFB703" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="208" cy="56" r="16" fill="#FFB703" fillOpacity="0.95" />
+      <path d="M208 50v12M202 56h12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="56" cy="64" r="5" fill="white" fillOpacity="0.5" />
+      <circle cx="228" cy="128" r="4" fill="white" fillOpacity="0.4" />
+    </svg>
+  );
+}

@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { CheckCircle2, Info, Loader2 } from 'lucide-react';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
+import { PortalPageLayout } from '@/components/layout/portal/portal-page-layout';
+import { ReferPageIllustration } from '@/components/layout/portal/portal-page-illustrations';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Field } from '@/components/ui/field';
+import { SectionHead } from '@/components/ui/section-head';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
@@ -19,7 +23,6 @@ import {
   REFER_PAGE_TITLE,
   REFER_REFERRED_SECTION,
   REFER_REFERRER_SECTION,
-  REFER_SECTION_CARD_CLASS,
   isValidReferEmail,
   referSuccessMessage,
 } from '@/components/refer/refer-page-helpers';
@@ -42,6 +45,38 @@ type ReferPageViewProps = {
   initialReferrerLastName?: string;
   wrapInAuthLayout?: boolean;
 };
+
+type ReferSectionAccent = 'slate' | 'brand';
+
+function ReferFormSection({
+  title,
+  accent,
+  titleVariant = 'underlined',
+  children,
+}: {
+  title: string;
+  accent: ReferSectionAccent;
+  titleVariant?: 'underlined' | 'simple';
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      {titleVariant === 'simple' ? (
+        <SectionHead title={title} className="mb-0" />
+      ) : (
+        <h2
+          className={cn(
+            'inline-block border-b-2 pb-2 text-base font-bold tracking-tight text-slate-900',
+            accent === 'brand' ? 'border-brand' : 'border-slate-300'
+          )}
+        >
+          {title}
+        </h2>
+      )}
+      {children}
+    </div>
+  );
+}
 
 export function ReferPageView({
   variant,
@@ -84,8 +119,6 @@ export function ReferPageView({
 
   const referredBlocked = referredClassification?.blocked === true;
   const referredEligible = referredClassification?.eligible === true && !referredBlocked && referredEmail.trim() !== '';
-  const showReferredDetails =
-    referredEmail.trim() !== '' && referredClassification !== null && !referredBlocked && !checkingReferred;
 
   const clearReferredState = () => {
     setReferredEmail('');
@@ -258,129 +291,157 @@ export function ReferPageView({
     }
   };
 
-  const formContent = (
-    <div className={cn('mx-auto flex w-full max-w-[420px] flex-col gap-5 py-2', !wrapInAuthLayout && 'px-4 sm:px-6')}>
-      <div className="text-center">
-        {wrapInAuthLayout ? (
-          <div className="mb-5 flex justify-center overflow-x-auto">
-            <SbmWordmark size="lg" showSubtitle={false} />
-          </div>
-        ) : null}
-        <h1 className="text-xl font-bold text-slate-900">{REFER_PAGE_TITLE}</h1>
-        <p className="text-sm text-slate-600">{REFER_PAGE_SUBTITLE}</p>
-      </div>
+  const successPanel = (
+    <div className="flex flex-col items-center gap-4 rounded-2xl border border-success/30 bg-success/5 px-5 py-8 text-center">
+      <CheckCircle2 className="h-10 w-10 text-success" aria-hidden />
+      <p className="text-sm font-medium text-slate-800">{successMessage}</p>
+      <Button type="button" variant="primary" onClick={() => clearReferredState()}>
+        Refer another friend
+      </Button>
+    </div>
+  );
 
-      {success ? (
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-success/30 bg-success/5 px-5 py-8 text-center">
-          <CheckCircle2 className="h-10 w-10 text-success" aria-hidden />
-          <p className="text-sm font-medium text-slate-800">{successMessage}</p>
-          <Button type="button" variant="primary" onClick={() => clearReferredState()}>
-            Refer another friend
-          </Button>
+  const sectionTitleVariant = hideReferrerEmail ? 'simple' : 'underlined';
+
+  const referrerSection = !hideReferrerEmail ? (
+    <ReferFormSection title={REFER_REFERRER_SECTION} accent="slate" titleVariant={sectionTitleVariant}>
+      <Field label="Email" error={referrerEmailError}>
+        <TextInput
+          type="email"
+          autoComplete="email"
+          value={referrerEmail}
+          onChange={handleReferrerEmailChange}
+          onBlur={() => void handleReferrerEmailBlur()}
+          error={Boolean(referrerEmailError)}
+        />
+        {checkingReferrer ? (
+          <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+            <Loader2 className="h-3 w-3 animate-spin" /> Checking your details…
+          </p>
+        ) : null}
+      </Field>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field label="First name">
+          <TextInput value={referrerFirstName} onChange={setReferrerFirstName} autoComplete="given-name" />
+        </Field>
+        <Field label="Last name">
+          <TextInput value={referrerLastName} onChange={setReferrerLastName} autoComplete="family-name" />
+        </Field>
+      </div>
+    </ReferFormSection>
+  ) : null;
+
+  const friendSection = (
+    <ReferFormSection title={REFER_REFERRED_SECTION} accent="brand" titleVariant={sectionTitleVariant}>
+      <Field label="Email" error={referredEmailError}>
+        <TextInput
+          type="email"
+          autoComplete="off"
+          value={referredEmail}
+          onChange={handleReferredEmailChange}
+          onBlur={() => void handleReferredEmailBlur()}
+          error={Boolean(referredEmailError)}
+        />
+        {checkingReferred ? (
+          <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+            <Loader2 className="h-3 w-3 animate-spin" /> Checking eligibility…
+          </p>
+        ) : null}
+      </Field>
+
+      {referredBlocked ? (
+        <div className="flex gap-3 rounded-[14px] border border-slate-200 bg-canvas-cool px-4 py-3.5">
+          <Info className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden />
+          <p className="text-sm leading-relaxed text-slate-700">
+            {referredClassification?.blocked_reason ?? REFER_BLOCKED_DEFAULT}
+          </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          <section className={cn(REFER_SECTION_CARD_CLASS, 'space-y-3.5')}>
-            <h2 className="text-sm font-semibold text-slate-900">{REFER_REFERRER_SECTION}</h2>
-            {!hideReferrerEmail ? (
-              <Field label="Email" error={referrerEmailError}>
-                <TextInput
-                  type="email"
-                  autoComplete="email"
-                  value={referrerEmail}
-                  onChange={handleReferrerEmailChange}
-                  onBlur={() => void handleReferrerEmailBlur()}
-                  error={Boolean(referrerEmailError)}
-                />
-                {checkingReferrer ? (
-                  <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Checking your details…
-                  </p>
-                ) : null}
-              </Field>
-            ) : null}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="First name">
-                <TextInput value={referrerFirstName} onChange={setReferrerFirstName} autoComplete="given-name" />
-              </Field>
-              <Field label="Last name">
-                <TextInput value={referrerLastName} onChange={setReferrerLastName} autoComplete="family-name" />
-              </Field>
-            </div>
-          </section>
-
-          <section className={cn(REFER_SECTION_CARD_CLASS, 'space-y-3.5')}>
-            <h2 className="text-sm font-semibold text-slate-900">{REFER_REFERRED_SECTION}</h2>
-            <Field label="Email" error={referredEmailError}>
-              <TextInput
-                type="email"
-                autoComplete="off"
-                value={referredEmail}
-                onChange={handleReferredEmailChange}
-                onBlur={() => void handleReferredEmailBlur()}
-                error={Boolean(referredEmailError)}
-              />
-              {checkingReferred ? (
-                <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Checking eligibility…
-                </p>
-              ) : null}
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="First name">
+              <TextInput value={referredFirstName} onChange={setReferredFirstName} autoComplete="off" />
             </Field>
-            {referredBlocked ? (
-              <p className="rounded-xl border border-slate-200 bg-canvas-cool px-3.5 py-3 text-sm text-slate-700">
-                {referredClassification?.blocked_reason ?? REFER_BLOCKED_DEFAULT}
-              </p>
-            ) : null}
-            {showReferredDetails ? (
-              <>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field label="First name">
-                    <TextInput value={referredFirstName} onChange={setReferredFirstName} autoComplete="off" />
-                  </Field>
-                  <Field label="Last name">
-                    <TextInput value={referredLastName} onChange={setReferredLastName} autoComplete="off" />
-                  </Field>
-                </div>
-                <Field label="WhatsApp">
-                  <PhoneInput
-                    value={referredWhatsapp}
-                    onChange={setReferredWhatsapp}
-                    countries={countries}
-                    suggestedCountryIso={suggestedCountryIso}
-                    preferredDialIso={whatsappDialIso}
-                    onDialIsoChange={(iso) => {
-                      setWhatsappDialIso(iso);
-                      setCountryIso(iso);
-                    }}
-                  />
-                </Field>
-              </>
-            ) : null}
-          </section>
-
-          <Button
-            type="button"
-            variant="primary"
-            className="w-full"
-            disabled={submitting || !referredEligible}
-            onClick={() => void handleSubmit()}
-          >
-            {submitting ? (
-              <span className="flex items-center justify-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" /> Submitting…
-              </span>
-            ) : (
-              'Refer'
-            )}
-          </Button>
-        </div>
+            <Field label="Last name">
+              <TextInput value={referredLastName} onChange={setReferredLastName} autoComplete="off" />
+            </Field>
+          </div>
+          <Field label="WhatsApp">
+            <PhoneInput
+              value={referredWhatsapp}
+              onChange={setReferredWhatsapp}
+              countries={countries}
+              suggestedCountryIso={suggestedCountryIso}
+              preferredDialIso={whatsappDialIso}
+              onDialIsoChange={(iso) => {
+                setWhatsappDialIso(iso);
+                setCountryIso(iso);
+              }}
+              className="flex-col sm:flex-row sm:items-start"
+              dialCodeClassName="w-full sm:w-35 sm:shrink-0"
+              mobileClassName="w-full sm:flex-1"
+            />
+          </Field>
+        </>
       )}
+    </ReferFormSection>
+  );
+
+  const submitButton = (
+    <Button
+      type="button"
+      variant="primary"
+      size="lg"
+      className="w-full"
+      disabled={submitting || !referredEligible}
+      onClick={() => void handleSubmit()}
+      rightIcon={submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+    >
+      {submitting ? 'Submitting…' : 'Refer'}
+    </Button>
+  );
+
+  const formBody = success ? (
+    successPanel
+  ) : (
+    <div className="space-y-3">
+      {referrerSection}
+      <div className={cn(referrerSection && 'pt-4')}>{friendSection}</div>
+      {submitButton}
     </div>
   );
 
   if (!wrapInAuthLayout) {
-    return formContent;
+    return (
+      <PortalPageLayout
+        eyebrow="Referrals"
+        title={REFER_PAGE_TITLE}
+        description={REFER_PAGE_SUBTITLE}
+        illustration={<ReferPageIllustration />}
+        panelClassName="bg-gradient-to-br from-brand via-[#6A71E6] to-brand-deep"
+        glowClassName="bg-white/25"
+        highlights={[
+          { label: 'Program', value: 'Take Control' },
+          { label: 'Next step', value: 'We reach out' },
+        ]}
+      >
+        <Card>{formBody}</Card>
+      </PortalPageLayout>
+    );
   }
 
-  return <AuthLayout variant="account">{formContent}</AuthLayout>;
+  const authContent = (
+    <div className="mx-auto flex w-full max-w-[420px] flex-col gap-5 py-2">
+      <div className="text-center">
+        <div className="mb-5 flex justify-center overflow-x-auto">
+          <SbmWordmark size="lg" showSubtitle={false} />
+        </div>
+        <h1 className="text-xl font-bold tracking-tight text-slate-900">{REFER_PAGE_TITLE}</h1>
+        <p className="mt-1 text-sm text-slate-600">{REFER_PAGE_SUBTITLE}</p>
+      </div>
+      {formBody}
+    </div>
+  );
+
+  return <AuthLayout variant="account">{authContent}</AuthLayout>;
 }

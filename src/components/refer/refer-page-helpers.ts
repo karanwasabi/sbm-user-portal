@@ -7,9 +7,6 @@ export const REFER_REFERRED_SECTION = 'Your friend’s details';
 
 export const REFER_BLOCKED_DEFAULT = 'They’re already enrolled in Take Control.';
 
-export const REFER_SECTION_CARD_CLASS =
-  'rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_30px_-18px_rgba(15,23,42,0.35)] sm:p-5';
-
 export function referSuccessMessage(referredFirstName: string, referredLastName: string): string {
   const name = [referredFirstName.trim(), referredLastName.trim()].filter(Boolean).join(' ');
   if (name) {
