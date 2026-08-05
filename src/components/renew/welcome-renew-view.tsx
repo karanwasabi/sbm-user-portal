@@ -9,6 +9,7 @@ import { AuthLayout } from '@/components/layout/auth-layout';
 import { clearRenewDraft } from '@/lib/renew-draft';
 import { formatInclusiveAccessEndDate, formatShortStartDate } from '@/lib/format-display-date';
 import { getRenewPaymentStatus } from '@/utils/client-api';
+import { trackCheckoutRegistrationOnce } from '@/lib/checkout-analytics';
 import type { RenewCategory } from '@/types/renew';
 
 type WelcomeRenewViewProps = {
@@ -51,7 +52,11 @@ export function WelcomeRenewView({ sessionId, categoryHint }: WelcomeRenewViewPr
           setStatus('success');
           setStartsOn(result.starts_on ?? null);
           setAccessUntil(result.access_until ?? null);
-          setCategory((result.category as RenewCategory) || categoryHint || null);
+          const resolvedCategory = (result.category as RenewCategory) || categoryHint || null;
+          setCategory(resolvedCategory);
+          if (isNewSignupRenewCategory(resolvedCategory) && result.user_id) {
+            trackCheckoutRegistrationOnce(result.user_id);
+          }
           return;
         }
         setStatus('pending');

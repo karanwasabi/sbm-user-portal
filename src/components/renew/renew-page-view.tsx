@@ -31,7 +31,8 @@ import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from
 import { readRenewDraft, saveRenewDraft, clearRenewDraft } from '@/lib/renew-draft';
 import { openRazorpayOrderCheckout, openRazorpaySubscriptionCheckout } from '@/lib/razorpay-checkout';
 import { toTitleCase } from '@/lib/title-case';
-import { captureUtmAttributionFromLocation, readUtmAttributionFromCookie } from '@/lib/utm-attribution';
+import { captureUtmAttributionFromLocation } from '@/lib/utm-attribution';
+import { readAttributionPayloadForApi } from '@/lib/attribution-payload';
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
 import { trackPortalBeginCheckout, trackPortalSignUp } from '@/lib/gtag';
 import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
@@ -531,7 +532,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
         whatsapp: whatsappE164,
         country_code: countryIso,
         dpdp_consent: true,
-        ...(readUtmAttributionFromCookie() ?? {}),
+        ...(readAttributionPayloadForApi() ?? {}),
         ...(appliedPromo ? { promo_code: appliedPromo } : {}),
       });
 

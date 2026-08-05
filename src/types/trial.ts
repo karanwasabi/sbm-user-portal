@@ -43,6 +43,7 @@ export type TrialCheckoutStartResponse = {
 export type TrialPaymentStatus = {
   status: string;
   enrolled: boolean;
+  user_id?: string;
   cohort_name?: string;
   starts_on?: string;
   product?: string;
@@ -76,4 +77,6 @@ export type TrialCheckoutStartRequest = {
   gbraid?: string;
   wbraid?: string;
   fbclid?: string;
+  fbp?: string;
+  fbc?: string;
 };

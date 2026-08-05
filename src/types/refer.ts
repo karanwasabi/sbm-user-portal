@@ -33,6 +33,8 @@ export type ReferSubmitRequest = {
   gbraid?: string;
   wbraid?: string;
   fbclid?: string;
+  fbp?: string;
+  fbc?: string;
 };
 
 export type ReferSubmitResponse = {

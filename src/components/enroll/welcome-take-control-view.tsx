@@ -6,6 +6,7 @@ import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { EnrollWelcomeIllustration } from '@/components/enroll/enroll-welcome-illustration';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { getTrialPaymentStatus } from '@/utils/client-api';
+import { trackCheckoutRegistrationOnce } from '@/lib/checkout-analytics';
 
 type WelcomeTakeControlViewProps = {
   sessionId?: string;
@@ -36,6 +37,9 @@ export function WelcomeTakeControlView({ sessionId }: WelcomeTakeControlViewProp
         if (result.enrolled) {
           setStatus('success');
           setStartsOn(result.starts_on ?? null);
+          if (result.user_id) {
+            trackCheckoutRegistrationOnce(result.user_id);
+          }
           return;
         }
         setStatus('pending');

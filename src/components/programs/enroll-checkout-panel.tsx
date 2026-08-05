@@ -14,7 +14,7 @@ import { trackMetaBeginCheckout } from '@/lib/meta-pixel';
 import { formatInrFromPaise } from '@/lib/money';
 import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
 import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned } from '@/lib/gtag';
-import { readUtmAttributionFromCookie } from '@/lib/utm-attribution';
+import { readAttributionPayloadForApi } from '@/lib/attribution-payload';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
 import { openRazorpayEnrollmentCheckout } from '@/lib/razorpay-checkout';
@@ -293,7 +293,7 @@ export function EnrollCheckoutPanel({ onBack, onPaid, defaultLegalName = '' }: E
           country: billingCountry,
         },
         promo_code: appliedPromo || undefined,
-        ...(readUtmAttributionFromCookie() ?? {}),
+        ...(readAttributionPayloadForApi() ?? {}),
       });
 
       lastCheckoutRef.current = {

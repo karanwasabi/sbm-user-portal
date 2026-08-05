@@ -72,6 +72,8 @@ export type RenewCheckoutStartRequest = {
   gbraid?: string;
   wbraid?: string;
   fbclid?: string;
+  fbp?: string;
+  fbc?: string;
 };
 
 export type RenewCheckoutStartResponse = {
@@ -93,6 +95,7 @@ export type RenewCheckoutStartResponse = {
 export type RenewPaymentStatus = {
   status: string;
   fulfilled: boolean;
+  user_id?: string;
   cohort_name?: string;
   starts_on?: string;
   category?: string;

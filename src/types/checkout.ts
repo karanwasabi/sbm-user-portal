@@ -50,6 +50,8 @@ export type CheckoutQuoteRequest = {
   gbraid?: string;
   wbraid?: string;
   fbclid?: string;
+  fbp?: string;
+  fbc?: string;
 };
 
 export type CheckoutStartResponse = {

@@ -15,7 +15,7 @@ import type {
   TrialStatus,
 } from '@/types/trial';
 import { createClient } from '@/utils/supabase/client';
-import { readUtmAttributionFromCookie } from '@/lib/utm-attribution';
+import { readAttributionPayloadForApi } from '@/lib/attribution-payload';
 
 async function publicApiFetch(path: string, init?: RequestInit): Promise<Response> {
   const headers = new Headers(init?.headers);
@@ -511,19 +511,7 @@ export async function postMeReferCheckReferredEmail(
 }
 
 function referAttributionPayload(): Partial<import('@/types/refer').ReferSubmitRequest> {
-  const utm = readUtmAttributionFromCookie();
-  if (!utm) return {};
-  return {
-    utm_source: utm.utm_source,
-    utm_medium: utm.utm_medium,
-    utm_campaign: utm.utm_campaign,
-    utm_content: utm.utm_content,
-    utm_term: utm.utm_term,
-    gclid: utm.gclid,
-    gbraid: utm.gbraid,
-    wbraid: utm.wbraid,
-    fbclid: utm.fbclid,
-  };
+  return readAttributionPayloadForApi() ?? {};
 }
 
 export async function postReferSubmit(

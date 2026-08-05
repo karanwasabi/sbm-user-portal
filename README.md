@@ -54,6 +54,14 @@ NEXT_PUBLIC_META_PIXEL_ID=2147725022394519
 
 Scripts load only when the env var is set. GA4 tracks page views on client-side route changes.
 
+**Meta Pixel + CAPI deduplication**
+
+- Browser pixel and server CAPI must use the **same pixel ID** (`NEXT_PUBLIC_META_PIXEL_ID` = backend `META_CAPI_PIXEL_ID`).
+- Checkout flows send UTM + Meta browser cookies (`_fbp`, `_fbc`) via `readAttributionPayloadForApi()` on checkout/refer start.
+- Purchase events dedupe on `purchase:{checkout_session_id}` (browser + server).
+- Lead events dedupe on `lead:{lead_id}` when the API confirms a new server-side lead.
+- CompleteRegistration dedupes on `registration:{user_id}` on welcome pages (first enrollment only; renewals skip server + browser).
+
 **Portal events** (all include `app_name: portal`):
 
 | Event                       | When                                                   |
