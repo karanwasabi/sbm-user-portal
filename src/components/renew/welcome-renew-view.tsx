@@ -7,7 +7,7 @@ import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { EnrollWelcomeIllustration } from '@/components/enroll/enroll-welcome-illustration';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { clearRenewDraft } from '@/lib/renew-draft';
-import { formatShortStartDate } from '@/lib/format-display-date';
+import { formatInclusiveAccessEndDate, formatShortStartDate } from '@/lib/format-display-date';
 import { getRenewPaymentStatus } from '@/utils/client-api';
 import type { RenewCategory } from '@/types/renew';
 
@@ -18,13 +18,6 @@ type WelcomeRenewViewProps = {
 
 function isNewSignupRenewCategory(category?: RenewCategory | string | null) {
   return category === 'new_user' || category === 'new_lead_no_sub';
-}
-
-function formatAccessUntilLabel(iso?: string | null): string | null {
-  if (!iso) return null;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export function WelcomeRenewView({ sessionId, categoryHint }: WelcomeRenewViewProps) {
@@ -85,7 +78,7 @@ export function WelcomeRenewView({ sessionId, categoryHint }: WelcomeRenewViewPr
   }, [sessionId, categoryHint]);
 
   const startLabel = startsOn ? formatShortStartDate(startsOn) : null;
-  const accessUntilLabel = formatAccessUntilLabel(accessUntil);
+  const accessUntilLabel = formatInclusiveAccessEndDate(accessUntil);
   const isNewSignup = isNewSignupRenewCategory(category);
 
   const heading =

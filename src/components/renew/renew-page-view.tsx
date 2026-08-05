@@ -23,6 +23,7 @@ import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
 import { useToast } from '@/components/ui/toast';
 import { getCountryDialCode } from '@/lib/country-dial-codes';
+import { formatInclusiveAccessEndDate } from '@/lib/format-display-date';
 import { isValidEmailFormat } from '@/lib/email-validation';
 import { trackPortalCheckoutAbandoned } from '@/lib/gtag';
 import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
@@ -59,7 +60,7 @@ function buildRenewWelcomeUrl(sessionId: string, category?: RenewCategory): stri
   return `/welcome/renew?${params.toString()}`;
 }
 
-function formatAccessDate(iso?: string): string | null {
+function formatRenewalOnDate(iso?: string): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
@@ -742,7 +743,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                 <p className="font-semibold text-slate-900">Auto-renew is already on</p>
                 <p className="mt-1">
                   {classification.next_renewal_at
-                    ? `Your next renewal is on ${formatAccessDate(classification.next_renewal_at) ?? classification.next_renewal_at}.`
+                    ? `Your next renewal is on ${formatRenewalOnDate(classification.next_renewal_at) ?? classification.next_renewal_at}.`
                     : 'Your membership renews automatically — no payment needed here.'}
                 </p>
               </>
@@ -771,7 +772,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
               <div className="rounded-xl border border-brand/20 bg-brand/5 px-4 py-3 text-sm text-slate-700">
                 Access until{' '}
                 <span className="font-semibold text-slate-900">
-                  {formatAccessDate(classification.access_until) ?? classification.access_until}
+                  {formatInclusiveAccessEndDate(classification.access_until, 'long') ?? classification.access_until}
                 </span>
               </div>
             ) : null}

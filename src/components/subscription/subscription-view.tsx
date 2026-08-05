@@ -14,6 +14,7 @@ import { Pill } from '@/components/ui/pill';
 import { SectionHead } from '@/components/ui/section-head';
 import { SubscriptionRenewalCardSkeleton } from '@/components/loading/subscription-page-skeleton';
 import { openRazorpayContinueBilling, openRazorpayPaymentMethodUpdate } from '@/lib/razorpay-checkout';
+import { formatInclusiveAccessEndDate } from '@/lib/format-display-date';
 import { formatInrFromPaise } from '@/lib/money';
 import { invoicesNavEnabled } from '@/lib/portal-features';
 import type { Subscription } from '@/types/subscription';
@@ -51,6 +52,16 @@ function daysUntil(iso?: string | null): number | null {
   target.setHours(0, 0, 0, 0);
   today.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function formatMembershipAccessEndDisplay(subscription: Subscription, style: 'short' | 'long' = 'short'): string {
+  if (subscription.access_until) {
+    const inclusive = formatInclusiveAccessEndDate(subscription.access_until, style);
+    if (inclusive) return inclusive;
+  }
+  const fallback = subscription.access_until ?? subscription.next_renewal_at ?? subscription.recurring_start_at;
+  if (style === 'long') return formatRenewalDate(fallback);
+  return formatDisplayDate(fallback);
 }
 
 function renewalCountdownLabel(days: number | null): string {
@@ -183,6 +194,8 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
     !isPrepaid && (subscription.cancel_at_period_end || subscription.subscription_status === 'cancelling');
   const billingStartDate = subscription.monthly_billing_start_at ?? subscription.recurring_start_at ?? accessEnd;
   const renewalDays = daysUntil(subscription.next_renewal_at ?? billingStartDate);
+  const accessEndDisplayShort = formatMembershipAccessEndDisplay(subscription, 'short');
+  const accessEndDisplayLong = formatMembershipAccessEndDisplay(subscription, 'long');
   const monthlyTotalDisplay = formatInrFromPaise(subscription.monthly_total_paise);
   const monthlyBaseDisplay = formatInrFromPaise(subscription.monthly_base_paise);
   const monthlyGstDisplay = formatInrFromPaise(subscription.monthly_gst_paise);
@@ -295,7 +308,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
         { label: 'Status', value: statusLabel(subscription.subscription_status) },
         {
           label: isPrepaid ? 'Prepaid Until' : isCancelling ? 'Access Until' : 'Next Renewal',
-          value: formatDisplayDate(isPrepaid || isCancelling ? accessEnd : subscription.next_renewal_at),
+          value: isPrepaid || isCancelling ? accessEndDisplayShort : formatDisplayDate(subscription.next_renewal_at),
         },
       ]}
     >
@@ -316,7 +329,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
                   {isPrepaid ? 'Prepaid Until' : isCancelling ? 'Access Ends' : 'Next Renewal'}
                 </p>
                 <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-                  {formatRenewalDate(isPrepaid || isCancelling ? accessEnd : subscription.next_renewal_at)}
+                  {isPrepaid || isCancelling ? accessEndDisplayLong : formatRenewalDate(subscription.next_renewal_at)}
                 </p>
                 {!isCancelling && !isPrepaid ? (
                   <p className="mt-2 text-sm font-semibold text-brand">{renewalCountdownLabel(renewalDays)}</p>
@@ -404,7 +417,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
               <Calendar size={18} className="mt-0.5 shrink-0 text-slate-500" />
               <p className="text-sm leading-relaxed text-slate-600">
                 If you cancel today, you keep program access until{' '}
-                <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>.
+                <span className="font-semibold text-slate-800">{accessEndDisplayShort}</span>.
               </p>
             </div>
             <Button
@@ -448,7 +461,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
                     {accessEnd && subscription.enrollment_status !== 'cancelled' ? (
                       <>
                         . Access continues until{' '}
-                        <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>.
+                        <span className="font-semibold text-slate-800">{accessEndDisplayShort}</span>.
                       </>
                     ) : subscription.enrollment_status === 'cancelled' ? (
                       '. Billing starts immediately after setup.'
@@ -484,7 +497,7 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
         <Card>
           <p className="text-sm leading-relaxed text-slate-600">
             Your subscription is set to cancel. Program access continues until{' '}
-            <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>.
+            <span className="font-semibold text-slate-800">{accessEndDisplayShort}</span>.
           </p>
         </Card>
       ) : null}
@@ -497,8 +510,8 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
           accessEnd ? (
             <>
               You&apos;ll keep program access until{' '}
-              <span className="font-semibold text-slate-800">{formatDisplayDate(accessEnd)}</span>. After that, billing
-              stops but you can still use the member portal to re-enrol.
+              <span className="font-semibold text-slate-800">{accessEndDisplayShort}</span>. After that, billing stops
+              but you can still use the member portal to re-enrol.
             </>
           ) : (
             'Billing will stop at the end of the current period.'
