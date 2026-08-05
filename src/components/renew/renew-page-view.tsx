@@ -29,7 +29,7 @@ import { trackPortalCheckoutAbandoned } from '@/lib/gtag';
 import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
 import { readRenewDraft, saveRenewDraft, clearRenewDraft } from '@/lib/renew-draft';
-import { openRazorpayOrderCheckout } from '@/lib/razorpay-checkout';
+import { openRazorpayOrderCheckout, openRazorpaySubscriptionCheckout } from '@/lib/razorpay-checkout';
 import { toTitleCase } from '@/lib/title-case';
 import { captureUtmAttributionFromLocation, readUtmAttributionFromCookie } from '@/lib/utm-attribution';
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
@@ -561,7 +561,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
         pricingRegion,
       };
 
-      if (start.mock || !start.razorpay_key_id || !start.razorpay_order_id) {
+      if (start.mock || !start.razorpay_key_id || (!start.razorpay_order_id && !start.razorpay_subscription_id)) {
         trackCheckoutPurchaseOnce({
           transactionId: start.checkout_session_id,
           valuePaise: start.amount_paise,
@@ -575,9 +575,51 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
         return;
       }
 
+      if (start.razorpay_subscription_id) {
+        await openRazorpaySubscriptionCheckout({
+          key: start.razorpay_key_id!,
+          subscriptionId: start.razorpay_subscription_id,
+          description: renewPlanLabel(start.plan_key),
+          pricingRegion: pricingRegion as 'domestic' | 'international',
+          checkoutSessionId: start.checkout_session_id,
+          returnDestination: welcomeUrl,
+          returnFlow: razorpayReturnFlow,
+          prefill: {
+            name: `${firstName} ${lastName}`.trim(),
+            email: email.trim(),
+            contact: whatsappE164,
+            contactCountryIso: dialIso,
+          },
+          onSuccess: () => {
+            const checkout = lastCheckoutRef.current;
+            if (checkout) {
+              trackCheckoutPurchaseOnce({
+                transactionId: checkout.sessionId,
+                valuePaise: checkout.valuePaise,
+                cohortName: checkout.cohortName,
+                pricingRegion: checkout.pricingRegion,
+                renewPlanKey: start.plan_key,
+              });
+            }
+            clearRenewDraft();
+            window.location.href = welcomeUrl;
+          },
+          onDismiss: () => {
+            setSubmitting(false);
+            trackPortalCheckoutAbandoned({
+              valuePaise: start.amount_paise,
+              cohortName: start.cohort_name,
+              pricingRegion,
+              renewPlanKey: start.plan_key,
+            });
+          },
+        });
+        return;
+      }
+
       await openRazorpayOrderCheckout({
-        key: start.razorpay_key_id,
-        orderId: start.razorpay_order_id,
+        key: start.razorpay_key_id!,
+        orderId: start.razorpay_order_id!,
         customerId: start.razorpay_customer_id,
         description: renewPlanLabel(start.plan_key),
         pricingRegion: pricingRegion as 'domestic' | 'international',

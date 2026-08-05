@@ -186,6 +186,8 @@ export async function openRazorpaySubscriptionCheckout({
 
   const complete = runOnce(onSuccess);
   const enrollmentFlow = returnFlow === 'enrollment';
+  const renewFlow = returnFlow === 'renew';
+  const confirmOnHandler = enrollmentFlow || renewFlow;
   const watcher = enrollmentFlow ? startCheckoutCompletionWatcher(complete) : null;
 
   if (checkoutSessionId) {
@@ -218,16 +220,26 @@ export async function openRazorpaySubscriptionCheckout({
     }) => {
       watcher?.stop();
       void (async () => {
-        if (enrollmentFlow && checkoutSessionId) {
+        if (confirmOnHandler && checkoutSessionId) {
           try {
-            await confirmCheckoutPaymentReturn({
-              checkout_session_id: checkoutSessionId,
-              flow: returnFlow,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_subscription_id: response.razorpay_subscription_id ?? subscriptionId,
-              razorpay_signature: response.razorpay_signature,
-            });
+            if (enrollmentFlow) {
+              await confirmCheckoutPaymentReturn({
+                checkout_session_id: checkoutSessionId,
+                flow: returnFlow,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_subscription_id: response.razorpay_subscription_id ?? subscriptionId,
+                razorpay_signature: response.razorpay_signature,
+              });
+            } else if (renewFlow) {
+              await confirmRenewPaymentReturn({
+                checkout_session_id: checkoutSessionId,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_subscription_id: response.razorpay_subscription_id ?? subscriptionId,
+                razorpay_signature: response.razorpay_signature,
+              });
+            }
           } catch {
             // Webhook/callback may still confirm; sync runs on poll as backup.
           }

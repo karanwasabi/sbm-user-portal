@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
         checkout_session_id: sessionId || undefined,
         razorpay_payment_id: fields.razorpay_payment_id,
         razorpay_order_id: fields.razorpay_order_id,
+        razorpay_subscription_id: fields.razorpay_subscription_id,
         razorpay_signature: fields.razorpay_signature,
       }),
       cache: 'no-store',
