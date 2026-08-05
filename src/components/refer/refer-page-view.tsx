@@ -16,6 +16,8 @@ import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
 import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
 import { captureUtmAttributionFromLocation } from '@/lib/utm-attribution';
+import { trackPortalEvent } from '@/lib/gtag';
+import { trackMetaCustom, trackMetaLead } from '@/lib/meta-pixel';
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
 import {
   REFER_BLOCKED_DEFAULT,
@@ -26,6 +28,7 @@ import {
   REFER_SAME_EMAIL_ERROR,
   isValidReferEmail,
   referEmailsMatch,
+  referAnalyticsBase,
   referSuccessMessage,
 } from '@/components/refer/refer-page-helpers';
 import type { ReferCheckReferredEmailResponse } from '@/types/refer';
@@ -120,6 +123,12 @@ export function ReferPageView({
     captureUtmAttributionFromLocation();
   }, []);
 
+  useEffect(() => {
+    const params = referAnalyticsBase(variant, hideReferrerEmail);
+    trackPortalEvent('portal_refer_page_viewed', params);
+    trackMetaCustom('PortalReferPageViewed', params);
+  }, [variant, hideReferrerEmail]);
+
   const referredBlocked = referredClassification?.blocked === true;
   const activeReferrerEmail = hideReferrerEmail
     ? initialReferrerEmail.trim().toLowerCase()
@@ -150,6 +159,13 @@ export function ReferPageView({
     lastReferredCheck.current = '';
     setSuccess(false);
     setSuccessMessage('');
+  };
+
+  const handleReferAnotherFriend = () => {
+    const params = referAnalyticsBase(variant, hideReferrerEmail);
+    trackPortalEvent('portal_refer_another_clicked', params);
+    trackMetaCustom('PortalReferAnotherClicked', params);
+    clearReferredState();
   };
 
   const handleReferrerEmailBlur = async () => {
@@ -321,14 +337,21 @@ export function ReferPageView({
         referrer_consent: true,
       };
 
-      if (isPortal) {
-        await postMeReferSubmit(payload);
-      } else {
-        await postReferSubmit({
-          ...payload,
-          referrer_email: trimmedReferrerEmail,
-        });
-      }
+      const response = isPortal
+        ? await postMeReferSubmit(payload)
+        : await postReferSubmit({
+            ...payload,
+            referrer_email: trimmedReferrerEmail,
+          });
+
+      const submitParams = {
+        ...referAnalyticsBase(variant, hideReferrerEmail),
+        referral_id: response.referral_id,
+        lead_id: response.lead_id,
+      };
+      trackPortalEvent('portal_refer_submitted', submitParams);
+      trackMetaCustom('PortalReferSubmitted', submitParams);
+      trackMetaLead();
 
       setSuccessMessage(referSuccessMessage(referredFirstName, referredLastName));
       setSuccess(true);
@@ -346,7 +369,7 @@ export function ReferPageView({
     <div className="flex flex-col items-center gap-4 rounded-2xl border border-success/30 bg-success/5 px-5 py-8 text-center">
       <CheckCircle2 className="h-10 w-10 text-success" aria-hidden />
       <p className="text-sm font-medium text-slate-800">{successMessage}</p>
-      <Button type="button" variant="primary" onClick={() => clearReferredState()}>
+      <Button type="button" variant="primary" onClick={handleReferAnotherFriend}>
         Refer another friend
       </Button>
     </div>

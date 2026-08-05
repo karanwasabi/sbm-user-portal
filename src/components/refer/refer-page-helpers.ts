@@ -15,6 +15,14 @@ export function referEmailsMatch(referrerEmail: string, referredEmail: string): 
   return referrer.length > 0 && referred.length > 0 && referrer === referred;
 }
 
+export function referAnalyticsBase(variant: 'public' | 'portal', loggedIn: boolean) {
+  return {
+    page_path: '/refer',
+    refer_variant: variant,
+    logged_in: loggedIn,
+  };
+}
+
 export function referSuccessMessage(referredFirstName: string, referredLastName: string): string {
   const name = [referredFirstName.trim(), referredLastName.trim()].filter(Boolean).join(' ');
   if (name) {
