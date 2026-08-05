@@ -23,7 +23,9 @@ import {
   REFER_PAGE_TITLE,
   REFER_REFERRED_SECTION,
   REFER_REFERRER_SECTION,
+  REFER_SAME_EMAIL_ERROR,
   isValidReferEmail,
+  referEmailsMatch,
   referSuccessMessage,
 } from '@/components/refer/refer-page-helpers';
 import type { ReferCheckReferredEmailResponse } from '@/types/refer';
@@ -105,6 +107,7 @@ export function ReferPageView({
   const [checkingReferred, setCheckingReferred] = useState(false);
   const [referredClassification, setReferredClassification] = useState<ReferCheckReferredEmailResponse | null>(null);
   const [referrerEmailError, setReferrerEmailError] = useState<string | null>(null);
+  const [referrerNameLocked, setReferrerNameLocked] = useState(false);
   const [referredEmailError, setReferredEmailError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -118,7 +121,24 @@ export function ReferPageView({
   }, []);
 
   const referredBlocked = referredClassification?.blocked === true;
-  const referredEligible = referredClassification?.eligible === true && !referredBlocked && referredEmail.trim() !== '';
+  const activeReferrerEmail = hideReferrerEmail
+    ? initialReferrerEmail.trim().toLowerCase()
+    : referrerEmail.trim().toLowerCase();
+  const referredEmailNormalized = referredEmail.trim().toLowerCase();
+  const sameReferrerAndFriendEmail = referEmailsMatch(activeReferrerEmail, referredEmailNormalized);
+  const referredEligible =
+    referredClassification?.eligible === true &&
+    !referredBlocked &&
+    referredEmailNormalized !== '' &&
+    !sameReferrerAndFriendEmail;
+
+  const rejectSameFriendEmail = (referred: string) => {
+    if (!referEmailsMatch(activeReferrerEmail, referred)) return false;
+    setReferredEmailError(REFER_SAME_EMAIL_ERROR);
+    setReferredClassification(null);
+    lastReferredCheck.current = '';
+    return true;
+  };
 
   const clearReferredState = () => {
     setReferredEmail('');
@@ -138,6 +158,7 @@ export function ReferPageView({
     const trimmed = referrerEmail.trim().toLowerCase();
     if (!trimmed) {
       setReferrerEmailError(null);
+      setReferrerNameLocked(false);
       return;
     }
     if (!isValidReferEmail(trimmed)) {
@@ -151,8 +172,16 @@ export function ReferPageView({
     try {
       const result = await postReferCheckReferrerEmail(trimmed);
       lastReferrerCheck.current = trimmed;
-      if (result.first_name) setReferrerFirstName(result.first_name);
-      if (result.last_name) setReferrerLastName(result.last_name);
+      if (result.in_system) {
+        setReferrerNameLocked(true);
+        if (result.first_name) setReferrerFirstName(result.first_name);
+        if (result.last_name) setReferrerLastName(result.last_name);
+      } else {
+        setReferrerNameLocked(false);
+      }
+      if (rejectSameFriendEmail(referredEmail.trim().toLowerCase())) {
+        return;
+      }
     } catch (err) {
       toast({
         message: err instanceof Error ? err.message : 'Could not verify your email.',
@@ -173,6 +202,9 @@ export function ReferPageView({
     if (!isValidReferEmail(trimmed)) {
       setReferredEmailError('That doesn’t look like a valid email.');
       setReferredClassification(null);
+      return;
+    }
+    if (rejectSameFriendEmail(trimmed)) {
       return;
     }
     if (trimmed === lastReferredCheck.current && referredClassification) return;
@@ -202,17 +234,32 @@ export function ReferPageView({
 
   const handleReferrerEmailChange = (value: string) => {
     setReferrerEmail(value);
-    if (value.trim().toLowerCase() !== lastReferrerCheck.current) {
+    const normalized = value.trim().toLowerCase();
+    if (normalized !== lastReferrerCheck.current) {
       lastReferrerCheck.current = '';
+      setReferrerNameLocked(false);
+    }
+    if (referEmailsMatch(normalized, referredEmail.trim().toLowerCase())) {
+      setReferredEmailError(REFER_SAME_EMAIL_ERROR);
+      setReferredClassification(null);
+      lastReferredCheck.current = '';
+    } else if (referredEmailError === REFER_SAME_EMAIL_ERROR) {
+      setReferredEmailError(null);
     }
   };
 
   const handleReferredEmailChange = (value: string) => {
     setReferredEmail(value);
-    if (value.trim().toLowerCase() !== lastReferredCheck.current) {
+    const normalized = value.trim().toLowerCase();
+    if (normalized !== lastReferredCheck.current) {
       lastReferredCheck.current = '';
       setReferredClassification(null);
       setReferredEmailError(null);
+    }
+    if (referEmailsMatch(activeReferrerEmail, normalized)) {
+      setReferredEmailError(REFER_SAME_EMAIL_ERROR);
+      setReferredClassification(null);
+      lastReferredCheck.current = '';
     }
   };
 
@@ -234,6 +281,10 @@ export function ReferPageView({
     }
     if (!isValidReferEmail(trimmedReferredEmail)) {
       setReferredEmailError('That doesn’t look like a valid email for your friend.');
+      return;
+    }
+    if (referEmailsMatch(trimmedReferrerEmail, trimmedReferredEmail)) {
+      setReferredEmailError(REFER_SAME_EMAIL_ERROR);
       return;
     }
     if (!referredEligible) {
@@ -322,10 +373,20 @@ export function ReferPageView({
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="First name">
-          <TextInput value={referrerFirstName} onChange={setReferrerFirstName} autoComplete="given-name" />
+          <TextInput
+            value={referrerFirstName}
+            onChange={setReferrerFirstName}
+            autoComplete="given-name"
+            disabled={referrerNameLocked}
+          />
         </Field>
         <Field label="Last name">
-          <TextInput value={referrerLastName} onChange={setReferrerLastName} autoComplete="family-name" />
+          <TextInput
+            value={referrerLastName}
+            onChange={setReferrerLastName}
+            autoComplete="family-name"
+            disabled={referrerNameLocked}
+          />
         </Field>
       </div>
     </ReferFormSection>
