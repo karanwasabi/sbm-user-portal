@@ -71,12 +71,24 @@ export default async function ReferPage() {
     }
 
     const referrerEmail = user.email?.trim() ?? '';
+    let referrerFirstName = '';
+    let referrerLastName = '';
+    try {
+      const profile = await getLatestProfile();
+      referrerFirstName = profile.first_name?.trim() ?? '';
+      referrerLastName = profile.last_name?.trim() ?? '';
+    } catch {
+      // Profile may not exist yet on subscribe path; referrer name fields stay empty.
+    }
+
     return (
       <ReferPageView
         variant="public"
         countries={countries}
         suggestedCountryIso={suggestedCountryIso}
         initialReferrerEmail={referrerEmail}
+        initialReferrerFirstName={referrerFirstName}
+        initialReferrerLastName={referrerLastName}
       />
     );
   }
