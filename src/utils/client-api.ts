@@ -15,6 +15,7 @@ import type {
   TrialStatus,
 } from '@/types/trial';
 import { createClient } from '@/utils/supabase/client';
+import { readUtmAttributionFromCookie } from '@/lib/utm-attribution';
 
 async function publicApiFetch(path: string, init?: RequestInit): Promise<Response> {
   const headers = new Headers(init?.headers);
@@ -477,4 +478,72 @@ export async function confirmRenewPaymentReturn(body: {
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+export async function postReferCheckReferrerEmail(
+  email: string
+): Promise<import('@/types/refer').ReferCheckReferrerEmailResponse> {
+  const response = await publicApiFetch('/public/refer/check-referrer-email', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  return response.json() as Promise<import('@/types/refer').ReferCheckReferrerEmailResponse>;
+}
+
+export async function postReferCheckReferredEmail(
+  email: string
+): Promise<import('@/types/refer').ReferCheckReferredEmailResponse> {
+  const response = await publicApiFetch('/public/refer/check-referred-email', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  return response.json() as Promise<import('@/types/refer').ReferCheckReferredEmailResponse>;
+}
+
+export async function postMeReferCheckReferredEmail(
+  email: string
+): Promise<import('@/types/refer').ReferCheckReferredEmailResponse> {
+  const response = await clientApiFetch('/me/refer/check-referred-email', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  return response.json() as Promise<import('@/types/refer').ReferCheckReferredEmailResponse>;
+}
+
+function referAttributionPayload(): Partial<import('@/types/refer').ReferSubmitRequest> {
+  const utm = readUtmAttributionFromCookie();
+  if (!utm) return {};
+  return {
+    utm_source: utm.utm_source,
+    utm_medium: utm.utm_medium,
+    utm_campaign: utm.utm_campaign,
+    utm_content: utm.utm_content,
+    utm_term: utm.utm_term,
+    gclid: utm.gclid,
+    gbraid: utm.gbraid,
+    wbraid: utm.wbraid,
+    fbclid: utm.fbclid,
+  };
+}
+
+export async function postReferSubmit(
+  body: Omit<import('@/types/refer').ReferSubmitRequest, 'referrer_consent'> & { referrer_consent: boolean }
+): Promise<import('@/types/refer').ReferSubmitResponse> {
+  const response = await publicApiFetch('/public/refer/submit', {
+    method: 'POST',
+    body: JSON.stringify({ ...body, ...referAttributionPayload() }),
+  });
+  return response.json() as Promise<import('@/types/refer').ReferSubmitResponse>;
+}
+
+export async function postMeReferSubmit(
+  body: Omit<import('@/types/refer').ReferSubmitRequest, 'referrer_email' | 'referrer_consent'> & {
+    referrer_consent: boolean;
+  }
+): Promise<import('@/types/refer').ReferSubmitResponse> {
+  const response = await clientApiFetch('/me/refer/submit', {
+    method: 'POST',
+    body: JSON.stringify({ ...body, ...referAttributionPayload() }),
+  });
+  return response.json() as Promise<import('@/types/refer').ReferSubmitResponse>;
 }

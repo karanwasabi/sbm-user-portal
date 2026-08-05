@@ -1,4 +1,4 @@
-import { CreditCard, FileText, HelpCircle, Home, Settings, User, type LucideIcon } from 'lucide-react';
+import { CreditCard, FileText, HelpCircle, Home, Settings, User, UserPlus, type LucideIcon } from 'lucide-react';
 import { invoicesNavEnabled } from '@/lib/portal-features';
 import { PORTAL_HOME_PATH } from '@/lib/routes';
 
@@ -24,6 +24,13 @@ export const portalMainNavItems: PortalNavItem[] = [
     icon: CreditCard,
     activeClass:
       'border-b-success-press bg-success font-bold text-white shadow-[0_8px_14px_-6px_rgba(16,185,129,0.35)]',
+    iconActiveClass: 'text-white',
+  },
+  {
+    href: '/refer',
+    label: 'Refer a friend',
+    icon: UserPlus,
+    activeClass: 'border-b-brand-press bg-brand font-bold text-white shadow-[0_8px_14px_-6px_rgba(92,101,207,0.40)]',
     iconActiveClass: 'text-white',
   },
   ...(invoicesNavEnabled
