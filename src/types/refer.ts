@@ -10,6 +10,8 @@ export type ReferCheckReferredEmailResponse = {
   blocked_reason?: string;
   first_name?: string;
   last_name?: string;
+  phone?: string;
+  country_code?: string;
 };
 
 export type ReferSubmitRequest = {

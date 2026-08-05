@@ -236,6 +236,11 @@ export function ReferPageView({
       if (!result.blocked) {
         if (result.first_name && !referredFirstName) setReferredFirstName(result.first_name);
         if (result.last_name && !referredLastName) setReferredLastName(result.last_name);
+        if (result.phone && !referredWhatsapp.trim()) setReferredWhatsapp(result.phone);
+        if (result.country_code) {
+          setCountryIso(result.country_code);
+          setWhatsappDialIso(result.country_code);
+        }
       }
     } catch (err) {
       toast({
