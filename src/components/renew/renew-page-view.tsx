@@ -934,9 +934,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                       quote={renewalQuote}
                       startsOn={preview.starts_on}
                       renewFromDate={renewFromDateIso}
-                      extensionBasePaise={
-                        trialExtendAddonBasePaiseValue != null ? trialExtendExtensionBasePaiseValue : undefined
-                      }
+                      extensionBasePaise={trialExtendExtensionBasePaiseValue ?? undefined}
                       addonBasePaise={trialExtendAddonBasePaiseValue ?? undefined}
                     />
                   ) : null
