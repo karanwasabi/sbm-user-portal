@@ -24,9 +24,16 @@ export function shouldClearPromoForPlan(planKey: string) {
   return planKey !== 'trial_3m';
 }
 
-/** Returnee 1-month plan uses Razorpay subscription autopay. */
+/** Renew categories where renewal_1m is a Razorpay subscription with autopay. */
+export const RENEW_1M_AUTOPAY_CATEGORIES: RenewCategory[] = ['returnee_no_sub', 'old_student_active_renew'];
+
+export function isRenew1mAutopayCategory(category: RenewCategory | null): boolean {
+  return category != null && RENEW_1M_AUTOPAY_CATEGORIES.includes(category);
+}
+
+/** 1-month renewal plan uses Razorpay subscription autopay for returnees and active old-students. */
 export function isRenewal1mAutopayPlan(category: RenewCategory | null, planKey: string) {
-  return (category === 'returnee_no_sub' || category === 'old_student_active_renew') && planKey === 'renewal_1m';
+  return isRenew1mAutopayCategory(category) && planKey.trim() === 'renewal_1m';
 }
 
 export function isTrialPlanOptionsLoading(

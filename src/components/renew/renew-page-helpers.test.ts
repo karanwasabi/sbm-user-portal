@@ -4,6 +4,7 @@ import {
   isBlockedCategory,
   isNewUserCategory,
   isRenewal1mAutopayPlan,
+  isRenew1mAutopayCategory,
   isSubscribedProfileFieldLocked,
   isTrialPlanOptionsLoading,
   shouldClearPromoForPlan,
@@ -42,6 +43,8 @@ describe('renew-page-helpers', () => {
   });
 
   it('detects returnee 1-month autopay plan', () => {
+    expect(isRenew1mAutopayCategory('old_student_active_renew')).toBe(true);
+    expect(isRenew1mAutopayCategory('member_manual_renew')).toBe(false);
     expect(isRenewal1mAutopayPlan('returnee_no_sub', 'renewal_1m')).toBe(true);
     expect(isRenewal1mAutopayPlan('old_student_active_renew', 'renewal_1m')).toBe(true);
     expect(isRenewal1mAutopayPlan('returnee_no_sub', 'renewal_3m')).toBe(false);

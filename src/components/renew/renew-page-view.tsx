@@ -13,6 +13,7 @@ import {
   isSubscribedProfileFieldLocked,
   isTrialPlanOptionsLoading,
   isRenewal1mAutopayPlan,
+  isRenew1mAutopayCategory,
   shouldClearPromoForPlan,
   trialExtendAddonBasePaise,
   trialExtendExtensionBasePaise,
@@ -238,7 +239,8 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
           if (isNewUserCategory(category)) {
             setSelectedPlan((prev) => prev || data.trial_products?.[0] || 'trial_3m');
           } else if (data.plans && data.plans.length > 0) {
-            setSelectedPlan((prev) => prev || data.plans![0].plan_key);
+            const planKeys = data.plans.map((plan) => plan.plan_key);
+            setSelectedPlan((prev) => (prev && planKeys.includes(prev) ? prev : data.plans![0].plan_key));
           }
         }
       } catch {
@@ -865,6 +867,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                     options={planPickerOptions}
                     selectedPlanKey={selectedPlan}
                     onSelect={setSelectedPlan}
+                    autopayPlanKey={isRenew1mAutopayCategory(category) ? 'renewal_1m' : undefined}
                   />
                 ) : null}
 
