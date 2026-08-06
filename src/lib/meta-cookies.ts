@@ -17,6 +17,13 @@ function readCookieValue(name: string): string | null {
   return null;
 }
 
+/** Build Meta click cookie value from fbclid (matches backend meta.FormatFbc). */
+export function formatMetaFbc(fbclid: string, clickTimeMs = Date.now()): string {
+  const trimmed = fbclid.trim();
+  if (!trimmed) return '';
+  return `fb.1.${Math.floor(clickTimeMs / 1000)}.${trimmed}`;
+}
+
 /** Read Meta browser cookies set by the pixel (_fbp, _fbc). */
 export function readMetaCookies(): MetaCookieAttribution {
   const fbp = readCookieValue('_fbp')?.trim();

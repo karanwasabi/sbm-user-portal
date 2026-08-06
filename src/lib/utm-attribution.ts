@@ -11,6 +11,8 @@ export type UtmAttribution = {
   gbraid?: string;
   wbraid?: string;
   fbclid?: string;
+  /** Unix seconds when fbclid was first observed (for Meta fbc synthesis). */
+  meta_click_time?: number;
 };
 
 function normalizeAttributionValue(value: string | null): string | undefined {
@@ -33,6 +35,8 @@ function parseUtmCookie(value?: string): UtmAttribution | null {
       gbraid: normalizeAttributionValue(parsed.gbraid ?? null),
       wbraid: normalizeAttributionValue(parsed.wbraid ?? null),
       fbclid: normalizeAttributionValue(parsed.fbclid ?? null),
+      meta_click_time:
+        typeof parsed.meta_click_time === 'number' && parsed.meta_click_time > 0 ? parsed.meta_click_time : undefined,
     };
     return hasAnyAttribution(merged) ? merged : null;
   } catch {
@@ -109,6 +113,7 @@ export function captureUtmAttributionFromLocation(): UtmAttribution | null {
   };
 
   const existing = readUtmAttributionFromCookie();
+  const urlFbclid = fromUrl.fbclid;
   const merged: UtmAttribution = {
     utm_source: existing?.utm_source ?? fromUrl.utm_source,
     utm_medium: existing?.utm_medium ?? fromUrl.utm_medium,
@@ -118,7 +123,8 @@ export function captureUtmAttributionFromLocation(): UtmAttribution | null {
     gclid: existing?.gclid ?? fromUrl.gclid,
     gbraid: existing?.gbraid ?? fromUrl.gbraid,
     wbraid: existing?.wbraid ?? fromUrl.wbraid,
-    fbclid: existing?.fbclid ?? fromUrl.fbclid,
+    fbclid: existing?.fbclid ?? urlFbclid,
+    meta_click_time: existing?.meta_click_time ?? (urlFbclid ? Math.floor(Date.now() / 1000) : undefined),
   };
 
   if (!hasAnyAttribution(merged)) {
