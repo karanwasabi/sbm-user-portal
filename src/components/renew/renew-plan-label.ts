@@ -26,3 +26,17 @@ export function renewPlanLabel(planKey: string): string {
       return planKey.replaceAll('_', ' ');
   }
 }
+
+/** Splits bundled trial_extend titles so the membership addon can be styled separately. */
+export function splitRenewPlanLabel(planKey: string): { base: string; addon?: string } {
+  const label = renewPlanLabel(planKey);
+  const addonSep = ' + ';
+  const sepIndex = label.indexOf(addonSep);
+  if (sepIndex === -1) {
+    return { base: label };
+  }
+  return {
+    base: label.slice(0, sepIndex),
+    addon: label.slice(sepIndex + 1),
+  };
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
-import { renewPlanLabel } from '@/components/renew/renew-plan-label';
+import { splitRenewPlanLabel } from '@/components/renew/renew-plan-label';
 import { cn } from '@/lib/cn';
 import { formatInrFromPaise } from '@/lib/money';
 
@@ -54,6 +54,7 @@ export function RenewPlanPicker({ options, selectedPlanKey, onSelect }: RenewPla
             option.addonBasePaise != null &&
             option.addonBasePaise > 0 &&
             !hasDiscount;
+          const planTitleParts = splitRenewPlanLabel(option.planKey);
 
           return (
             <button
@@ -71,7 +72,15 @@ export function RenewPlanPicker({ options, selectedPlanKey, onSelect }: RenewPla
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-base leading-snug font-bold text-slate-900">{renewPlanLabel(option.planKey)}</p>
+                  <p className="text-base leading-snug font-bold text-slate-900">
+                    {planTitleParts.base}
+                    {planTitleParts.addon ? (
+                      <>
+                        {' '}
+                        <span className="text-brand">{planTitleParts.addon}</span>
+                      </>
+                    ) : null}
+                  </p>
                   {option.discountLabel ? (
                     <span className="mt-1.5 inline-block rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
                       {option.discountLabel}
@@ -101,9 +110,12 @@ export function RenewPlanPicker({ options, selectedPlanKey, onSelect }: RenewPla
                     </p>
                   </>
                 ) : showTrialExtendSplit ? (
-                  <p className="text-[1.65rem] leading-none font-extrabold tracking-tight text-slate-900">
-                    {formatInrFromPaise(option.extensionBasePaise!)} + {formatInrFromPaise(option.addonBasePaise!)}
-                  </p>
+                  <div className="text-[1.65rem] leading-none font-extrabold tracking-tight tabular-nums">
+                    <p className="text-slate-900">
+                      {formatInrFromPaise(option.extensionBasePaise!)} <span aria-hidden="true">+</span>
+                    </p>
+                    <p className="mt-0.5 text-brand">{formatInrFromPaise(option.addonBasePaise!)}</p>
+                  </div>
                 ) : (
                   <p className="text-[1.65rem] leading-none font-extrabold tracking-tight text-slate-900">
                     {formatInrFromPaise(option.basePaise)}

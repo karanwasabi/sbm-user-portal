@@ -1,7 +1,7 @@
 'use client';
 
 import { CalendarDays } from 'lucide-react';
-import { renewPlanLabel } from '@/components/renew/renew-plan-label';
+import { splitRenewPlanLabel } from '@/components/renew/renew-plan-label';
 import { cn } from '@/lib/cn';
 import { formatShortStartDate } from '@/lib/format-display-date';
 import { formatInrFromPaise } from '@/lib/money';
@@ -39,6 +39,7 @@ export function RenewPricingSummary({
   const dateLabel = renewFromLabel ?? startsLabel;
   const showTrialExtendSplit =
     extensionBasePaise != null && addonBasePaise != null && addonBasePaise > 0 && !hasDiscount;
+  const planTitleParts = splitRenewPlanLabel(planKey);
 
   return (
     <section
@@ -56,10 +57,15 @@ export function RenewPricingSummary({
           </div>
           <div className="min-w-0 shrink text-right">
             {showTrialExtendSplit ? (
-              <p className="text-xl font-extrabold tracking-tight text-slate-900">
-                {formatInrFromPaise(extensionBasePaise)} + {formatInrFromPaise(addonBasePaise)}
-                {showGst ? <span className="text-base font-bold text-slate-600"> + GST</span> : null}
-              </p>
+              <div className="text-right text-xl font-extrabold tracking-tight tabular-nums">
+                <p className="text-slate-900">
+                  {formatInrFromPaise(extensionBasePaise)} <span aria-hidden="true">+</span>
+                </p>
+                <p className="mt-0.5 text-brand">
+                  {formatInrFromPaise(addonBasePaise)}
+                  {showGst ? <span className="text-base font-bold text-slate-600"> + GST</span> : null}
+                </p>
+              </div>
             ) : (
               <>
                 <p
@@ -84,7 +90,15 @@ export function RenewPricingSummary({
                 ) : null}
               </>
             )}
-            <p className={`mt-0.5 ${detailLineClass}`}>{renewPlanLabel(planKey)}</p>
+            <p className={`mt-0.5 ${detailLineClass}`}>
+              {planTitleParts.base}
+              {planTitleParts.addon ? (
+                <>
+                  {' '}
+                  <span className="text-brand">{planTitleParts.addon}</span>
+                </>
+              ) : null}
+            </p>
           </div>
         </div>
 
@@ -97,8 +111,8 @@ export function RenewPricingSummary({
                   <dd className="font-semibold text-slate-800">{formatInrFromPaise(extensionBasePaise)}</dd>
                 </div>
                 <div className="flex items-baseline justify-between gap-4">
-                  <dt className="text-slate-500">Additional membership</dt>
-                  <dd className="font-semibold text-slate-800">{formatInrFromPaise(addonBasePaise)}</dd>
+                  <dt className="text-brand">Additional membership</dt>
+                  <dd className="font-semibold text-brand">{formatInrFromPaise(addonBasePaise)}</dd>
                 </div>
               </>
             ) : (
