@@ -13,9 +13,20 @@ type RenewPricingSummaryProps = {
   startsOn: string;
   /** When set, show extension from this date instead of cohort start (active renewers). */
   renewFromDate?: string;
+  /** Pretax 2-month extension component for trial_extend bundles. */
+  extensionBasePaise?: number;
+  /** Pretax additional membership component for trial_extend bundles. */
+  addonBasePaise?: number;
 };
 
-export function RenewPricingSummary({ planKey, quote, startsOn, renewFromDate }: RenewPricingSummaryProps) {
+export function RenewPricingSummary({
+  planKey,
+  quote,
+  startsOn,
+  renewFromDate,
+  extensionBasePaise,
+  addonBasePaise,
+}: RenewPricingSummaryProps) {
   const isDomestic = quote.pricing_region === 'domestic';
   const showGst = isDomestic;
   const hasDiscount = (quote.discount_paise ?? 0) > 0;
@@ -26,6 +37,8 @@ export function RenewPricingSummary({ planKey, quote, startsOn, renewFromDate }:
   const startsLabel = formatShortStartDate(startsOn);
   const dateHeading = renewFromLabel ? 'Renews from' : 'Starts';
   const dateLabel = renewFromLabel ?? startsLabel;
+  const showTrialExtendSplit =
+    extensionBasePaise != null && addonBasePaise != null && addonBasePaise > 0 && !hasDiscount;
 
   return (
     <section
@@ -42,33 +55,58 @@ export function RenewPricingSummary({ planKey, quote, startsOn, renewFromDate }:
             <p className={`mt-0.5 pl-6 ${detailLineClass}`}>{dateLabel}</p>
           </div>
           <div className="min-w-0 shrink text-right">
-            <p
-              className={cn(
-                'text-xl font-extrabold tracking-tight text-slate-900',
-                hasDiscount && 'text-sm font-semibold text-slate-400 line-through'
-              )}
-            >
-              {formatInrFromPaise(quote.base_paise)}
-              {showGst ? (
-                <span className={cn('font-bold', hasDiscount ? 'text-xs' : 'text-base text-slate-600')}> + GST</span>
-              ) : null}
-            </p>
-            {hasDiscount ? (
-              <p className="text-lg font-extrabold tracking-tight text-success">
-                {formatInrFromPaise(discountedBasePaise)}
-                {showGst ? <span className="text-sm font-bold"> + GST</span> : null}
+            {showTrialExtendSplit ? (
+              <p className="text-xl font-extrabold tracking-tight text-slate-900">
+                {formatInrFromPaise(extensionBasePaise)} + {formatInrFromPaise(addonBasePaise)}
+                {showGst ? <span className="text-base font-bold text-slate-600"> + GST</span> : null}
               </p>
-            ) : null}
+            ) : (
+              <>
+                <p
+                  className={cn(
+                    'text-xl font-extrabold tracking-tight text-slate-900',
+                    hasDiscount && 'text-sm font-semibold text-slate-400 line-through'
+                  )}
+                >
+                  {formatInrFromPaise(quote.base_paise)}
+                  {showGst ? (
+                    <span className={cn('font-bold', hasDiscount ? 'text-xs' : 'text-base text-slate-600')}>
+                      {' '}
+                      + GST
+                    </span>
+                  ) : null}
+                </p>
+                {hasDiscount ? (
+                  <p className="text-lg font-extrabold tracking-tight text-success">
+                    {formatInrFromPaise(discountedBasePaise)}
+                    {showGst ? <span className="text-sm font-bold"> + GST</span> : null}
+                  </p>
+                ) : null}
+              </>
+            )}
             <p className={`mt-0.5 ${detailLineClass}`}>{renewPlanLabel(planKey)}</p>
           </div>
         </div>
 
         {showBreakdown ? (
           <dl className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-[13px]">
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-slate-500">Program fee</dt>
-              <dd className="font-semibold text-slate-800">{formatInrFromPaise(quote.base_paise)}</dd>
-            </div>
+            {showTrialExtendSplit ? (
+              <>
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-slate-500">2 month extension</dt>
+                  <dd className="font-semibold text-slate-800">{formatInrFromPaise(extensionBasePaise)}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-slate-500">Additional membership</dt>
+                  <dd className="font-semibold text-slate-800">{formatInrFromPaise(addonBasePaise)}</dd>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-slate-500">Program fee</dt>
+                <dd className="font-semibold text-slate-800">{formatInrFromPaise(quote.base_paise)}</dd>
+              </div>
+            )}
             {hasDiscount ? (
               <div className="flex items-baseline justify-between gap-4 text-success">
                 <dt>{quote.discount_label ? quote.discount_label : 'Discount'}</dt>

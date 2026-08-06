@@ -14,6 +14,8 @@ import {
   isTrialPlanOptionsLoading,
   isRenewal1mAutopayPlan,
   shouldClearPromoForPlan,
+  trialExtendAddonBasePaise,
+  trialExtendExtensionBasePaise,
 } from '@/components/renew/renew-page-helpers';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
@@ -374,12 +376,18 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
 
     return (preview.plans ?? []).map((plan) => {
       const quote = countryIso === 'IN' ? plan.domestic : plan.international;
+      const extensionBasePaise =
+        category === 'trial_extend' ? trialExtendExtensionBasePaise(preview.plans, countryIso) : null;
+      const addonBasePaise =
+        category === 'trial_extend' ? trialExtendAddonBasePaise(quote.base_paise, extensionBasePaise) : null;
       return {
         planKey: plan.plan_key,
         basePaise: quote.base_paise,
         discountLabel: plan.discount_label,
         pricingRegion: quote.pricing_region,
         months: quote.months ?? quote.renewal_months,
+        extensionBasePaise: extensionBasePaise ?? undefined,
+        addonBasePaise: addonBasePaise ?? undefined,
       };
     });
   }, [preview, category, trialQuotesByProduct, countryIso]);
@@ -403,6 +411,13 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
   const newUserPricingLoading =
     isNewUserCategory(category) && (loadingTrialQuotes || quotePending || planOptionsLoading);
   const primaryCtaLabel = submitting ? 'Initiating payment…' : isNewUser ? 'Enroll' : 'Renew';
+
+  const trialExtendExtensionBasePaiseValue =
+    category === 'trial_extend' ? trialExtendExtensionBasePaise(preview?.plans, countryIso) : null;
+  const trialExtendAddonBasePaiseValue =
+    renewalQuote && trialExtendExtensionBasePaiseValue != null
+      ? trialExtendAddonBasePaise(renewalQuote.base_paise, trialExtendExtensionBasePaiseValue)
+      : null;
 
   const handleEmailBlur = async () => {
     const trimmed = email.trim().toLowerCase();
@@ -854,7 +869,7 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                 ) : null}
 
                 {isRenewal1mAutopayPlan(category, selectedPlan) ? (
-                  <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <p className="rounded-xl border border-brand/20 bg-brand/5 px-4 py-3 text-sm text-slate-700">
                     Your 1-month subscription will be on Autopay. You can cancel anytime you wish to.
                   </p>
                 ) : null}
@@ -918,6 +933,10 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                       quote={renewalQuote}
                       startsOn={preview.starts_on}
                       renewFromDate={renewFromDateIso}
+                      extensionBasePaise={
+                        trialExtendAddonBasePaiseValue != null ? trialExtendExtensionBasePaiseValue : undefined
+                      }
+                      addonBasePaise={trialExtendAddonBasePaiseValue ?? undefined}
                     />
                   ) : null
                 ) : null}

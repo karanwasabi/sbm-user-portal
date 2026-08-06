@@ -12,6 +12,10 @@ export type RenewPlanPickerOption = {
   discountLabel?: string;
   pricingRegion?: 'domestic' | 'international';
   months?: number;
+  /** Pretax 2-month extension component (trial_extend plans). */
+  extensionBasePaise?: number;
+  /** Pretax additional membership component on bundled trial_extend plans. */
+  addonBasePaise?: number;
 };
 
 type RenewPlanPickerProps = {
@@ -45,6 +49,11 @@ export function RenewPlanPicker({ options, selectedPlanKey, onSelect }: RenewPla
             option.months && option.months > 1
               ? Math.round((hasDiscount ? discountedBasePaise : option.basePaise) / option.months)
               : null;
+          const showTrialExtendSplit =
+            option.extensionBasePaise != null &&
+            option.addonBasePaise != null &&
+            option.addonBasePaise > 0 &&
+            !hasDiscount;
 
           return (
             <button
@@ -91,6 +100,10 @@ export function RenewPlanPicker({ options, selectedPlanKey, onSelect }: RenewPla
                       {formatInrFromPaise(discountedBasePaise)}
                     </p>
                   </>
+                ) : showTrialExtendSplit ? (
+                  <p className="text-[1.65rem] leading-none font-extrabold tracking-tight text-slate-900">
+                    {formatInrFromPaise(option.extensionBasePaise!)} + {formatInrFromPaise(option.addonBasePaise!)}
+                  </p>
                 ) : (
                   <p className="text-[1.65rem] leading-none font-extrabold tracking-tight text-slate-900">
                     {formatInrFromPaise(option.basePaise)}

@@ -7,7 +7,10 @@ import {
   isSubscribedProfileFieldLocked,
   isTrialPlanOptionsLoading,
   shouldClearPromoForPlan,
+  trialExtendAddonBasePaise,
+  trialExtendExtensionBasePaise,
 } from '@/components/renew/renew-page-helpers';
+import type { RenewCheckoutPreview } from '@/types/renew';
 
 describe('renew-page-helpers', () => {
   it('identifies new-user categories', () => {
@@ -43,5 +46,59 @@ describe('renew-page-helpers', () => {
     expect(isRenewal1mAutopayPlan('old_student_active_renew', 'renewal_1m')).toBe(true);
     expect(isRenewal1mAutopayPlan('returnee_no_sub', 'renewal_3m')).toBe(false);
     expect(isRenewal1mAutopayPlan('newbie_manual_renew', 'renewal_1m')).toBe(false);
+  });
+
+  it('splits trial extend pretax into extension and addon amounts', () => {
+    const plans: RenewCheckoutPreview['plans'] = [
+      {
+        plan_key: 'trial_extend_2m',
+        domestic: {
+          plan_key: 'trial_extend_2m',
+          pricing_region: 'domestic',
+          base_paise: 630_000,
+          gst_paise: 113_400,
+          total_paise: 743_400,
+          currency: 'INR',
+          trial_months_bump: 2,
+        },
+        international: {
+          plan_key: 'trial_extend_2m',
+          pricing_region: 'international',
+          base_paise: 913_500,
+          gst_paise: 0,
+          total_paise: 913_500,
+          currency: 'INR',
+          trial_months_bump: 2,
+        },
+      },
+      {
+        plan_key: 'trial_extend_2m_3m',
+        domestic: {
+          plan_key: 'trial_extend_2m_3m',
+          pricing_region: 'domestic',
+          base_paise: 1_029_900,
+          gst_paise: 185_382,
+          total_paise: 1_215_282,
+          currency: 'INR',
+          trial_months_bump: 2,
+          renewal_months: 3,
+        },
+        international: {
+          plan_key: 'trial_extend_2m_3m',
+          pricing_region: 'international',
+          base_paise: 1_490_535,
+          gst_paise: 0,
+          total_paise: 1_490_535,
+          currency: 'INR',
+          trial_months_bump: 2,
+          renewal_months: 3,
+        },
+      },
+    ];
+
+    const extensionBase = trialExtendExtensionBasePaise(plans, 'IN');
+    expect(extensionBase).toBe(630_000);
+    expect(trialExtendAddonBasePaise(1_029_900, extensionBase)).toBe(399_900);
+    expect(trialExtendAddonBasePaise(630_000, extensionBase)).toBeNull();
   });
 });
