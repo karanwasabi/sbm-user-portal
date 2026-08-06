@@ -13,7 +13,6 @@ import {
   isSubscribedProfileFieldLocked,
   isTrialPlanOptionsLoading,
   isRenewal1mAutopayPlan,
-  isRenew1mAutopayCategory,
   shouldClearPromoForPlan,
   trialExtendAddonBasePaise,
   trialExtendExtensionBasePaise,
@@ -867,7 +866,6 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                     options={planPickerOptions}
                     selectedPlanKey={selectedPlan}
                     onSelect={setSelectedPlan}
-                    autopayPlanKey={isRenew1mAutopayCategory(category) ? 'renewal_1m' : undefined}
                   />
                 ) : null}
 

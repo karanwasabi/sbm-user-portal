@@ -22,11 +22,9 @@ type RenewPlanPickerProps = {
   options: RenewPlanPickerOption[];
   selectedPlanKey: string;
   onSelect: (planKey: string) => void;
-  /** When set, the matching plan card shows an Autopay label (returnee / active old-student 1m). */
-  autopayPlanKey?: string;
 };
 
-export function RenewPlanPicker({ options, selectedPlanKey, onSelect, autopayPlanKey }: RenewPlanPickerProps) {
+export function RenewPlanPicker({ options, selectedPlanKey, onSelect }: RenewPlanPickerProps) {
   const useTwoColumns = options.length === 2;
 
   return (
@@ -56,7 +54,6 @@ export function RenewPlanPicker({ options, selectedPlanKey, onSelect, autopayPla
             option.addonBasePaise != null &&
             option.addonBasePaise > 0 &&
             !hasDiscount;
-          const showAutopayLabel = autopayPlanKey != null && option.planKey === autopayPlanKey;
 
           return (
             <button
@@ -116,7 +113,6 @@ export function RenewPlanPicker({ options, selectedPlanKey, onSelect, autopayPla
                 {perMonthPaise ? (
                   <p className="text-xs font-medium text-slate-500">{formatInrFromPaise(perMonthPaise)}/month</p>
                 ) : null}
-                {showAutopayLabel ? <p className="text-xs font-semibold text-brand">Autopay subscription</p> : null}
               </div>
             </button>
           );
