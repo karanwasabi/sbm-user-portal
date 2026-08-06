@@ -12,6 +12,7 @@ import {
   isNewUserCategory,
   isSubscribedProfileFieldLocked,
   isTrialPlanOptionsLoading,
+  isRenewal1mAutopayPlan,
   shouldClearPromoForPlan,
 } from '@/components/renew/renew-page-helpers';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
@@ -850,6 +851,12 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
                     selectedPlanKey={selectedPlan}
                     onSelect={setSelectedPlan}
                   />
+                ) : null}
+
+                {isRenewal1mAutopayPlan(category, selectedPlan) ? (
+                  <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    Your 1-month subscription will be on Autopay. You can cancel anytime you wish to.
+                  </p>
                 ) : null}
 
                 {selectedPlan === 'trial_3m' && isNewUserCategory(category) ? (

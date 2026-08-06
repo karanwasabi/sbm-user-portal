@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isBlockedCategory,
   isNewUserCategory,
+  isRenewal1mAutopayPlan,
   isSubscribedProfileFieldLocked,
   isTrialPlanOptionsLoading,
   shouldClearPromoForPlan,
@@ -35,5 +36,11 @@ describe('renew-page-helpers', () => {
     expect(isTrialPlanOptionsLoading('new_user', 2, 0)).toBe(true);
     expect(isTrialPlanOptionsLoading('new_user', 2, 2)).toBe(false);
     expect(isTrialPlanOptionsLoading('returnee_no_sub', 2, 0)).toBe(false);
+  });
+
+  it('detects returnee 1-month autopay plan', () => {
+    expect(isRenewal1mAutopayPlan('returnee_no_sub', 'renewal_1m')).toBe(true);
+    expect(isRenewal1mAutopayPlan('returnee_no_sub', 'renewal_3m')).toBe(false);
+    expect(isRenewal1mAutopayPlan('newbie_manual_renew', 'renewal_1m')).toBe(false);
   });
 });
