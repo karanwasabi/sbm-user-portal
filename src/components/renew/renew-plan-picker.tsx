@@ -24,6 +24,19 @@ type RenewPlanPickerProps = {
   onSelect: (planKey: string) => void;
 };
 
+const PLAN_AMOUNT_SIZE_DEFAULT = 'text-[1.65rem]';
+const PLAN_AMOUNT_SIZE_COMPACT = 'text-lg';
+
+/** International decimals and long domestic amounts need a smaller size in narrow plan cards. */
+function planAmountSizeClass(paise: number, isDomestic: boolean): string {
+  if (!isDomestic) return PLAN_AMOUNT_SIZE_COMPACT;
+  return formatInrFromPaise(paise).length > 9 ? 'text-xl' : PLAN_AMOUNT_SIZE_DEFAULT;
+}
+
+function planAmountTextClass(paise: number, isDomestic: boolean, extra?: string): string {
+  return cn('leading-none font-extrabold tracking-tight tabular-nums', planAmountSizeClass(paise, isDomestic), extra);
+}
+
 export function RenewPlanPicker({ options, selectedPlanKey, onSelect }: RenewPlanPickerProps) {
   const useTwoColumns = options.length === 2;
 
@@ -105,19 +118,24 @@ export function RenewPlanPicker({ options, selectedPlanKey, onSelect }: RenewPla
                       {formatInrFromPaise(option.basePaise)}
                       {isDomestic ? <span className="text-xs font-medium"> + GST</span> : null}
                     </p>
-                    <p className="text-[1.65rem] leading-none font-extrabold tracking-tight text-success">
+                    <p className={planAmountTextClass(discountedBasePaise, isDomestic, 'text-success')}>
                       {formatInrFromPaise(discountedBasePaise)}
                     </p>
                   </>
                 ) : showTrialExtendSplit ? (
-                  <div className="text-[1.65rem] leading-none font-extrabold tracking-tight tabular-nums">
+                  <div
+                    className={planAmountTextClass(
+                      Math.max(option.extensionBasePaise!, option.addonBasePaise!),
+                      isDomestic
+                    )}
+                  >
                     <p className="text-slate-900">
                       {formatInrFromPaise(option.extensionBasePaise!)} <span aria-hidden="true">+</span>
                     </p>
                     <p className="mt-0.5 text-brand">{formatInrFromPaise(option.addonBasePaise!)}</p>
                   </div>
                 ) : (
-                  <p className="text-[1.65rem] leading-none font-extrabold tracking-tight text-slate-900">
+                  <p className={planAmountTextClass(option.basePaise, isDomestic, 'text-slate-900')}>
                     {formatInrFromPaise(option.basePaise)}
                   </p>
                 )}
