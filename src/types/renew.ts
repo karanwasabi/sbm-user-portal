@@ -2,6 +2,7 @@ export type RenewCategory =
   | 'new_user'
   | 'new_lead_no_sub'
   | 'returnee_no_sub'
+  | 'old_student_active_renew'
   | 'trial_extend'
   | 'newbie_auto_renew'
   | 'newbie_manual_renew'

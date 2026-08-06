@@ -40,6 +40,7 @@ describe('renew-page-helpers', () => {
 
   it('detects returnee 1-month autopay plan', () => {
     expect(isRenewal1mAutopayPlan('returnee_no_sub', 'renewal_1m')).toBe(true);
+    expect(isRenewal1mAutopayPlan('old_student_active_renew', 'renewal_1m')).toBe(true);
     expect(isRenewal1mAutopayPlan('returnee_no_sub', 'renewal_3m')).toBe(false);
     expect(isRenewal1mAutopayPlan('newbie_manual_renew', 'renewal_1m')).toBe(false);
   });

@@ -24,7 +24,7 @@ export function shouldClearPromoForPlan(planKey: string) {
 
 /** Returnee 1-month plan uses Razorpay subscription autopay. */
 export function isRenewal1mAutopayPlan(category: RenewCategory | null, planKey: string) {
-  return category === 'returnee_no_sub' && planKey === 'renewal_1m';
+  return (category === 'returnee_no_sub' || category === 'old_student_active_renew') && planKey === 'renewal_1m';
 }
 
 export function isTrialPlanOptionsLoading(

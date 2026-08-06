@@ -11,6 +11,7 @@ function parseCategoryHint(raw?: string): RenewCategory | undefined {
     value === 'new_user' ||
     value === 'new_lead_no_sub' ||
     value === 'returnee_no_sub' ||
+    value === 'old_student_active_renew' ||
     value === 'trial_extend' ||
     value === 'newbie_auto_renew' ||
     value === 'newbie_manual_renew' ||
