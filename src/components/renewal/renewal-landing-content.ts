@@ -3,6 +3,12 @@ import { readUtmAttributionFromCookie } from '@/lib/utm-attribution';
 export const RENEWAL_LANDING_PATH = '/renewal';
 export const RENEW_CHECKOUT_PATH = '/renew';
 
+export type RenewalLandingPricingTier = {
+  label: string;
+  amount: string;
+  discountLabel?: string;
+};
+
 export const RENEWAL_LANDING_INTRO =
   'It is lovely to see you back! We have spent the last few months turning SBM into something that actually holds your hand through the slow work, and a lot has changed since you were last here. Three things in particular we think you are going to love.';
 
@@ -18,11 +24,11 @@ export const RENEWAL_LANDING_VALIDATION =
 export const RENEWAL_LANDING_PRICING_INTRO =
   'The membership durations are the same 1, 3, 6 and 12 month options you know, and here is your pricing:';
 
-export const RENEWAL_LANDING_PRICING = [
+export const RENEWAL_LANDING_PRICING: RenewalLandingPricingTier[] = [
   { label: '1 month', amount: '₹1,500 + taxes' },
-  { label: '3 months', amount: '₹3,999 + taxes' },
-  { label: '6 months', amount: '₹7,499 + taxes' },
-  { label: '12 months', amount: '₹13,499 + taxes' },
+  { label: '3 months', amount: '₹3,999 + taxes', discountLabel: '12% off' },
+  { label: '6 months', amount: '₹7,499 + taxes', discountLabel: '17% off' },
+  { label: '12 months', amount: '₹13,499 + taxes', discountLabel: '23% off' },
 ];
 
 export const RENEWAL_LANDING_CTA_LEAD_IN = 'You can sign up here';
