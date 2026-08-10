@@ -10,6 +10,7 @@ const PUBLIC_ROUTES = [
   '/subscribe',
   '/enroll',
   '/renew',
+  '/renewal',
   '/refer',
   '/welcome',
   '/forgot-password',
@@ -126,6 +127,8 @@ export async function updateSession(request: NextRequest) {
       pathname.startsWith('/enroll/') ||
       pathname === '/renew' ||
       pathname.startsWith('/renew/') ||
+      pathname === '/renewal' ||
+      pathname.startsWith('/renewal/') ||
       pathname === '/refer' ||
       pathname.startsWith('/refer/') ||
       pathname.startsWith('/welcome/') ||
