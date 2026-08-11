@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { EnrollConsentCheckbox } from '@/components/enroll/enroll-consent-checkbox';
 import { EnrollPricingSummary, enrollProgramLabel } from '@/components/enroll/enroll-pricing-summary';
@@ -11,7 +11,6 @@ import { PhoneInput } from '@/components/profile/phone-input';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { TextInput } from '@/components/ui/text-input';
-import { useToast } from '@/components/ui/toast';
 import { getCountryDialCode } from '@/lib/country-dial-codes';
 import { clearEnrollDraft, readEnrollDraft, saveEnrollDraft } from '@/lib/enroll-draft';
 import { trackCheckoutPurchaseOnce } from '@/lib/checkout-analytics';
@@ -37,9 +36,9 @@ type EnrollPageViewProps = {
 
 export function EnrollPageView({ product, welcomeProductParam, countries, suggestedCountryIso }: EnrollPageViewProps) {
   const discountCodeEnabled = product === 'trial_3m';
-  const { toast } = useToast();
   const [preview, setPreview] = useState<TrialCheckoutPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
+  const [previewError, setPreviewError] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -81,22 +80,23 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
     captureUtmAttributionFromLocation();
   }, []);
 
+  const loadPreview = useCallback(async () => {
+    setLoadingPreview(true);
+    setPreviewError(false);
+    try {
+      const data = await getTrialCheckoutPreview(product);
+      setPreview(data);
+    } catch {
+      setPreview(null);
+      setPreviewError(true);
+    } finally {
+      setLoadingPreview(false);
+    }
+  }, [product]);
+
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const data = await getTrialCheckoutPreview(product);
-        if (!cancelled) setPreview(data);
-      } catch {
-        if (!cancelled) toast({ message: 'Could not load pricing. Please refresh.', variant: 'error' });
-      } finally {
-        if (!cancelled) setLoadingPreview(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [product, toast]);
+    void loadPreview();
+  }, [loadPreview]);
 
   const baseQuote = useMemo(() => {
     if (!preview) return null;
@@ -302,9 +302,16 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
           </h1>
         </div>
 
-        {loadingPreview || !preview || !displayQuote ? (
+        {loadingPreview ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-brand" />
+          </div>
+        ) : previewError || !preview || !displayQuote ? (
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
+            <p className="text-sm text-slate-600">Could not load pricing. Please try again or refresh the page.</p>
+            <Button type="button" variant="light" size="md" onClick={() => void loadPreview()}>
+              Try again
+            </Button>
           </div>
         ) : (
           <>
