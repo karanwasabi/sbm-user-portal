@@ -54,6 +54,8 @@ import type { TrialProduct, TrialQuote } from '@/types/trial';
 type RenewPageViewProps = {
   countries: Country[];
   suggestedCountryIso?: string;
+  /** Prefill from `?email=` (e.g. app renew banner) and classify immediately. */
+  initialEmail?: string;
 };
 
 function buildRenewWelcomeUrl(sessionId: string, category?: RenewCategory): string {
@@ -71,7 +73,7 @@ function formatRenewalOnDate(iso?: string): string | null {
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewProps) {
+export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: RenewPageViewProps) {
   const { toast } = useToast();
   const [classification, setClassification] = useState<RenewCheckEmailResponse | null>(null);
   const [preview, setPreview] = useState<RenewCheckoutPreview | null>(null);
@@ -186,26 +188,33 @@ export function RenewPageView({ countries, suggestedCountryIso }: RenewPageViewP
 
   useEffect(() => {
     const draft = readRenewDraft();
-    if (!draft) return;
-    setFirstName(draft.firstName);
-    setLastName(draft.lastName);
-    setEmail(draft.email);
-    setWhatsapp(draft.whatsapp);
-    if (draft.whatsapp.trim()) {
-      setPhoneSyncToken((token) => token + 1);
+    const urlEmail = initialEmail?.trim().toLowerCase() ?? '';
+
+    if (draft) {
+      setFirstName(draft.firstName);
+      setLastName(draft.lastName);
+      setWhatsapp(draft.whatsapp);
+      if (draft.whatsapp.trim()) {
+        setPhoneSyncToken((token) => token + 1);
+      }
+      setCountryIso(draft.countryIso);
+      setCountryManuallySet(draft.countryManuallySet);
+      setWhatsappDialIso(draft.whatsappDialIso);
+      whatsappDialIsoRef.current = draft.whatsappDialIso;
+      if (draft.selectedPlan) setSelectedPlan(draft.selectedPlan);
+      if (draft.promoCode) setPromoCode(draft.promoCode);
+      if (draft.appliedPromo) setAppliedPromo(draft.appliedPromo);
     }
-    setCountryIso(draft.countryIso);
-    setCountryManuallySet(draft.countryManuallySet);
-    setWhatsappDialIso(draft.whatsappDialIso);
-    whatsappDialIsoRef.current = draft.whatsappDialIso;
-    if (draft.selectedPlan) setSelectedPlan(draft.selectedPlan);
-    if (draft.promoCode) setPromoCode(draft.promoCode);
-    if (draft.appliedPromo) setAppliedPromo(draft.appliedPromo);
-    const trimmed = draft.email.trim().toLowerCase();
-    if (isValidEmailFormat(trimmed)) {
-      void classifyEmail(trimmed);
+
+    // URL email wins (app deep link); otherwise restore draft email.
+    const emailToClassify = urlEmail || draft?.email.trim().toLowerCase() || '';
+    if (emailToClassify) {
+      setEmail(emailToClassify);
     }
-  }, [classifyEmail]);
+    if (isValidEmailFormat(emailToClassify)) {
+      void classifyEmail(emailToClassify);
+    }
+  }, [classifyEmail, initialEmail]);
 
   useEffect(() => {
     captureUtmAttributionFromLocation();
