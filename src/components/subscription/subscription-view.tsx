@@ -294,7 +294,9 @@ export function SubscriptionView({ subscription, error }: SubscriptionViewProps)
   const paymentMethodLabel =
     subscription.payment_method_summary === 'offline_crm'
       ? 'Offline'
-      : (subscription.payment_method_summary ?? 'Not set up');
+      : subscription.payment_method_summary === 'zoho_checkout'
+        ? 'Zoho'
+        : (subscription.payment_method_summary ?? 'Not set up');
 
   return (
     <PortalPageLayout
