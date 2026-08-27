@@ -4,6 +4,11 @@ import { trackMetaCompleteRegistration, trackMetaPurchase } from '@/lib/meta-pix
 const PURCHASE_TRACKED_PREFIX = 'sbm_purchase_tracked:';
 const REGISTRATION_TRACKED_PREFIX = 'sbm_registration_tracked:';
 
+/** Renewals must not fire Meta browser Purchase (aligned with CAPI skip). */
+export function shouldSkipMetaPurchasePixel(params: { renewPlanKey?: string }): boolean {
+  return Boolean(params.renewPlanKey?.trim());
+}
+
 export function trackCheckoutPurchaseOnce(
   params: CheckoutItemParams & {
     transactionId: string;
@@ -15,6 +20,9 @@ export function trackCheckoutPurchaseOnce(
   sessionStorage.setItem(key, '1');
 
   trackPortalPurchase(params);
+  if (shouldSkipMetaPurchasePixel(params)) {
+    return;
+  }
   trackMetaPurchase({
     eventID: params.transactionId,
     valuePaise: params.valuePaise,
