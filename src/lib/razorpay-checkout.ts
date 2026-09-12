@@ -39,9 +39,11 @@ export function loadRazorpayScript(): Promise<void> {
 
 type RazorpayPricingRegion = CheckoutStartResponse['pricing_region'];
 
-const INTERNATIONAL_CARD_ONLY_METHODS = {
+// International checkout still uses intl pricing/plans, but NRIs often pay via UPI
+// from Indian bank accounts. Keep non-UPI Indian rails off for intl region.
+const INTERNATIONAL_METHODS = {
   card: true,
-  upi: false,
+  upi: true,
   netbanking: false,
   wallet: false,
   paylater: false,
@@ -52,7 +54,7 @@ function razorpayOptionsForRegion(pricingRegion?: RazorpayPricingRegion): Record
   if (pricingRegion !== 'international') {
     return {};
   }
-  return { method: INTERNATIONAL_CARD_ONLY_METHODS };
+  return { method: INTERNATIONAL_METHODS };
 }
 
 type RazorpayPrefill = {
