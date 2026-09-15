@@ -16,6 +16,8 @@ export function isSubscribedLeadCategory(category: RenewCategory | null) {
 }
 
 export function isSubscribedProfileFieldLocked(category: RenewCategory | null, prefilledValue?: string) {
+  // Name / WhatsApp stay locked for known members. Billing country stays editable on /renew
+  // so people can correct pricing region (e.g. NRI with an Indian bank account).
   return isSubscribedLeadCategory(category) && Boolean(prefilledValue?.trim());
 }
 

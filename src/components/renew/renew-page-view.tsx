@@ -106,6 +106,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
 
   const [whatsappDialIso, setWhatsappDialIso] = useState(suggestedCountryIso ?? 'IN');
   const whatsappDialIsoRef = useRef(suggestedCountryIso);
+  const countryManuallySetRef = useRef(false);
   const [phoneSyncToken, setPhoneSyncToken] = useState(0);
   const lastCheckoutRef = useRef<{
     sessionId: string;
@@ -133,6 +134,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
         setLastName('');
         setWhatsapp('');
         setCountryIso(suggestedCountryIso ?? 'IN');
+        countryManuallySetRef.current = false;
         setCountryManuallySet(false);
         setWhatsappDialIso(suggestedCountryIso ?? 'IN');
         whatsappDialIsoRef.current = suggestedCountryIso ?? 'IN';
@@ -145,10 +147,17 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
     (result: RenewCheckEmailResponse) => {
       if (result.first_name) setFirstName(result.first_name);
       if (result.last_name) setLastName(result.last_name);
-      if (result.country_iso) setCountryIso(result.country_iso);
+      // Prefill billing country from the account, but keep a user-edited country.
+      // Use a ref so draft restore + async classify don't lose a manual choice via stale state.
+      if (result.country_iso && !countryManuallySetRef.current) {
+        setCountryIso(result.country_iso);
+      }
       if (result.whatsapp) {
-        const preferredIso = result.country_iso ?? whatsappDialIsoRef.current ?? countryIso;
-        const parsed = parseWhatsapp(result.whatsapp, preferredIso);
+        const preferredIso = countryManuallySetRef.current ? undefined : result.country_iso;
+        const parsed = parseWhatsapp(
+          result.whatsapp,
+          preferredIso ?? whatsappDialIsoRef.current ?? suggestedCountryIso ?? 'IN'
+        );
         setWhatsapp(result.whatsapp);
         if (parsed.dialIso) {
           setWhatsappDialIso(parsed.dialIso);
@@ -157,7 +166,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
         setPhoneSyncToken((token) => token + 1);
       }
     },
-    [countryIso]
+    [suggestedCountryIso]
   );
 
   const classifyEmail = useCallback(
@@ -198,6 +207,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
         setPhoneSyncToken((token) => token + 1);
       }
       setCountryIso(draft.countryIso);
+      countryManuallySetRef.current = draft.countryManuallySet;
       setCountryManuallySet(draft.countryManuallySet);
       setWhatsappDialIso(draft.whatsappDialIso);
       whatsappDialIsoRef.current = draft.whatsappDialIso;
@@ -482,7 +492,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
   const handleDialIsoChange = (iso: string) => {
     whatsappDialIsoRef.current = iso;
     setWhatsappDialIso(iso);
-    if (!countryManuallySet && iso) {
+    if (!countryManuallySetRef.current && iso) {
       setCountryIso(iso);
     }
   };
@@ -782,8 +792,8 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
             <CountryCombobox
               countries={countries}
               value={countryIso}
-              disabled={isSubscribedProfileFieldLocked(category, classification?.country_iso)}
               onChange={(value) => {
+                countryManuallySetRef.current = true;
                 setCountryManuallySet(true);
                 setCountryIso(value);
                 const dial = getCountryDialCode(value);
