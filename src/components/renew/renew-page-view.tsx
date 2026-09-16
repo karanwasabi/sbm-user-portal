@@ -249,9 +249,10 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
     let cancelled = false;
     setLoadingPreview(true);
     setPreviewError(false);
+    const previewEmail = email.trim();
     void (async () => {
       try {
-        const data = await getRenewCheckoutPreview(category, countryIso);
+        const data = await getRenewCheckoutPreview(category, countryIso, previewEmail || undefined);
         if (!cancelled) {
           setPreview(data);
           if (isNewUserCategory(category)) {
@@ -274,7 +275,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
     return () => {
       cancelled = true;
     };
-  }, [category, countryIso, blocked, toast]);
+  }, [category, countryIso, blocked, email, toast]);
 
   useEffect(() => {
     if (!isNewUserCategory(category) || !preview?.trial_products?.length) {
@@ -723,10 +724,19 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
     }
   };
 
-  const renewFromDateIso =
-    category && !isNewUserCategory(category) && category !== 'returnee_no_sub' && classification?.access_until
-      ? classification.access_until.slice(0, 10)
-      : undefined;
+  // Prefer backend renew_from. Fallback: remaining access, else today for past-cohort
+  // renewers. Future-cohort returnees omit this so the UI shows "Starts".
+  const renewFromDateIso = (() => {
+    if (preview?.renew_from) return preview.renew_from;
+    if (!category || isNewUserCategory(category)) return undefined;
+    if (classification?.access_until && Date.parse(classification.access_until) > Date.now()) {
+      return classification.access_until.slice(0, 10);
+    }
+    if (category === 'returnee_no_sub' && preview?.starts_on && Date.parse(preview.starts_on) > Date.now()) {
+      return undefined;
+    }
+    return new Date().toISOString().slice(0, 10);
+  })();
 
   return (
     <AuthLayout variant="account">

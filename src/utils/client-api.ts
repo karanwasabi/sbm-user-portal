@@ -404,9 +404,13 @@ export async function postRenewCheckEmail(email: string): Promise<import('@/type
 
 export async function getRenewCheckoutPreview(
   category: string,
-  countryIso: string
+  countryIso: string,
+  email?: string
 ): Promise<import('@/types/renew').RenewCheckoutPreview> {
   const params = new URLSearchParams({ category, country_iso: countryIso });
+  if (email?.trim()) {
+    params.set('email', email.trim());
+  }
   const response = await publicApiFetch(`/public/renew/checkout-preview?${params.toString()}`);
   return response.json() as Promise<import('@/types/renew').RenewCheckoutPreview>;
 }

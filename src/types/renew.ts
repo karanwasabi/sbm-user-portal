@@ -49,6 +49,8 @@ export type RenewCheckoutPreview = {
   program_name: string;
   cohort_name: string;
   starts_on: string;
+  /** Existing-member renew: access still open → that date; else today. */
+  renew_from?: string;
   plans?: RenewPlanPreview[];
   trial_products?: string[];
   razorpay_key_id?: string;
