@@ -24,7 +24,7 @@ function priceDurationLabel(product: TrialProduct): string {
 }
 
 export function enrollProgramLabel(product: TrialProduct): string {
-  return product === 'trial_1m' ? '1 month trial' : '3 months';
+  return product === 'trial_1m' ? 'monthly' : '3 months';
 }
 
 export function EnrollPricingSummary({ product, quote, startsOn, shortStartDate }: EnrollPricingSummaryProps) {
