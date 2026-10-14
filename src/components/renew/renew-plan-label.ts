@@ -1,7 +1,7 @@
 export function renewPlanLabel(planKey: string): string {
   switch (planKey) {
     case 'trial_1m':
-      return '1 month trial';
+      return 'monthly';
     case 'trial_3m':
       return '3 months program';
     case 'renewal_1m':

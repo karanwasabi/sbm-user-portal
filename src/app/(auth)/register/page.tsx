@@ -70,7 +70,7 @@ export default function RegisterPage() {
               WITH MONEYBACK GUARANTEE
             </span>
           </div>
-          <h2 className="mt-2 text-xl font-bold text-slate-900">1-MONTH TRIAL</h2>
+          <h2 className="mt-2 text-xl font-bold text-slate-900">MONTHLY</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-700">
             <li>Experience the whole SBM package in 4 weeks.</li>
             <li>Continue the membership if it feels like a fit after 1 month.</li>
@@ -81,7 +81,7 @@ export default function RegisterPage() {
             </p>
             <div className="mt-5" onClick={handleTrialClick}>
               <Button href="/enroll/monthly" variant="primary" size="md" rightIcon={<ArrowRight className="h-4 w-4" />}>
-                Register for 1 Month Trial
+                Register for Monthly
               </Button>
             </div>
           </div>

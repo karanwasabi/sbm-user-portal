@@ -306,7 +306,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
         if (!cancelled) {
           setTrialQuotesByProduct({});
           setTrialQuotesError(true);
-          toast({ message: 'Could not load trial pricing. Please refresh.', variant: 'error' });
+          toast({ message: 'Could not load pricing. Please refresh.', variant: 'error' });
         }
       } finally {
         if (!cancelled) setLoadingTrialQuotes(false);
@@ -884,7 +884,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
               <>
                 {trialQuotesError ? (
                   <p className="text-center text-sm text-slate-600">
-                    Could not load trial plan pricing. Please refresh the page or try again later.
+                    Could not load plan pricing. Please refresh the page or try again later.
                   </p>
                 ) : planOptionsLoading || loadingTrialQuotes ? (
                   <div className="flex justify-center py-6">
