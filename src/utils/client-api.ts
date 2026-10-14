@@ -310,8 +310,19 @@ export async function postRegistrationPaymentLink(): Promise<PaymentLinkResponse
   return response.json() as Promise<PaymentLinkResponse>;
 }
 
-export async function getTrialCheckoutPreview(product: TrialProduct): Promise<TrialCheckoutPreview> {
-  const response = await publicApiFetch(`/public/trial/checkout-preview?product=${encodeURIComponent(product)}`);
+export async function getTrialEnrollableCohorts(): Promise<
+  import('@/types/trial').PublicTrialEnrollableCohortsResponse
+> {
+  const response = await publicApiFetch('/public/trial/enrollable-cohorts');
+  return response.json() as Promise<import('@/types/trial').PublicTrialEnrollableCohortsResponse>;
+}
+
+export async function getTrialCheckoutPreview(product: TrialProduct, starts?: string): Promise<TrialCheckoutPreview> {
+  const params = new URLSearchParams({ product });
+  if (starts?.trim()) {
+    params.set('starts', starts.trim());
+  }
+  const response = await publicApiFetch(`/public/trial/checkout-preview?${params.toString()}`);
   return response.json() as Promise<TrialCheckoutPreview>;
 }
 

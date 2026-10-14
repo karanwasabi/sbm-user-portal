@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { CalendarDays, Loader2 } from 'lucide-react';
 import { EnrollConsentCheckbox } from '@/components/enroll/enroll-consent-checkbox';
 import { EnrollPricingSummary, enrollProgramLabel } from '@/components/enroll/enroll-pricing-summary';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
@@ -10,6 +11,7 @@ import { CountryCombobox } from '@/components/profile/country-combobox';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { TextInput } from '@/components/ui/text-input';
 import { getCountryDialCode } from '@/lib/country-dial-codes';
 import { clearEnrollDraft, readEnrollDraft, saveEnrollDraft } from '@/lib/enroll-draft';
@@ -18,14 +20,24 @@ import { trackPortalBeginCheckout, trackPortalCheckoutAbandoned, trackPortalSign
 import { trackMetaBeginCheckout } from '@/lib/meta-pixel';
 import { combineWhatsapp, formatPhoneE164, parseWhatsapp } from '@/lib/phone-number';
 import { normalizePromoCode, normalizePromoCodeInput, promoCodeInputProps } from '@/lib/promo-code';
+import {
+  DEFAULT_PUBLIC_TRIAL_STARTS,
+  normalizePublicTrialStarts,
+  publicTrialCohortLabel,
+} from '@/lib/public-trial-cohort';
 import { openRazorpayOrderCheckout } from '@/lib/razorpay-checkout';
 import { toTitleCase } from '@/lib/title-case';
 import { captureUtmAttributionFromLocation } from '@/lib/utm-attribution';
 import { readAttributionPayloadForApi } from '@/lib/attribution-payload';
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
-import { getTrialCheckoutPreview, postTrialCheckoutQuote, startTrialCheckout } from '@/utils/client-api';
+import {
+  getTrialCheckoutPreview,
+  getTrialEnrollableCohorts,
+  postTrialCheckoutQuote,
+  startTrialCheckout,
+} from '@/utils/client-api';
 import type { Country } from '@/types/reference';
-import type { TrialCheckoutPreview, TrialProduct, TrialQuote } from '@/types/trial';
+import type { PublicTrialEnrollableCohort, TrialCheckoutPreview, TrialProduct, TrialQuote } from '@/types/trial';
 
 type EnrollPageViewProps = {
   product: TrialProduct;
@@ -36,6 +48,12 @@ type EnrollPageViewProps = {
 
 export function EnrollPageView({ product, welcomeProductParam, countries, suggestedCountryIso }: EnrollPageViewProps) {
   const discountCodeEnabled = product === 'trial_3m';
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const startsFromUrl = normalizePublicTrialStarts(searchParams.get('starts'));
+  const [startsOn, setStartsOn] = useState(startsFromUrl);
+  const [cohortOptions, setCohortOptions] = useState<PublicTrialEnrollableCohort[]>([]);
   const [preview, setPreview] = useState<TrialCheckoutPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
   const [previewError, setPreviewError] = useState(false);
@@ -63,6 +81,27 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
     pricingRegion: string;
   } | null>(null);
 
+  const replaceStartsInUrl = useCallback(
+    (nextStarts: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('starts', nextStarts);
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
+  useEffect(() => {
+    if (startsFromUrl !== startsOn) {
+      setStartsOn(startsFromUrl);
+    }
+    if (searchParams.get('starts') !== startsFromUrl) {
+      replaceStartsInUrl(startsFromUrl);
+    }
+    // Only sync when the URL-derived starts value changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional URL → state sync
+  }, [startsFromUrl]);
+
   useEffect(() => {
     const draft = readEnrollDraft(product);
     if (!draft) return;
@@ -80,11 +119,32 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
     captureUtmAttributionFromLocation();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await getTrialEnrollableCohorts();
+        if (cancelled) return;
+        setCohortOptions(data.cohorts);
+      } catch {
+        if (!cancelled) {
+          setCohortOptions([
+            { starts_on: DEFAULT_PUBLIC_TRIAL_STARTS, name: 'Nov 2026' },
+            { starts_on: '2026-11-16', name: 'Nov 16 2026' },
+          ]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const loadPreview = useCallback(async () => {
     setLoadingPreview(true);
     setPreviewError(false);
     try {
-      const data = await getTrialCheckoutPreview(product);
+      const data = await getTrialCheckoutPreview(product, startsOn);
       setPreview(data);
     } catch {
       setPreview(null);
@@ -92,11 +152,32 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
     } finally {
       setLoadingPreview(false);
     }
-  }, [product]);
+  }, [product, startsOn]);
 
   useEffect(() => {
     void loadPreview();
   }, [loadPreview]);
+
+  const cohortSelectOptions = useMemo(
+    () =>
+      (cohortOptions.length > 0
+        ? cohortOptions
+        : [
+            { starts_on: DEFAULT_PUBLIC_TRIAL_STARTS, name: 'Nov 2026' },
+            { starts_on: '2026-11-16', name: 'Nov 16 2026' },
+          ]
+      ).map((cohort) => ({
+        value: cohort.starts_on,
+        label: publicTrialCohortLabel(cohort.starts_on),
+      })),
+    [cohortOptions]
+  );
+
+  const handleStartsChange = (next: string) => {
+    const normalized = normalizePublicTrialStarts(next);
+    setStartsOn(normalized);
+    replaceStartsInUrl(normalized);
+  };
 
   const baseQuote = useMemo(() => {
     if (!preview) return null;
@@ -201,6 +282,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
         whatsapp: whatsappE164,
         country_code: countryIso,
         dpdp_consent: true,
+        starts: startsOn,
         ...(readAttributionPayloadForApi() ?? {}),
         ...(discountCodeEnabled && appliedPromo ? { promo_code: appliedPromo } : {}),
       });
@@ -352,6 +434,18 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
                     }
                   }}
                   countries={countries}
+                />
+              </Field>
+
+              <Field label="Program start">
+                <SearchableSelect
+                  value={startsOn}
+                  onChange={handleStartsChange}
+                  options={cohortSelectOptions}
+                  placeholder="Select start date"
+                  leftIcon={<CalendarDays size={16} />}
+                  searchable={false}
+                  disabled={submitting}
                 />
               </Field>
 

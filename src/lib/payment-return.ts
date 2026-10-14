@@ -67,7 +67,7 @@ export function trialEnrollRetryPath(destination: string): string {
   try {
     const url = new URL(destination, 'http://local');
     const product = url.searchParams.get('product')?.trim();
-    if (product === 'trial_1m') return '/enroll/trial';
+    if (product === 'trial_1m') return '/enroll/monthly';
     if (product === 'trial_3m') return '/enroll';
   } catch {
     // Fall through to default enroll path.

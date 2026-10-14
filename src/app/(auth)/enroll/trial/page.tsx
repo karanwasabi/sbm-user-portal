@@ -1,19 +1,27 @@
-import { EnrollPageView } from '@/components/enroll/enroll-page-view';
-import { getRequestCountryIso } from '@/lib/request-country-code';
-import { fetchCountries } from '@/utils/api';
+import { redirect } from 'next/navigation';
 
-export default async function EnrollTrialPage() {
-  const [countries, suggestedCountryIso] = await Promise.all([
-    fetchCountries().catch(() => []),
-    getRequestCountryIso(),
-  ]);
+type EnrollTrialRedirectProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-  return (
-    <EnrollPageView
-      product="trial_1m"
-      welcomeProductParam="trial_1m"
-      countries={countries}
-      suggestedCountryIso={suggestedCountryIso}
-    />
-  );
+function buildQueryString(searchParams: Record<string, string | string[] | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (value == null) continue;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item != null && item !== '') params.append(key, item);
+      }
+      continue;
+    }
+    if (value !== '') params.set(key, value);
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
+/** Legacy /enroll/trial bookmarks and ads → /enroll/monthly, preserving query params. */
+export default async function EnrollTrialRedirectPage({ searchParams }: EnrollTrialRedirectProps) {
+  const resolved = await searchParams;
+  redirect(`/enroll/monthly${buildQueryString(resolved)}`);
 }

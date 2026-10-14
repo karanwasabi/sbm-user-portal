@@ -27,12 +27,12 @@ export default function RegisterPage() {
     trackPortalEvent('portal_register_option_selected', {
       page_path: '/register',
       selected_plan: 'trial_1m',
-      destination_path: '/enroll/trial',
+      destination_path: '/enroll/monthly',
     });
     trackMetaCustom('PortalRegisterOptionSelected', {
       page_path: '/register',
       selected_plan: 'trial_1m',
-      destination_path: '/enroll/trial',
+      destination_path: '/enroll/monthly',
     });
   };
 
@@ -80,7 +80,7 @@ export default function RegisterPage() {
               ₹3900 <span className="text-xl font-medium text-slate-700">+ taxes</span>
             </p>
             <div className="mt-5" onClick={handleTrialClick}>
-              <Button href="/enroll/trial" variant="primary" size="md" rightIcon={<ArrowRight className="h-4 w-4" />}>
+              <Button href="/enroll/monthly" variant="primary" size="md" rightIcon={<ArrowRight className="h-4 w-4" />}>
                 Register for 1 Month Trial
               </Button>
             </div>

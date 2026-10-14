@@ -67,6 +67,8 @@ export type TrialCheckoutStartRequest = {
   whatsapp: string;
   country_code: string;
   dpdp_consent: boolean;
+  /** YYYY-MM-DD cohort start for dual-batch enroll. */
+  starts?: string;
   promo_code?: string;
   utm_source?: string;
   utm_medium?: string;
@@ -79,4 +81,14 @@ export type TrialCheckoutStartRequest = {
   fbclid?: string;
   fbp?: string;
   fbc?: string;
+};
+
+export type PublicTrialEnrollableCohort = {
+  starts_on: string;
+  name: string;
+};
+
+export type PublicTrialEnrollableCohortsResponse = {
+  cohorts: PublicTrialEnrollableCohort[];
+  default_starts: string;
 };
