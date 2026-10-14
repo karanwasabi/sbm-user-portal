@@ -413,6 +413,33 @@ export async function postRenewCheckEmail(email: string): Promise<import('@/type
   return response.json() as Promise<import('@/types/renew').RenewCheckEmailResponse>;
 }
 
+export async function getPublicEvent(slug: string): Promise<import('@/types/event').PublicEvent> {
+  const response = await publicApiFetch(`/public/events/${encodeURIComponent(slug)}`);
+  return response.json() as Promise<import('@/types/event').PublicEvent>;
+}
+
+export async function postEventCheckEmail(
+  slug: string,
+  email: string
+): Promise<import('@/types/event').EventCheckEmailResponse> {
+  const response = await publicApiFetch(`/public/events/${encodeURIComponent(slug)}/check-email`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  return response.json() as Promise<import('@/types/event').EventCheckEmailResponse>;
+}
+
+export async function postEventSubmit(
+  slug: string,
+  body: import('@/types/event').EventSubmitRequest
+): Promise<import('@/types/event').EventSubmitResponse> {
+  const response = await publicApiFetch(`/public/events/${encodeURIComponent(slug)}/submit`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return response.json() as Promise<import('@/types/event').EventSubmitResponse>;
+}
+
 export async function getRenewCheckoutPreview(
   category: string,
   countryIso: string,

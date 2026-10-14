@@ -11,6 +11,7 @@ const PUBLIC_ROUTES = [
   '/enroll',
   '/renew',
   '/renewal',
+  '/events',
   '/refer',
   '/welcome',
   '/forgot-password',

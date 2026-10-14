@@ -165,6 +165,17 @@ export async function enrollInProgram(programSlug = 'take-control'): Promise<Enr
   return response.json() as Promise<Enrollment>;
 }
 
+/** Public event for signup pages. Returns null when not found / not published / unreachable. */
+export const fetchPublicEvent = cache(async (slug: string): Promise<import('@/types/event').PublicEvent | null> => {
+  try {
+    const response = await apiFetch(`/public/events/${encodeURIComponent(slug)}`);
+    if (!response.ok) return null;
+    return (await response.json()) as import('@/types/event').PublicEvent;
+  } catch {
+    return null;
+  }
+});
+
 export const fetchCountries = cache(async (): Promise<Country[]> => {
   let response: Response;
   try {
