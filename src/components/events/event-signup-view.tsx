@@ -25,18 +25,6 @@ type EventSignupViewProps = {
   suggestedCountryIso?: string;
 };
 
-function formatSlotStart(iso: string): string | null {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleString('en-IN', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
 function SlotOption({
   slot,
   selected,
@@ -48,11 +36,10 @@ function SlotOption({
   disabled: boolean;
   onSelect: () => void;
 }) {
-  const when = formatSlotStart(slot.starts_at);
   return (
     <label
       className={cn(
-        'flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors',
+        'flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 transition-colors',
         selected ? 'border-brand bg-brand/5' : 'border-slate-200 bg-background hover:border-slate-300',
         disabled && 'cursor-not-allowed opacity-60'
       )}
@@ -64,12 +51,9 @@ function SlotOption({
         checked={selected}
         disabled={disabled}
         onChange={onSelect}
-        className="mt-0.5 h-4 w-4 shrink-0 accent-brand"
+        className="h-4 w-4 shrink-0 accent-brand"
       />
-      <span className="flex min-w-0 flex-col">
-        <span className="text-sm font-semibold text-slate-900">{slot.label}</span>
-        {when ? <span className="text-xs text-slate-500">{when}</span> : null}
-      </span>
+      <span className="min-w-0 text-sm font-semibold text-slate-900">{slot.label}</span>
     </label>
   );
 }
