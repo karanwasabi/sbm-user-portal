@@ -7,6 +7,7 @@ import { EnrollPricingSummary } from '@/components/enroll/enroll-pricing-summary
 import { renewPlanLabel } from '@/components/renew/renew-plan-label';
 import { RenewPlanPicker, type RenewPlanPickerOption } from '@/components/renew/renew-plan-picker';
 import { RenewPricingSummary } from '@/components/renew/renew-pricing-summary';
+import { RenewStarsPanel } from '@/components/renew/renew-stars-panel';
 import {
   isBlockedCategory,
   isNewUserCategory,
@@ -48,7 +49,13 @@ import {
   startRenewCheckout,
 } from '@/utils/client-api';
 import type { Country } from '@/types/reference';
-import type { RenewCategory, RenewCheckEmailResponse, RenewCheckoutPreview, RenewQuote } from '@/types/renew';
+import type {
+  RenewCategory,
+  RenewCheckEmailResponse,
+  RenewCheckoutPreview,
+  RenewQuote,
+  RenewStarsApplyResponse,
+} from '@/types/renew';
 import type { TrialProduct, TrialQuote } from '@/types/trial';
 
 type RenewPageViewProps = {
@@ -98,6 +105,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState('');
   const [promoError, setPromoError] = useState<string | null>(null);
+  const [starApplied, setStarApplied] = useState<RenewStarsApplyResponse | null>(null);
   const [quotePending, setQuotePending] = useState(false);
   const [quotedTrialQuote, setQuotedTrialQuote] = useState<TrialQuote | null>(null);
   const [trialQuotesByProduct, setTrialQuotesByProduct] = useState<Record<string, TrialQuote>>({});
@@ -571,6 +579,9 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
         dpdp_consent: true,
         ...(readAttributionPayloadForApi() ?? {}),
         ...(appliedPromo ? { promo_code: appliedPromo } : {}),
+        ...(starApplied?.path === 'prepaid_checkout' && starApplied.redemption_id
+          ? { star_redemption_id: starApplied.redemption_id }
+          : {}),
       });
 
       const checkoutIsNewUser = isNewUserCategory(activeCategory);
@@ -832,26 +843,37 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
         </div>
 
         {classification && blocked ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
-            {autoRenewBlocked ? (
-              <>
-                <p className="font-semibold text-slate-900">Auto-renew is already on</p>
-                <p className="mt-1">
-                  {classification.next_renewal_at
-                    ? `Your next renewal is on ${formatRenewalOnDate(classification.next_renewal_at) ?? classification.next_renewal_at}.`
-                    : 'Your membership renews automatically — no payment needed here.'}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="font-semibold text-slate-900">Renewal not available</p>
-                <p className="mt-1">
-                  {classification.subscription_end_label
-                    ? classification.subscription_end_label
-                    : 'You cannot renew at this time. Contact support if you need help.'}
-                </p>
-              </>
-            )}
+          <div className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
+              {autoRenewBlocked ? (
+                <>
+                  <p className="font-semibold text-slate-900">Auto-renew is already on</p>
+                  <p className="mt-1">
+                    {classification.next_renewal_at
+                      ? `Your next renewal is on ${formatRenewalOnDate(classification.next_renewal_at) ?? classification.next_renewal_at}.`
+                      : 'Your membership renews automatically — no payment needed here.'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-slate-900">Renewal not available</p>
+                  <p className="mt-1">
+                    {classification.subscription_end_label
+                      ? classification.subscription_end_label
+                      : 'You cannot renew at this time. Contact support if you need help.'}
+                  </p>
+                </>
+              )}
+            </div>
+            {autoRenewBlocked && isValidEmailFormat(email.trim()) ? (
+              <RenewStarsPanel
+                email={email.trim().toLowerCase()}
+                countryIso={countryIso}
+                planKey={null}
+                amountDuePaise={null}
+                onAppliedChange={setStarApplied}
+              />
+            ) : null}
           </div>
         ) : null}
 
@@ -902,6 +924,16 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
                   <p className="rounded-xl border border-brand/20 bg-brand/5 px-4 py-3 text-sm text-slate-700">
                     Your 1-month subscription will be on Autopay. You can cancel anytime you wish to.
                   </p>
+                ) : null}
+
+                {!isNewUserCategory(category) && isValidEmailFormat(email.trim()) ? (
+                  <RenewStarsPanel
+                    email={email.trim().toLowerCase()}
+                    countryIso={countryIso}
+                    planKey={selectedPlan || null}
+                    amountDuePaise={typeof displayTotalPaise === 'number' ? displayTotalPaise : null}
+                    onAppliedChange={setStarApplied}
+                  />
                 ) : null}
 
                 {selectedPlan === 'trial_3m' && isNewUserCategory(category) ? (

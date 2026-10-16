@@ -413,6 +413,67 @@ export async function postRenewCheckEmail(email: string): Promise<import('@/type
   return response.json() as Promise<import('@/types/renew').RenewCheckEmailResponse>;
 }
 
+export async function getRenewStarsBalance(email: string): Promise<import('@/types/renew').RenewStarsBalance> {
+  const params = new URLSearchParams({ email: email.trim() });
+  const response = await publicApiFetch(`/public/renew/stars?${params.toString()}`);
+  return response.json() as Promise<import('@/types/renew').RenewStarsBalance>;
+}
+
+export async function postRenewStarsRequestOtp(email: string): Promise<void> {
+  await publicApiFetch('/public/renew/stars/request-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email: email.trim() }),
+  });
+}
+
+export async function postRenewStarsGrant(
+  email: string,
+  accessToken: string
+): Promise<import('@/types/renew').RenewStarsGrantResponse> {
+  const response = await publicApiFetch('/public/renew/stars/grant', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ email: email.trim() }),
+  });
+  return response.json() as Promise<import('@/types/renew').RenewStarsGrantResponse>;
+}
+
+export async function postRenewStarsApply(body: {
+  email: string;
+  grant_token: string;
+  stars_requested: number;
+  idempotency_key: string;
+  plan_key?: string;
+  country_iso?: string;
+}): Promise<import('@/types/renew').RenewStarsApplyResponse> {
+  const response = await publicApiFetch('/public/renew/stars/apply', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return response.json() as Promise<import('@/types/renew').RenewStarsApplyResponse>;
+}
+
+export async function postRenewStarsCancel(body: {
+  email: string;
+  grant_token?: string;
+  redemption_id: string;
+  accessToken?: string;
+}): Promise<void> {
+  const headers: HeadersInit = {};
+  if (body.accessToken) {
+    headers.Authorization = `Bearer ${body.accessToken}`;
+  }
+  await publicApiFetch('/public/renew/stars/cancel', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      email: body.email,
+      grant_token: body.grant_token,
+      redemption_id: body.redemption_id,
+    }),
+  });
+}
+
 export async function getPublicEvent(slug: string): Promise<import('@/types/event').PublicEvent> {
   const response = await publicApiFetch(`/public/events/${encodeURIComponent(slug)}`);
   return response.json() as Promise<import('@/types/event').PublicEvent>;

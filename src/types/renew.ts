@@ -65,6 +65,7 @@ export type RenewCheckoutStartRequest = {
   whatsapp: string;
   country_code: string;
   dpdp_consent: boolean;
+  star_redemption_id?: string;
   promo_code?: string;
   utm_source?: string;
   utm_medium?: string;
@@ -104,4 +105,45 @@ export type RenewPaymentStatus = {
   category?: string;
   plan_key?: string;
   access_until?: string;
+};
+
+export type RenewStarsBalance = {
+  enabled: boolean;
+  available_stars: number;
+  earned_stars: number;
+  rate_paise_per_star: number;
+  category?: RenewCategory;
+  can_pay: boolean;
+  next_charge_total_paise?: number;
+  next_renewal_at?: string;
+  pending_cashback?: {
+    redemption_id: string;
+    stars_applied: number;
+    discount_paise: number;
+    status: string;
+  };
+  open_reservation?: {
+    redemption_id: string;
+    stars_applied: number;
+    discount_paise: number;
+    expires_at?: string;
+  };
+};
+
+export type RenewStarsGrantResponse = {
+  grant_token: string;
+  expires_at: string;
+};
+
+export type RenewStarsApplyResponse = {
+  redemption_id: string;
+  path: string;
+  status: string;
+  stars_requested: number;
+  stars_applied: number;
+  discount_paise: number;
+  clamped: boolean;
+  base_paise?: number;
+  gst_paise?: number;
+  total_paise?: number;
 };
