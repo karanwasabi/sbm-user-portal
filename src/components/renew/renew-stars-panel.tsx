@@ -266,6 +266,10 @@ export function RenewStarsPanel({
   const showPendingCashback = Boolean(balance.pending_cashback) || applied?.path === 'autopay_cashback';
   const showPrepaidApplied = applied?.path === 'prepaid_checkout';
   const showRedeemControls = !showPendingCashback && !showPrepaidApplied;
+  const cashbackStatus = applied?.status ?? balance.pending_cashback?.status ?? '';
+  const canCancelCashback =
+    applied?.path === 'autopay_cashback' &&
+    (cashbackStatus === 'cashback_pending' || cashbackStatus === 'cashback_failed');
 
   return (
     <section className="rounded-xl border border-amber-200/80 bg-amber-50/50 px-4 py-4 text-sm text-slate-800">
@@ -289,10 +293,12 @@ export function RenewStarsPanel({
                 {applied?.stars_applied ?? balance.pending_cashback?.stars_applied ?? 0} stars) will apply on your next
                 billing charge.
               </p>
-              {applied ? (
+              {canCancelCashback ? (
                 <Button type="button" variant="light" size="sm" disabled={busy} onClick={() => void handleCancel()}>
                   Remove
                 </Button>
+              ) : cashbackStatus === 'cashback_processing' ? (
+                <p className="text-xs font-medium text-slate-500">Cashback refund in progress…</p>
               ) : null}
             </div>
           ) : null}
