@@ -137,6 +137,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
       setLoadingTrialQuotes(false);
       setPromoCode('');
       setPromoError(null);
+      setStarApplied(null);
       if (resetProfile) {
         setFirstName('');
         setLastName('');
@@ -871,6 +872,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
                 countryIso={countryIso}
                 planKey={null}
                 amountDuePaise={null}
+                autopay
                 onAppliedChange={setStarApplied}
               />
             ) : null}
@@ -932,6 +934,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
                     countryIso={countryIso}
                     planKey={selectedPlan || null}
                     amountDuePaise={typeof displayTotalPaise === 'number' ? displayTotalPaise : null}
+                    reserveMinPaise={isRenewal1mAutopayPlan(category, selectedPlan) ? 200 : 0}
                     onAppliedChange={setStarApplied}
                   />
                 ) : null}
@@ -997,6 +1000,24 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
                       renewFromDate={renewFromDateIso}
                       extensionBasePaise={trialExtendExtensionBasePaiseValue ?? undefined}
                       addonBasePaise={trialExtendAddonBasePaiseValue ?? undefined}
+                      starDiscountPaise={
+                        starApplied?.path === 'prepaid_checkout' ? starApplied.discount_paise : undefined
+                      }
+                      starAdjustedTotalPaise={
+                        starApplied?.path === 'prepaid_checkout' && typeof starApplied.total_paise === 'number'
+                          ? starApplied.total_paise
+                          : undefined
+                      }
+                      starAdjustedBasePaise={
+                        starApplied?.path === 'prepaid_checkout' && typeof starApplied.base_paise === 'number'
+                          ? starApplied.base_paise
+                          : undefined
+                      }
+                      starAdjustedGstPaise={
+                        starApplied?.path === 'prepaid_checkout' && typeof starApplied.gst_paise === 'number'
+                          ? starApplied.gst_paise
+                          : undefined
+                      }
                     />
                   ) : null
                 ) : null}

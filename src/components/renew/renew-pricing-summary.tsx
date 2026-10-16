@@ -17,6 +17,11 @@ type RenewPricingSummaryProps = {
   extensionBasePaise?: number;
   /** Pretax additional membership component for trial_extend bundles. */
   addonBasePaise?: number;
+  /** GST-inclusive star discount already applied to totals below when set. */
+  starDiscountPaise?: number;
+  starAdjustedTotalPaise?: number;
+  starAdjustedBasePaise?: number;
+  starAdjustedGstPaise?: number;
 };
 
 export function RenewPricingSummary({
@@ -26,11 +31,22 @@ export function RenewPricingSummary({
   renewFromDate,
   extensionBasePaise,
   addonBasePaise,
+  starDiscountPaise,
+  starAdjustedTotalPaise,
+  starAdjustedBasePaise,
+  starAdjustedGstPaise,
 }: RenewPricingSummaryProps) {
   const isDomestic = quote.pricing_region === 'domestic';
   const showGst = isDomestic;
-  const hasDiscount = (quote.discount_paise ?? 0) > 0;
-  const discountedBasePaise = quote.base_paise - (quote.discount_paise ?? 0);
+  const hasPromoDiscount = (quote.discount_paise ?? 0) > 0;
+  const hasStarDiscount = (starDiscountPaise ?? 0) > 0;
+  const hasDiscount = hasPromoDiscount || hasStarDiscount;
+  const displayBasePaise = starAdjustedBasePaise ?? quote.base_paise - (quote.discount_paise ?? 0);
+  const displayGstPaise = starAdjustedGstPaise ?? quote.gst_paise;
+  // Star discount is GST-inclusive against gross due; without a full re-quote, net due is gross − stars.
+  const displayTotalPaise =
+    starAdjustedTotalPaise ??
+    (hasStarDiscount ? Math.max(0, quote.total_paise - (starDiscountPaise ?? 0)) : quote.total_paise);
   const showBreakdown = true;
   const detailLineClass = 'text-sm font-medium text-slate-500';
   const renewFromLabel = renewFromDate ? formatShortStartDate(renewFromDate) : null;
@@ -38,7 +54,7 @@ export function RenewPricingSummary({
   const dateHeading = renewFromLabel ? 'Renews from' : 'Starts';
   const dateLabel = renewFromLabel ?? startsLabel;
   const showTrialExtendSplit =
-    extensionBasePaise != null && addonBasePaise != null && addonBasePaise > 0 && !hasDiscount;
+    extensionBasePaise != null && addonBasePaise != null && addonBasePaise > 0 && !hasPromoDiscount && !hasStarDiscount;
   const planTitleParts = splitRenewPlanLabel(planKey);
 
   return (
@@ -84,7 +100,7 @@ export function RenewPricingSummary({
                 </p>
                 {hasDiscount ? (
                   <p className="text-lg font-extrabold tracking-tight text-success">
-                    {formatInrFromPaise(discountedBasePaise)}
+                    {formatInrFromPaise(displayBasePaise)}
                     {showGst ? <span className="text-sm font-bold"> + GST</span> : null}
                   </p>
                 ) : null}
@@ -121,22 +137,28 @@ export function RenewPricingSummary({
                 <dd className="font-semibold text-slate-800">{formatInrFromPaise(quote.base_paise)}</dd>
               </div>
             )}
-            {hasDiscount ? (
+            {hasPromoDiscount ? (
               <div className="flex items-baseline justify-between gap-4 text-success">
                 <dt>{quote.discount_label ? quote.discount_label : 'Discount'}</dt>
                 <dd className="font-semibold">−{formatInrFromPaise(quote.discount_paise ?? 0)}</dd>
               </div>
             ) : null}
+            {hasStarDiscount ? (
+              <div className="flex items-baseline justify-between gap-4 text-success">
+                <dt>Stars</dt>
+                <dd className="font-semibold">−{formatInrFromPaise(starDiscountPaise ?? 0)}</dd>
+              </div>
+            ) : null}
             {showGst ? (
               <div className="flex items-baseline justify-between gap-4">
                 <dt className="text-slate-500">GST (18%)</dt>
-                <dd className="font-semibold text-slate-800">{formatInrFromPaise(quote.gst_paise)}</dd>
+                <dd className="font-semibold text-slate-800">{formatInrFromPaise(displayGstPaise)}</dd>
               </div>
             ) : null}
             <div className="flex items-baseline justify-between gap-4 border-t border-dashed border-slate-200 pt-3">
               <dt className="text-sm font-semibold text-slate-700">Due today</dt>
               <dd className="text-base font-extrabold tracking-tight text-slate-900">
-                {formatInrFromPaise(quote.total_paise)}
+                {formatInrFromPaise(displayTotalPaise)}
               </dd>
             </div>
           </dl>

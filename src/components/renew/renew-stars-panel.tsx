@@ -22,15 +22,34 @@ type RenewStarsPanelProps = {
   planKey: string | null;
   /** Gross amount due before stars (plan total). Used to clamp the slider. */
   amountDuePaise: number | null;
+  /** Keep this much of the due amount unpaid (renewal_1m mandate floor). */
+  reserveMinPaise?: number;
+  /** Autopay-blocked path: clamp against next_charge_total_paise from balance. */
+  autopay?: boolean;
   onAppliedChange: (applied: RenewStarsApplyResponse | null) => void;
 };
 
-function maxStarsForDue(available: number, amountDuePaise: number | null, rate: number): number {
+function maxStarsForDue(
+  available: number,
+  amountDuePaise: number | null,
+  rate: number,
+  reserveMinPaise: number
+): number {
   if (!amountDuePaise || amountDuePaise <= 0 || rate <= 0) return available;
-  return Math.min(available, Math.floor(amountDuePaise / rate));
+  const spendable = amountDuePaise - Math.max(0, reserveMinPaise);
+  if (spendable <= 0) return 0;
+  return Math.min(available, Math.floor(spendable / rate));
 }
 
-export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, onAppliedChange }: RenewStarsPanelProps) {
+export function RenewStarsPanel({
+  email,
+  countryIso,
+  planKey,
+  amountDuePaise,
+  reserveMinPaise = 0,
+  autopay = false,
+  onAppliedChange,
+}: RenewStarsPanelProps) {
   const [balance, setBalance] = useState<RenewStarsBalance | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +62,11 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
 
   const rate = balance?.rate_paise_per_star ?? 200;
   const available = balance?.available_stars ?? 0;
-  const sliderMax = maxStarsForDue(available, amountDuePaise, rate);
+  const dueForClamp =
+    autopay && typeof balance?.next_charge_total_paise === 'number' ? balance.next_charge_total_paise : amountDuePaise;
+  const sliderMax = maxStarsForDue(available, dueForClamp, rate, reserveMinPaise);
+  const requiresPlan = !autopay;
+  const applyDisabled = busy || starsToRedeem <= 0 || sliderMax <= 0 || (requiresPlan && !planKey);
 
   const loadBalance = useCallback(async () => {
     const trimmed = email.trim().toLowerCase();
@@ -124,7 +147,7 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
       if (!/^\d{6,8}$/.test(otp.trim())) {
         throw new Error('Enter the OTP sent to your email');
       }
-      const { error: verifyError } = await supabase.auth.verifyOtp({
+      const { data: verified, error: verifyError } = await supabase.auth.verifyOtp({
         email: renewEmail,
         token: otp.trim(),
         type: 'email',
@@ -132,10 +155,7 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
       if (verifyError) {
         throw new Error(verifyError.message || 'Invalid OTP');
       }
-      const {
-        data: { session: next },
-      } = await supabase.auth.getSession();
-      accessToken = next?.access_token ?? null;
+      accessToken = verified.session?.access_token ?? null;
       if (!accessToken) {
         throw new Error('Could not verify email');
       }
@@ -147,7 +167,7 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
   }, [email, grantToken, otp, otpSent]);
 
   const handleApply = async () => {
-    if (starsToRedeem <= 0) return;
+    if (starsToRedeem <= 0 || applyDisabled) return;
     setBusy(true);
     setError(null);
     try {
@@ -163,6 +183,7 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
       setApplied(result);
       onAppliedChange(result);
       setStarsToRedeem(result.stars_applied);
+      setGrantToken(null);
       setOtpSent(false);
       setOtp('');
       await loadBalance();
@@ -171,6 +192,7 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
       if (message === 'OTP_REQUIRED') {
         setError('We sent a code to your email. Enter it below to redeem stars.');
       } else {
+        setGrantToken(null);
         setError(message);
       }
     } finally {
@@ -214,6 +236,21 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
     }
   };
 
+  const handleResendOtp = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await postRenewStarsRequestOtp(email.trim().toLowerCase());
+      setOtpSent(true);
+      setOtp('');
+      setError('We sent a new code to your email.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resend code');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading && !balance) {
     return (
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
@@ -225,6 +262,10 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
   if (!balance?.enabled || (available <= 0 && !applied && !balance.pending_cashback)) {
     return null;
   }
+
+  const showPendingCashback = Boolean(balance.pending_cashback) || applied?.path === 'autopay_cashback';
+  const showPrepaidApplied = applied?.path === 'prepaid_checkout';
+  const showRedeemControls = !showPendingCashback && !showPrepaidApplied;
 
   return (
     <section className="rounded-xl border border-amber-200/80 bg-amber-50/50 px-4 py-4 text-sm text-slate-800">
@@ -240,14 +281,23 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
             . Each star is worth {formatInrFromPaise(rate)}.
           </p>
 
-          {balance.pending_cashback ? (
-            <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-slate-700">
-              Pending cashback of {formatInrFromPaise(balance.pending_cashback.discount_paise)} (
-              {balance.pending_cashback.stars_applied} stars) will apply on your next billing charge.
-            </p>
+          {showPendingCashback ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <p className="rounded-lg bg-white/70 px-3 py-2 text-slate-700">
+                Pending cashback of{' '}
+                {formatInrFromPaise(applied?.discount_paise ?? balance.pending_cashback?.discount_paise ?? 0)} (
+                {applied?.stars_applied ?? balance.pending_cashback?.stars_applied ?? 0} stars) will apply on your next
+                billing charge.
+              </p>
+              {applied ? (
+                <Button type="button" variant="light" size="sm" disabled={busy} onClick={() => void handleCancel()}>
+                  Remove
+                </Button>
+              ) : null}
+            </div>
           ) : null}
 
-          {applied && applied.path === 'prepaid_checkout' ? (
+          {showPrepaidApplied ? (
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <p className="font-medium text-slate-900">
                 Applying {applied.stars_applied} stars (−{formatInrFromPaise(applied.discount_paise)})
@@ -256,7 +306,9 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
                 Remove
               </Button>
             </div>
-          ) : !balance.pending_cashback ? (
+          ) : null}
+
+          {showRedeemControls ? (
             <div className="mt-3 space-y-3">
               <div>
                 <label className="text-xs font-semibold tracking-wide text-slate-500 uppercase" htmlFor="stars-redeem">
@@ -278,22 +330,32 @@ export function RenewStarsPanel({ email, countryIso, planKey, amountDuePaise, on
               </div>
 
               {otpSent ? (
-                <Field label="Email code">
-                  <TextInput
-                    value={otp}
-                    onChange={(value) => setOtp(value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="6-digit code"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                  />
-                </Field>
+                <div className="space-y-2">
+                  <Field label="Email code">
+                    <TextInput
+                      value={otp}
+                      onChange={(value) => setOtp(value.replace(/\D/g, '').slice(0, 8))}
+                      placeholder="6-digit code"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                    />
+                  </Field>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-brand underline-offset-2 hover:underline"
+                    disabled={busy}
+                    onClick={() => void handleResendOtp()}
+                  >
+                    Resend code
+                  </button>
+                </div>
               ) : null}
 
               <Button
                 type="button"
                 variant="primary"
                 size="sm"
-                disabled={busy || starsToRedeem <= 0 || (amountDuePaise != null && !planKey)}
+                disabled={applyDisabled}
                 onClick={() => void handleApply()}
                 leftIcon={busy ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
               >
