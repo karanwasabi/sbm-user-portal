@@ -259,7 +259,7 @@ export function RenewStarsPanel({
     );
   }
 
-  if (!balance?.enabled || (available <= 0 && !applied && !balance.pending_cashback)) {
+  if (!balance?.enabled) {
     return null;
   }
 
