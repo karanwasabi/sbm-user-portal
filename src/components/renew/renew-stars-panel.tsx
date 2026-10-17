@@ -190,7 +190,7 @@ export function RenewStarsPanel({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not redeem stars';
       if (message === 'OTP_REQUIRED') {
-        setError('We sent a code to your email. Enter it below to redeem stars.');
+        setError('We sent a code to your email. Enter it above to redeem stars.');
       } else {
         setGrantToken(null);
         setError(message);
