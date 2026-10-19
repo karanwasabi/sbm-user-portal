@@ -85,6 +85,13 @@ export async function updateSession(request: NextRequest) {
   const requiresAuth = isProtectedRoute(pathname);
   const isConfirmRoute = pathname === '/auth/confirm';
 
+  // Email typo: "Renewal reminder july batch" linked to /renew. (trailing period).
+  if (pathname === '/renew.' || pathname === '/renew./') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/renew';
+    return NextResponse.redirect(url);
+  }
+
   if (pathname === '/signup' || pathname.startsWith('/signup/')) {
     const url = request.nextUrl.clone();
     url.pathname = '/subscribe';
