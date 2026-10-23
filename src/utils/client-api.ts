@@ -504,11 +504,15 @@ export async function postEventSubmit(
 export async function getRenewCheckoutPreview(
   category: string,
   countryIso: string,
-  email?: string
+  email?: string,
+  starts?: string
 ): Promise<import('@/types/renew').RenewCheckoutPreview> {
   const params = new URLSearchParams({ category, country_iso: countryIso });
   if (email?.trim()) {
     params.set('email', email.trim());
+  }
+  if (starts?.trim()) {
+    params.set('starts', starts.trim());
   }
   const response = await publicApiFetch(`/public/renew/checkout-preview?${params.toString()}`);
   return response.json() as Promise<import('@/types/renew').RenewCheckoutPreview>;

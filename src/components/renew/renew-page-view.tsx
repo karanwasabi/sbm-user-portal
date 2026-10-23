@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { CalendarDays, Loader2 } from 'lucide-react';
 import { EnrollConsentCheckbox } from '@/components/enroll/enroll-consent-checkbox';
 import { EnrollPricingSummary } from '@/components/enroll/enroll-pricing-summary';
 import { renewPlanLabel } from '@/components/renew/renew-plan-label';
@@ -24,7 +24,9 @@ import { CountryCombobox } from '@/components/profile/country-combobox';
 import { PhoneInput } from '@/components/profile/phone-input';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { TextInput } from '@/components/ui/text-input';
+import { publicTrialCohortLabel } from '@/lib/public-trial-cohort';
 import { useToast } from '@/components/ui/toast';
 import { getCountryDialCode } from '@/lib/country-dial-codes';
 import { formatInclusiveAccessEndDate } from '@/lib/format-display-date';
@@ -102,6 +104,8 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
   const [formError, setFormError] = useState<string | null>(null);
 
   const [selectedPlan, setSelectedPlan] = useState<string>('');
+  /** Set only after the member picks a start date. Empty keeps the next open cohort. */
+  const [pickedStarts, setPickedStarts] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState('');
   const [promoError, setPromoError] = useState<string | null>(null);
@@ -261,7 +265,12 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
     const previewEmail = email.trim();
     void (async () => {
       try {
-        const data = await getRenewCheckoutPreview(category, countryIso, previewEmail || undefined);
+        const data = await getRenewCheckoutPreview(
+          category,
+          countryIso,
+          previewEmail || undefined,
+          pickedStarts || undefined
+        );
         if (!cancelled) {
           setPreview(data);
           if (isNewUserCategory(category)) {
@@ -284,7 +293,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
     return () => {
       cancelled = true;
     };
-  }, [category, countryIso, blocked, email, toast]);
+  }, [category, countryIso, blocked, email, pickedStarts, toast]);
 
   useEffect(() => {
     if (!isNewUserCategory(category) || !preview?.trial_products?.length) {
@@ -579,6 +588,9 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
         country_code: countryIso,
         dpdp_consent: true,
         ...(readAttributionPayloadForApi() ?? {}),
+        ...(preview?.cohort_choice && (pickedStarts || preview.starts_on)
+          ? { starts: pickedStarts || preview.starts_on }
+          : {}),
         ...(appliedPromo ? { promo_code: appliedPromo } : {}),
         ...(starApplied?.path === 'prepaid_checkout' && starApplied.redemption_id
           ? { star_redemption_id: starApplied.redemption_id }
@@ -826,6 +838,23 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
               }}
             />
           </Field>
+
+          {preview?.cohort_choice && (preview.cohorts?.length ?? 0) > 0 ? (
+            <Field label="Program start">
+              <SearchableSelect
+                value={pickedStarts || preview.starts_on}
+                onChange={setPickedStarts}
+                options={preview.cohorts!.map((cohort) => ({
+                  value: cohort.starts_on,
+                  label: publicTrialCohortLabel(cohort.starts_on),
+                }))}
+                placeholder="Select start date"
+                leftIcon={<CalendarDays size={16} />}
+                searchable={false}
+                disabled={submitting}
+              />
+            </Field>
+          ) : null}
 
           <EnrollConsentCheckbox
             checked={dpdpConsent}

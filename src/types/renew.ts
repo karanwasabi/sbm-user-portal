@@ -44,11 +44,19 @@ export type RenewPlanPreview = {
   international: RenewQuote;
 };
 
+export type RenewEnrollableCohort = {
+  starts_on: string;
+  name: string;
+};
+
 export type RenewCheckoutPreview = {
   category: RenewCategory;
   program_name: string;
   cohort_name: string;
   starts_on: string;
+  /** True when this person is joining an open cohort and can pick among `cohorts`. */
+  cohort_choice?: boolean;
+  cohorts?: RenewEnrollableCohort[];
   /** Existing-member renew: access still open → that date; else today. */
   renew_from?: string;
   plans?: RenewPlanPreview[];
@@ -65,6 +73,8 @@ export type RenewCheckoutStartRequest = {
   whatsapp: string;
   country_code: string;
   dpdp_consent: boolean;
+  /** YYYY-MM-DD when joining an open cohort. */
+  starts?: string;
   star_redemption_id?: string;
   promo_code?: string;
   utm_source?: string;
