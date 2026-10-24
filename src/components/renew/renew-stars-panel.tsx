@@ -287,12 +287,21 @@ export function RenewStarsPanel({
 
           {showPendingCashback ? (
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <p className="rounded-lg bg-white/70 px-3 py-2 text-slate-700">
-                Pending cashback of{' '}
-                {formatInrFromPaise(applied?.discount_paise ?? balance.pending_cashback?.discount_paise ?? 0)} (
-                {applied?.stars_applied ?? balance.pending_cashback?.stars_applied ?? 0} stars) will apply on your next
-                billing charge.
-              </p>
+              {cashbackStatus === 'cashback_completed' ? (
+                <p className="rounded-lg bg-white/70 px-3 py-2 text-slate-700">
+                  Cashback of{' '}
+                  {formatInrFromPaise(applied?.discount_paise ?? balance.pending_cashback?.discount_paise ?? 0)} (
+                  {applied?.stars_applied ?? balance.pending_cashback?.stars_applied ?? 0} stars) is being refunded to
+                  the payment method from your last charge.
+                </p>
+              ) : (
+                <p className="rounded-lg bg-white/70 px-3 py-2 text-slate-700">
+                  Pending cashback of{' '}
+                  {formatInrFromPaise(applied?.discount_paise ?? balance.pending_cashback?.discount_paise ?? 0)} (
+                  {applied?.stars_applied ?? balance.pending_cashback?.stars_applied ?? 0} stars) will apply on your
+                  next billing charge.
+                </p>
+              )}
               {canCancelCashback ? (
                 <Button type="button" variant="light" size="sm" disabled={busy} onClick={() => void handleCancel()}>
                   Remove
@@ -331,7 +340,8 @@ export function RenewStarsPanel({
                   disabled={busy || sliderMax <= 0}
                 />
                 <p className="mt-1 text-slate-600">
-                  {starsToRedeem} stars → {formatInrFromPaise(discountPreviewPaise)} off
+                  {starsToRedeem} stars → {formatInrFromPaise(discountPreviewPaise)}{' '}
+                  {balance?.immediate_cashback ? 'back on your last payment' : autopay ? 'off your next charge' : 'off'}
                 </p>
               </div>
 

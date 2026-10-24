@@ -126,6 +126,8 @@ export type RenewStarsBalance = {
   can_pay: boolean;
   next_charge_total_paise?: number;
   next_renewal_at?: string;
+  /** A captured renewal charge in the last 20 days can be refunded now. */
+  immediate_cashback?: boolean;
   pending_cashback?: {
     redemption_id: string;
     stars_applied: number;
