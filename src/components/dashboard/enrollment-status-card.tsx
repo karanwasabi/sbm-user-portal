@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, CalendarDays, Sparkles } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { getProfileCompletionSummary } from '@/lib/profile-completion';
 import type { Enrollment } from '@/types/enrollment';
 import type { Profile } from '@/types/profile';
@@ -19,10 +20,80 @@ function formatStartDate(startsOn: string): string {
   });
 }
 
+function civilToday(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function inclusiveDaySpan(from: string, to: string): number {
+  const start = Date.parse(`${from}T00:00:00`);
+  const end = Date.parse(`${to}T00:00:00`);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 0;
+  return Math.round((end - start) / 86_400_000) + 1;
+}
+
+function renewHref(email: string | null | undefined): string {
+  const normalized = email?.trim().toLowerCase();
+  if (!normalized) return '/renew';
+  return `/renew?email=${encodeURIComponent(normalized)}`;
+}
+
 export function EnrollmentStatusCard({ enrollments, profile }: EnrollmentStatusCardProps) {
   const upcoming = enrollments.find((entry) => entry.status === 'upcoming');
   const active = enrollments.find((entry) => entry.status === 'active');
+  const trial = enrollments.find((entry) => entry.program_slug === 'take-control-trial' && entry.trial_ends_on);
+  const upcomingBatch = enrollments.find(
+    (entry) =>
+      entry.program_slug === 'take-control' &&
+      entry.status === 'upcoming' &&
+      entry.starts_on &&
+      entry.days_until_start != null &&
+      entry.days_until_start > 0
+  );
   const { isComplete, missingLabels } = getProfileCompletionSummary(profile);
+
+  if (trial?.trial_open && trial.trial_ends_on && upcomingBatch?.starts_on) {
+    return (
+      <TrialShell eyebrow="Classroom batch" badge="Upcoming">
+        <p className="mt-6 text-2xl leading-tight font-extrabold tracking-tight">
+          Starts {formatStartDate(upcomingBatch.starts_on)}
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-white/85">
+          Your trial continues until {formatStartDate(trial.trial_ends_on)}. Check-ins stay on the trial until then.
+        </p>
+      </TrialShell>
+    );
+  }
+
+  if (trial?.trial_open && trial.trial_ends_on) {
+    const days = inclusiveDaySpan(civilToday(), trial.trial_ends_on);
+    return (
+      <TrialShell eyebrow="Take Control Trial" badge={days === 1 ? 'Last day' : 'In progress'}>
+        <div className="mt-6 flex items-end gap-3">
+          <p className="text-6xl leading-none font-extrabold tracking-tight">{Math.max(days, 0)}</p>
+          <p className="pb-1 text-lg font-semibold text-white/85">
+            day{days === 1 ? '' : 's'}
+            <span className="block text-sm font-medium text-white/70">Left in your trial</span>
+          </p>
+        </div>
+        <div className="mt-5 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <CalendarDays className="h-4 w-4 shrink-0 text-white/80" />
+            Ends {formatStartDate(trial.trial_ends_on)}
+          </div>
+        </div>
+        <Link
+          href={renewHref(profile?.email)}
+          className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white hover:text-white/80"
+        >
+          Join the next classroom batch
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </TrialShell>
+    );
+  }
 
   if (upcoming?.starts_on && upcoming.days_until_start != null && upcoming.days_until_start > 0) {
     const days = upcoming.days_until_start;
@@ -67,20 +138,22 @@ export function EnrollmentStatusCard({ enrollments, profile }: EnrollmentStatusC
     );
   }
 
-  if (active) {
+  const liveProgram = active && active.program_slug !== 'take-control-trial' ? active : undefined;
+
+  if (liveProgram) {
     return (
       <div className="relative overflow-hidden rounded-3xl border border-success/20 bg-gradient-to-br from-success/10 via-white to-white p-6 shadow-[0_12px_30px_-18px_rgba(16,185,129,0.35)]">
         <div className="flex h-full flex-col">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold tracking-wide text-success uppercase">Program Active</p>
-              <p className="mt-1 text-sm font-medium text-slate-600">{active.program_name}</p>
+              <p className="mt-1 text-sm font-medium text-slate-600">{liveProgram.program_name}</p>
             </div>
             <span className="rounded-full bg-success/15 px-2.5 py-1 text-[11px] font-semibold text-success">Live</span>
           </div>
 
           <p className="mt-6 text-2xl leading-tight font-extrabold tracking-tight text-slate-900">
-            {active.program_name}
+            {liveProgram.program_name}
           </p>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Your coach-led program is underway. Check WhatsApp for updates from your coach.
@@ -96,6 +169,30 @@ export function EnrollmentStatusCard({ enrollments, profile }: EnrollmentStatusC
             </Link>
           ) : null}
         </div>
+      </div>
+    );
+  }
+
+  if (trial && !trial.trial_open) {
+    const batchMessage = trial.trial_message_kind === 'batch';
+    return (
+      <div className="relative overflow-hidden rounded-3xl border border-brand/15 bg-white p-6 shadow-[0_12px_30px_-18px_rgba(91,45,142,0.28)]">
+        <p className="text-xs font-semibold tracking-wide text-brand uppercase">Trial complete</p>
+        <p className="mt-4 text-lg leading-snug font-extrabold tracking-tight text-slate-900">
+          {trial.trial_message ?? 'Your Take Control trial has ended.'}
+        </p>
+        {batchMessage ? null : (
+          <Link
+            href={renewHref(profile?.email)}
+            className={cn(
+              'mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white',
+              'transition hover:bg-brand-press focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none'
+            )}
+          >
+            Continue on the portal
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        )}
       </div>
     );
   }
@@ -141,6 +238,22 @@ export function EnrollmentStatusCard({ enrollments, profile }: EnrollmentStatusC
             <ArrowRight className="h-4 w-4" />
           </Link>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+function TrialShell({ eyebrow, badge, children }: { eyebrow: string; badge: string; children: ReactNode }) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-brand/15 bg-gradient-to-br from-brand via-brand-press to-brand-deep p-6 text-white shadow-[0_20px_40px_-20px_rgba(91,45,142,0.55)]">
+      <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+      <div className="pointer-events-none absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-lilac/20 blur-2xl" />
+      <div className="relative flex h-full flex-col">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-xs font-semibold tracking-wide text-white/75 uppercase">{eyebrow}</p>
+          <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white/90">{badge}</span>
+        </div>
+        {children}
       </div>
     </div>
   );

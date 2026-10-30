@@ -7,6 +7,11 @@ export type Enrollment = {
   phase?: 'initial' | 'monthly' | null;
   starts_on?: string;
   days_until_start?: number;
+  trial_starts_on?: string;
+  trial_ends_on?: string;
+  trial_open?: boolean;
+  trial_message?: string;
+  trial_message_kind?: 'renew' | 'batch';
 };
 
 export function hasPendingPayment(enrollments: Enrollment[]): boolean {
