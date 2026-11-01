@@ -839,7 +839,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
             />
           </Field>
 
-          {preview?.cohort_choice && (preview.cohorts?.length ?? 0) > 0 ? (
+          {preview?.cohort_choice && (preview.cohorts?.length ?? 0) > 1 ? (
             <Field label="Program start">
               <SearchableSelect
                 value={pickedStarts || preview.starts_on}

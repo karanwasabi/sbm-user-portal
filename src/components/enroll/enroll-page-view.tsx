@@ -431,17 +431,19 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
                 />
               </Field>
 
-              <Field label="Program start">
-                <SearchableSelect
-                  value={startsOn}
-                  onChange={handleStartsChange}
-                  options={cohortSelectOptions}
-                  placeholder="Select start date"
-                  leftIcon={<CalendarDays size={16} />}
-                  searchable={false}
-                  disabled={submitting}
-                />
-              </Field>
+              {cohortSelectOptions.length > 1 ? (
+                <Field label="Program start">
+                  <SearchableSelect
+                    value={startsOn}
+                    onChange={handleStartsChange}
+                    options={cohortSelectOptions}
+                    placeholder="Select start date"
+                    leftIcon={<CalendarDays size={16} />}
+                    searchable={false}
+                    disabled={submitting}
+                  />
+                </Field>
+              ) : null}
 
               <EnrollConsentCheckbox
                 checked={dpdpConsent}
