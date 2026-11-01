@@ -128,10 +128,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
         setCohortOptions(data.cohorts);
       } catch {
         if (!cancelled) {
-          setCohortOptions([
-            { starts_on: DEFAULT_PUBLIC_TRIAL_STARTS, name: 'Nov 2026' },
-            { starts_on: '2026-11-16', name: 'Nov 16 2026' },
-          ]);
+          setCohortOptions([{ starts_on: DEFAULT_PUBLIC_TRIAL_STARTS, name: 'Nov 16 2026' }]);
         }
       }
     })();
@@ -162,10 +159,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
     () =>
       (cohortOptions.length > 0
         ? cohortOptions
-        : [
-            { starts_on: DEFAULT_PUBLIC_TRIAL_STARTS, name: 'Nov 2026' },
-            { starts_on: '2026-11-16', name: 'Nov 16 2026' },
-          ]
+        : [{ starts_on: DEFAULT_PUBLIC_TRIAL_STARTS, name: 'Nov 16 2026' }]
       ).map((cohort) => ({
         value: cohort.starts_on,
         label: publicTrialCohortLabel(cohort.starts_on),
