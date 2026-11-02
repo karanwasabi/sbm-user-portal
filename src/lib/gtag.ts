@@ -20,7 +20,7 @@ export function pageview(url: string) {
 }
 
 export function trackEvent(action: string, params?: Record<string, unknown>) {
-  if (!GA_MEASUREMENT_ID || typeof window.gtag !== 'function') {
+  if (typeof window.gtag !== 'function') {
     return;
   }
 
