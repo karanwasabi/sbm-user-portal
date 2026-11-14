@@ -77,7 +77,7 @@ export default function RegisterPage() {
           </ul>
           <div className="mt-auto pt-6">
             <p className="text-[2rem] leading-none font-bold tracking-tight text-slate-900">
-              ₹4000 <span className="text-xl font-medium text-slate-700">+ taxes</span>
+              ₹5,000 <span className="text-xl font-medium text-slate-700">+ taxes</span>
             </p>
             <div className="mt-5" onClick={handleTrialClick}>
               <Button href="/enroll/monthly" variant="primary" size="md" rightIcon={<ArrowRight className="h-4 w-4" />}>
@@ -103,7 +103,7 @@ export default function RegisterPage() {
           </ul>
           <div className="mt-auto pt-6">
             <p className="text-[2rem] leading-none font-bold tracking-tight text-slate-900">
-              ₹10,200 <span className="text-lg font-medium text-slate-400 line-through">₹12,000</span>{' '}
+              ₹12,999 <span className="text-lg font-medium text-slate-400 line-through">₹15,000</span>{' '}
               <span className="text-xl font-medium text-slate-700">+ taxes</span>
             </p>
             <div className="mt-5" onClick={handleProgramClick}>

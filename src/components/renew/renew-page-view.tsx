@@ -406,7 +406,7 @@ export function RenewPageView({ countries, suggestedCountryIso, initialEmail }: 
           planKey,
           basePaise: quote.base_paise,
           discountPaise: discountPaise > 0 ? discountPaise : undefined,
-          discountLabel: planKey === 'trial_3m' && discountPaise > 0 ? '15% off' : undefined,
+          discountLabel: discountPaise > 0 ? (quote.promo_code ?? undefined) : undefined,
           pricingRegion: quote.pricing_region,
         });
       }
