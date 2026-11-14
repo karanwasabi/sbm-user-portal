@@ -348,6 +348,20 @@ export async function postTrialCheckoutQuote(body: {
   return payload.quote;
 }
 
+export async function postLateNov16TrialCheckoutQuote(body: {
+  product: TrialProduct;
+  country_code: string;
+  access: string;
+  promo_code?: string;
+}): Promise<TrialQuote> {
+  const response = await publicApiFetch('/public/trial/late-nov16/checkout-quote', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json()) as { quote: TrialQuote };
+  return payload.quote;
+}
+
 export async function startTrialCheckout(body: TrialCheckoutStartRequest): Promise<TrialCheckoutStartResponse> {
   const response = await publicApiFetch('/public/trial/checkout/start', {
     method: 'POST',

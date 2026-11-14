@@ -35,6 +35,7 @@ import {
   getLateNov16TrialCheckoutPreview,
   getTrialCheckoutPreview,
   getTrialEnrollableCohorts,
+  postLateNov16TrialCheckoutQuote,
   postTrialCheckoutQuote,
   startLateNov16TrialCheckout,
   startTrialCheckout,
@@ -58,7 +59,7 @@ export function EnrollPageView({
   suggestedCountryIso,
   lateNov16 = false,
 }: EnrollPageViewProps) {
-  const discountCodeEnabled = !lateNov16 && product === 'trial_3m';
+  const discountCodeEnabled = product === 'trial_3m';
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -235,11 +236,18 @@ export function EnrollPageView({
     setPromoError(null);
     setQuotePending(true);
     try {
-      const quote = await postTrialCheckoutQuote({
-        product,
-        country_code: countryIso,
-        promo_code: normalized,
-      });
+      const quote = lateNov16
+        ? await postLateNov16TrialCheckoutQuote({
+            product,
+            country_code: countryIso,
+            access,
+            promo_code: normalized,
+          })
+        : await postTrialCheckoutQuote({
+            product,
+            country_code: countryIso,
+            promo_code: normalized,
+          });
       setAppliedPromo(normalized);
       setQuotedQuote(quote);
     } catch (err) {
