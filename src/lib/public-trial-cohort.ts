@@ -1,8 +1,8 @@
 /** Default marketing cohort when `starts` is missing or no longer open. */
-export const DEFAULT_PUBLIC_TRIAL_STARTS = '2026-11-16';
+export const DEFAULT_PUBLIC_TRIAL_STARTS = '2026-12-07';
 
 const PUBLIC_TRIAL_COHORT_LABELS: Record<string, string> = {
-  '2026-11-16': '16 Nov 2026 · Post Diwali',
+  '2026-12-07': '7 Dec 2026',
 };
 
 export function isPublicTrialStartsOn(startsOn: string | null | undefined): boolean {

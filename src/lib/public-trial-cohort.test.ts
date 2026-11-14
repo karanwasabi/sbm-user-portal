@@ -4,24 +4,24 @@ import {
   isPublicTrialStartsOn,
   normalizePublicTrialStarts,
   publicTrialCohortLabel,
-} from '@/lib/public-trial-cohort';
+} from './public-trial-cohort';
 
-describe('publicTrialCohort', () => {
-  it('defaults missing, closed, or invalid starts to Nov 16', () => {
-    expect(DEFAULT_PUBLIC_TRIAL_STARTS).toBe('2026-11-16');
-    expect(normalizePublicTrialStarts(null)).toBe('2026-11-16');
-    expect(normalizePublicTrialStarts('')).toBe('2026-11-16');
-    expect(normalizePublicTrialStarts('2026-11-02')).toBe('2026-11-16');
-    expect(normalizePublicTrialStarts('2026-12-02')).toBe('2026-11-16');
+describe('public trial cohort starts', () => {
+  it('defaults missing, closed, or invalid starts to Dec 7', () => {
+    expect(DEFAULT_PUBLIC_TRIAL_STARTS).toBe('2026-12-07');
+    expect(normalizePublicTrialStarts(null)).toBe('2026-12-07');
+    expect(normalizePublicTrialStarts('')).toBe('2026-12-07');
+    expect(normalizePublicTrialStarts('2026-11-02')).toBe('2026-12-07');
+    expect(normalizePublicTrialStarts('2026-11-16')).toBe('2026-12-07');
+    expect(normalizePublicTrialStarts('2026-12-02')).toBe('2026-12-07');
   });
 
-  it('keeps the open start date', () => {
-    expect(isPublicTrialStartsOn('2026-11-02')).toBe(false);
-    expect(isPublicTrialStartsOn('2026-11-16')).toBe(true);
-    expect(normalizePublicTrialStarts('2026-11-16')).toBe('2026-11-16');
+  it('keeps the open Dec 7 start', () => {
+    expect(isPublicTrialStartsOn('2026-12-07')).toBe(true);
+    expect(normalizePublicTrialStarts('2026-12-07')).toBe('2026-12-07');
   });
 
-  it('labels the Post Diwali batch', () => {
-    expect(publicTrialCohortLabel('2026-11-16')).toBe('16 Nov 2026 · Post Diwali');
+  it('labels the Dec 7 batch', () => {
+    expect(publicTrialCohortLabel('2026-12-07')).toBe('7 Dec 2026');
   });
 });
