@@ -1,0 +1,23 @@
+import { Suspense } from 'react';
+import { EnrollPageView } from '@/components/enroll/enroll-page-view';
+import { getRequestCountryIso } from '@/lib/request-country-code';
+import { fetchCountries } from '@/utils/api';
+
+export default async function LateNov16EnrollPrepaidPage() {
+  const [countries, suggestedCountryIso] = await Promise.all([
+    fetchCountries().catch(() => []),
+    getRequestCountryIso(),
+  ]);
+
+  return (
+    <Suspense fallback={null}>
+      <EnrollPageView
+        product="trial_3m"
+        welcomeProductParam="trial_3m"
+        countries={countries}
+        suggestedCountryIso={suggestedCountryIso}
+        lateNov16
+      />
+    </Suspense>
+  );
+}

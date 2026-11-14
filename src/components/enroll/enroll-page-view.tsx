@@ -30,10 +30,13 @@ import { toTitleCase } from '@/lib/title-case';
 import { captureUtmAttributionFromLocation } from '@/lib/utm-attribution';
 import { readAttributionPayloadForApi } from '@/lib/attribution-payload';
 import { validateWhatsappNumber } from '@/lib/whatsapp-validation';
+import { LATE_NOV16_COHORT_LABEL, LATE_NOV16_STARTS } from '@/lib/late-nov16-enroll';
 import {
+  getLateNov16TrialCheckoutPreview,
   getTrialCheckoutPreview,
   getTrialEnrollableCohorts,
   postTrialCheckoutQuote,
+  startLateNov16TrialCheckout,
   startTrialCheckout,
 } from '@/utils/client-api';
 import type { Country } from '@/types/reference';
@@ -44,19 +47,31 @@ type EnrollPageViewProps = {
   welcomeProductParam: string;
   countries: Country[];
   suggestedCountryIso?: string;
+  /** Secret-gated late join into locked Nov 16 at old prices. */
+  lateNov16?: boolean;
 };
 
-export function EnrollPageView({ product, welcomeProductParam, countries, suggestedCountryIso }: EnrollPageViewProps) {
-  const discountCodeEnabled = product === 'trial_3m';
+export function EnrollPageView({
+  product,
+  welcomeProductParam,
+  countries,
+  suggestedCountryIso,
+  lateNov16 = false,
+}: EnrollPageViewProps) {
+  const discountCodeEnabled = !lateNov16 && product === 'trial_3m';
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const startsFromUrl = normalizePublicTrialStarts(searchParams.get('starts'));
+  const access = (searchParams.get('access') ?? '').trim();
+  const startsFromUrl = lateNov16 ? LATE_NOV16_STARTS : normalizePublicTrialStarts(searchParams.get('starts'));
   const [startsOn, setStartsOn] = useState(startsFromUrl);
-  const [cohortOptions, setCohortOptions] = useState<PublicTrialEnrollableCohort[]>([]);
+  const [cohortOptions, setCohortOptions] = useState<PublicTrialEnrollableCohort[]>(
+    lateNov16 ? [{ starts_on: LATE_NOV16_STARTS, name: LATE_NOV16_COHORT_LABEL }] : []
+  );
   const [preview, setPreview] = useState<TrialCheckoutPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
   const [previewError, setPreviewError] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -92,6 +107,10 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
   );
 
   useEffect(() => {
+    if (lateNov16) {
+      setStartsOn(LATE_NOV16_STARTS);
+      return;
+    }
     if (startsFromUrl !== startsOn) {
       setStartsOn(startsFromUrl);
     }
@@ -100,7 +119,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
     }
     // Only sync when the URL-derived starts value changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional URL → state sync
-  }, [startsFromUrl]);
+  }, [startsFromUrl, lateNov16]);
 
   useEffect(() => {
     const draft = readEnrollDraft(product);
@@ -120,6 +139,10 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
   }, []);
 
   useEffect(() => {
+    if (lateNov16) {
+      setCohortOptions([{ starts_on: LATE_NOV16_STARTS, name: LATE_NOV16_COHORT_LABEL }]);
+      return;
+    }
     let cancelled = false;
     void (async () => {
       try {
@@ -135,21 +158,36 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lateNov16]);
 
   const loadPreview = useCallback(async () => {
     setLoadingPreview(true);
     setPreviewError(false);
+    setAccessDenied(false);
     try {
+      if (lateNov16) {
+        if (!access) {
+          setPreview(null);
+          setAccessDenied(true);
+          return;
+        }
+        const data = await getLateNov16TrialCheckoutPreview(product, access);
+        setPreview(data);
+        return;
+      }
       const data = await getTrialCheckoutPreview(product, startsOn);
       setPreview(data);
     } catch {
       setPreview(null);
-      setPreviewError(true);
+      if (lateNov16) {
+        setAccessDenied(true);
+      } else {
+        setPreviewError(true);
+      }
     } finally {
       setLoadingPreview(false);
     }
-  }, [product, startsOn]);
+  }, [product, startsOn, lateNov16, access]);
 
   useEffect(() => {
     void loadPreview();
@@ -160,10 +198,10 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
       (cohortOptions.length > 0 ? cohortOptions : [{ starts_on: DEFAULT_PUBLIC_TRIAL_STARTS, name: 'Dec 2026' }]).map(
         (cohort) => ({
           value: cohort.starts_on,
-          label: publicTrialCohortLabel(cohort.starts_on),
+          label: lateNov16 ? LATE_NOV16_COHORT_LABEL : publicTrialCohortLabel(cohort.starts_on),
         })
       ),
-    [cohortOptions]
+    [cohortOptions, lateNov16]
   );
 
   const handleStartsChange = (next: string) => {
@@ -267,7 +305,7 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
 
     setSubmitting(true);
     try {
-      const start = await startTrialCheckout({
+      const startBody = {
         product,
         first_name: toTitleCase(firstName.trim()),
         last_name: toTitleCase(lastName.trim()),
@@ -278,7 +316,10 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
         starts: startsOn,
         ...(readAttributionPayloadForApi() ?? {}),
         ...(discountCodeEnabled && appliedPromo ? { promo_code: appliedPromo } : {}),
-      });
+      };
+      const start = lateNov16
+        ? await startLateNov16TrialCheckout({ ...startBody, access })
+        : await startTrialCheckout(startBody);
 
       const welcomeUrl = `/welcome/take-control?product=${encodeURIComponent(welcomeProductParam)}&session=${encodeURIComponent(start.checkout_session_id)}`;
       const pricingRegion = countryIso === 'IN' ? 'domestic' : 'international';
@@ -380,6 +421,10 @@ export function EnrollPageView({ product, welcomeProductParam, countries, sugges
         {loadingPreview ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-brand" />
+          </div>
+        ) : accessDenied ? (
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
+            <p className="text-sm text-slate-600">This signup link is invalid or expired.</p>
           </div>
         ) : previewError || !preview || !displayQuote ? (
           <div className="flex flex-col items-center gap-4 py-8 text-center">

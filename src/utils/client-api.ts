@@ -326,6 +326,15 @@ export async function getTrialCheckoutPreview(product: TrialProduct, starts?: st
   return response.json() as Promise<TrialCheckoutPreview>;
 }
 
+export async function getLateNov16TrialCheckoutPreview(
+  product: TrialProduct,
+  access: string
+): Promise<TrialCheckoutPreview> {
+  const params = new URLSearchParams({ product, access });
+  const response = await publicApiFetch(`/public/trial/late-nov16/checkout-preview?${params.toString()}`);
+  return response.json() as Promise<TrialCheckoutPreview>;
+}
+
 export async function postTrialCheckoutQuote(body: {
   product: TrialProduct;
   country_code: string;
@@ -341,6 +350,16 @@ export async function postTrialCheckoutQuote(body: {
 
 export async function startTrialCheckout(body: TrialCheckoutStartRequest): Promise<TrialCheckoutStartResponse> {
   const response = await publicApiFetch('/public/trial/checkout/start', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return response.json() as Promise<TrialCheckoutStartResponse>;
+}
+
+export async function startLateNov16TrialCheckout(
+  body: TrialCheckoutStartRequest & { access: string }
+): Promise<TrialCheckoutStartResponse> {
+  const response = await publicApiFetch('/public/trial/late-nov16/checkout/start', {
     method: 'POST',
     body: JSON.stringify(body),
   });
