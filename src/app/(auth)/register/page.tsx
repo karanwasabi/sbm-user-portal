@@ -1,18 +1,21 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { SbmWordmark } from '@/components/brand/sbm-wordmark';
 import { AuthLayout } from '@/components/layout/auth-layout';
 import { Button } from '@/components/ui/button';
 import { trackPortalEvent } from '@/lib/gtag';
 import { trackMetaCustom } from '@/lib/meta-pixel';
 import { captureUtmAttributionFromLocation } from '@/lib/utm-attribution';
+import { registerTrialPriceCopy } from '@/lib/trial-early-bird';
 
 const optionCardClassName =
   'flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_30px_-18px_rgba(15,23,42,0.35)] sm:p-6';
 
 export default function RegisterPage() {
+  const prices = useMemo(() => registerTrialPriceCopy(), []);
+
   useEffect(() => {
     captureUtmAttributionFromLocation();
     trackPortalEvent('portal_register_options_viewed', {
@@ -63,12 +66,18 @@ export default function RegisterPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <section className={optionCardClassName}>
           <div className="flex min-h-6 items-start justify-end">
-            <span
-              aria-hidden
-              className="invisible rounded-full px-3 py-1 text-[10px] font-bold tracking-wide uppercase"
-            >
-              WITH MONEYBACK GUARANTEE
-            </span>
+            {prices.earlyBird ? (
+              <span className="rounded-full bg-brand/10 px-3 py-1 text-[10px] font-bold tracking-wide text-brand uppercase">
+                Early bird until 28 Nov
+              </span>
+            ) : (
+              <span
+                aria-hidden
+                className="invisible rounded-full px-3 py-1 text-[10px] font-bold tracking-wide uppercase"
+              >
+                Early bird until 28 Nov
+              </span>
+            )}
           </div>
           <h2 className="mt-2 text-xl font-bold text-slate-900">MONTHLY</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-700">
@@ -77,7 +86,11 @@ export default function RegisterPage() {
           </ul>
           <div className="mt-auto pt-6">
             <p className="text-[2rem] leading-none font-bold tracking-tight text-slate-900">
-              ₹5,000 <span className="text-xl font-medium text-slate-700">+ taxes</span>
+              {prices.monthlyChargedLabel}{' '}
+              {prices.monthlyStrikeLabel ? (
+                <span className="text-lg font-medium text-slate-400 line-through">{prices.monthlyStrikeLabel}</span>
+              ) : null}{' '}
+              <span className="text-xl font-medium text-slate-700">+ taxes</span>
             </p>
             <div className="mt-5" onClick={handleTrialClick}>
               <Button href="/enroll/monthly" variant="primary" size="md" rightIcon={<ArrowRight className="h-4 w-4" />}>
@@ -103,9 +116,17 @@ export default function RegisterPage() {
           </ul>
           <div className="mt-auto pt-6">
             <p className="text-[2rem] leading-none font-bold tracking-tight text-slate-900">
-              ₹12,999 <span className="text-lg font-medium text-slate-400 line-through">₹15,000</span>{' '}
+              {prices.prepaidChargedLabel}{' '}
+              {prices.prepaidStrikeLabel ? (
+                <span className="text-lg font-medium text-slate-400 line-through">{prices.prepaidStrikeLabel}</span>
+              ) : null}{' '}
               <span className="text-xl font-medium text-slate-700">+ taxes</span>
             </p>
+            {prices.earlyBird ? (
+              <p className="mt-2 text-sm text-slate-500">
+                ₹18,000 after 28 Nov · vs {prices.prepaidCompareMonthlyLabel} month-by-month
+              </p>
+            ) : null}
             <div className="mt-5" onClick={handleProgramClick}>
               <Button href="/enroll" variant="primary" size="md" rightIcon={<ArrowRight className="h-4 w-4" />}>
                 Register for the 3 Month Program
